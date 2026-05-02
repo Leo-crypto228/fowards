@@ -1,0 +1,68 @@
+Tu es un Senior UI/UX Designer expert iOS et mobile-first. 
+
+Tu dois concevoir un **profil et dashboard FF** en suivant ces règles :
+
+1️⃣ **Mentalité générale**
+- Inspiré par iOS 26 moderne, TikTok et LinkedIn : couleurs dynamiques mais sobres, dégradés subtils, accents lumineux, interface premium et motivante.
+- Design clair, hiérarchie nette des blocs, épuré mais vivant.
+- L’âme doit montrer discipline, progression, énergie et obsession saine.
+- Ne pas ressembler à Instagram/TikTok classique : pas de likes, pas de vues, pas de validation sociale vide.
+- Focus sur **progression et constance**, pas sur popularité.
+
+2️⃣ **Header profil**
+- Photo de profil ronde, centrée à gauche.
+- Nom complet.
+- Phrase courte et énergique (“Obsédé par la progression”, “Mission en cours”, etc.)
+- Ligne “Depuis X jours sur FF”.
+- Fond léger ou dégradé inspiré de la nature, ciel ou abstrait pour dynamiser.
+
+3️⃣ **Bloc objectif actif**
+- Objectif principal visible.
+- Barre de progression verticale ou horizontale colorée.
+- % complété clairement affiché.
+- Valeur actuelle / valeur cible.
+- Date de début de l’objectif.
+- Micro-message dynamique : “Vous avancez”, “Prochaine étape ?”, “Réajustez. Continuez.”
+
+4️⃣ **Bloc streak / discipline**
+- Streak actuel en jours consécutifs.
+- Score de constance hebdomadaire (% ou icône étoile)
+- Indicateur de discipline (% tâches accomplies, objectifs respectés)
+
+5️⃣ **Bloc graphique d’évolution**
+- Graphique linéaire simple sur 30 jours.
+- Axe horizontal : temps
+- Axe vertical : métrique choisie (revenu, tâches, progression personnelle)
+- Ligne visible, claire, éventuellement glow léger pour effet premium.
+- Permet de visualiser facilement la trajectoire et la constance.
+
+6️⃣ **Bloc énergie / engagement**
+- Indice d’engagement simple basé sur fréquence, régularité, cohérence.
+- Petit graphique ou cercle dynamique, avec couleurs motivantes.
+
+7️⃣ **Timeline filtrable**
+- Sections : Objectifs, Avancements, Leçons, Bilans.
+- Chaque item : titre, date, brève description.
+- Affichage simple, scroll vertical fluide, avec hiérarchie claire.
+
+8️⃣ **Navigation / actions**
+- Barre bas standard iOS : Accueil, Recherche, Ajouter Post (+), Notifications, Profil.
+- Bouton central plus mis en avant.
+- Effet hover ou glow sur les éléments interactifs.
+
+9️⃣ **Couleurs / typographie**
+- Fond sombre subtil ou gradient léger.
+- Accents colorés pour progression et éléments clés.
+- Typographie claire, moderne, facilement lisible, hiérarchie forte (H1/H2/H3).
+
+🔑 **Instructions d’âme et sensation**
+- Le profil doit transmettre discipline, obsession saine, plaisir de progresser.
+- Chaque bloc doit avoir un sens clair : progression visible, motivation immédiate, dopamine.
+- Minimalisme fonctionnel, pas décoratif.
+- Tout est orienté action et visualisation de la trajectoire.
+
+📐 **Sortie attendue**
+- Mockup iOS 26, style moderne, dynamique, inspirant.
+- Haute lisibilité, hiérarchie claire.
+- Sections distinctes mais harmonieuses.
+- L’utilisateur doit comprendre son état et sa progression instantanément.

@@ -1,0 +1,171 @@
+Je veux une page ultra-premium, avec un design noir profond, des accents dorés/métallisés, et une expérience utilisateur intuitive. L'objectif est de donner l'impression d'un espace exclusif et professionnel, comme un club privé ou une plateforme haut de gamme (ex : Discord Nitro, Circle.so, ou Patreon).
+Instructions détaillées :
+
+Thème et couleurs :
+
+Palette principale :
+Fond : Noir profond (#0A0A0A ou #121212).
+Accents : Or métallisé (#D4AF37), blanc cassé (#F5F5F5), gris anthracite (#2A2A2A).
+Effets : Ombre portée subtile (blur 20px, opacity 10%) pour les éléments cliquables, lueur dorée sur les boutons principaux.
+
+
+Typographie :
+Titres : Inter Bold (ou SF Pro Display Bold) – taille 24–32px.
+Corps de texte : Inter Regular (ou SF Pro Text) – taille 14–16px.
+Texte secondaire : Gris clair (#A0A0A0).
+
+
+
+
+Structure de la page :
+
+En-tête (Header) :
+
+Logo en haut à gauche (style minimaliste, texte blanc ou or).
+Bouton "Annuler" (texte gris clair) et bouton "Enregistrer" (fond or, texte noir) en haut à droite.
+Barre de progression (ex : "Étape 1/3 – Informations de base") avec un indicateur visuel (ligne dorée).
+
+
+Section 1 : Photo de profil et bannière (Étape 1/3) :
+
+Zone de téléchargement :
+Cadre arrondi (border-radius: 12px) pour la photo de profil (ratio 1:1, taille 120x120px).
+Zone pour la bannière (ratio 16:9, taille 800x450px) avec un overlay noir à 30% d'opacité pour le texte.
+Bouton "Télécharger" (fond transparent, bordure dorée, icône de caméra).
+Texte d'aide : "Choisissez une image qui représente votre communauté. Formats acceptés : JPG, PNG (max 5 Mo)."
+
+
+Prévisualisation :
+Aperçu en temps réel de la photo de profil + bannière avec un effet de "glow" doré sur les bords.
+
+
+
+
+Section 2 : Informations de base (Étape 2/3) :
+
+Nom de la communauté :
+Champ de texte avec placeholder "Nom de votre communauté" (police Inter Bold, taille 18px).
+Icône de vérification (✓) si le nom est disponible (validation en temps réel).
+
+
+Description :
+Zone de texte multi-lignes avec placeholder "Décrivez votre communauté en quelques mots...".
+Compteur de caractères (ex : "0/280").
+
+
+Catégorie :
+Menu déroulant (style "select" premium) avec des catégories comme "Technologie", "Art", "Business", etc.
+Icône de flèche vers le bas (or).
+
+
+Objectif :
+Boutons radio ou cases à cocher pour choisir l'objectif :
+"Partager du contenu" (icône 📢)
+"Discuter et échanger" (icône 💬)
+"Vendre des produits/services" (icône 🛒)
+"Autre" (champ de texte libre).
+
+
+
+
+
+
+Section 3 : Paramètres avancés (Étape 3/3) :
+
+Visibilité :
+Toggle switch (style iOS) pour choisir entre "Public" (tout le monde peut rejoindre) et "Privé" (invitation uniquement).
+Texte d'aide : "Une communauté privée nécessite une approbation manuelle."
+
+
+Règles de la communauté :
+Zone de texte avec placeholder "Exemple : Pas de spam, respect des autres membres...".
+Bouton "Générer avec IA" (icône 🤖) pour suggérer des règles automatiquement.
+
+
+Tags :
+Champ de texte avec suggestions de tags (ex : "#Tech", "#Débutants") en temps réel.
+
+
+
+
+Boutons d'action (en bas de page) :
+
+Bouton "Prévisualiser" (fond transparent, bordure dorée) pour voir un aperçu avant validation.
+Bouton "Créer ma communauté" (fond or, texte noir, effet de hover avec lueur dorée).
+
+
+
+
+Micro-interactions et détails premium :
+
+Effets de hover :
+Boutons : Légère élévation (shadow) + lueur dorée.
+Champs de texte : Bordure dorée au focus.
+
+
+Animations :
+Transition fluide entre les étapes (slide horizontal).
+Effet de "loading" subtil (spinner doré) lors du téléchargement d'images.
+
+
+Feedback utilisateur :
+Message de succès (toast) avec effet de fade-in : "Communauté créée avec succès !" (fond noir, texte or).
+Erreurs : Texte rouge discret (#FF5555) sous les champs invalides.
+
+
+
+
+Responsive Design :
+
+Mobile :
+Stack vertical des sections.
+Boutons plus larges pour faciliter le clic.
+Réduction de la taille des images (photo de profil : 80x80px).
+
+
+Desktop :
+Layout en 2 colonnes pour les étapes 2 et 3 (ex : informations à gauche, aperçu à droite).
+
+
+
+
+Inspirations visuelles (à inclure dans le prompt) :
+
+Discord Nitro (pour le côté premium).
+Circle.so (pour la sobriété).
+Patreon (pour les accents dorés).
+Linear (pour les effets de hover et les ombres).
+
+
+
+
+🎨 Exemple de rendu visuel (description textuelle)
+Voici à quoi pourrait ressembler la page (pour guider l'IA) :
++-----------------------------------------------------+
+| LOGO          [Annuler] [Enregistrer]              |
++-----------------------------------------------------+
+| Étape 1/3 – Photo de profil et bannière             |
++-----------------------------------------------------+
+|                                                     |
+|   +-------------------+   +---------------------+   |
+|   | [Photo de profil] |   | [Bannière]          |   |
+|   | (cadre doré)      |   | (overlay noir 30%)  |   |
+|   +-------------------+   +---------------------+   |
+|   [Télécharger]               [Télécharger]         |
+|                                                     |
++-----------------------------------------------------+
+| Étape 2/3 – Informations de base                    |
++-----------------------------------------------------+
+| Nom de la communauté: _______________ ✓            |
+| Description:                                         |
+| ________________________________________________    |
+| ________________________________________________    |
+| 0/280 caractères                                     |
+| Catégorie: [Technologie ▼]                          |
+| Objectif:                                            |
+| ○ Partager du contenu 📢                             |
+| ○ Discuter et échanger 💬                            |
+| ● Vendre des produits/services 🛒                   |
++-----------------------------------------------------+
+| [Prévisualiser] [Créer ma communauté]               |
++-----------------------------------------------------+
