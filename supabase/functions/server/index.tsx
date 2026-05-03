@@ -3,6 +3,7 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.tsx";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { Resend } from "npm:resend";
 
 
 const app = new Hono();
@@ -12,6 +13,9 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
+
+// ── Resend client for emails ──────────────────────────────────────────────────
+const resend = new Resend(Deno.env.get("Resend_API_KEY_Fowards")!);
 
 const PROFILE_BUCKET  = "make-218684af-profile-images";
 const POST_IMG_BUCKET = "make-218684af-post-images";
@@ -2600,8 +2604,8 @@ const FROM_ADDRESS = "FuturFeed <contact@email.futurfeed.com>";
 const RESEND_API_URL = "https://api.resend.com/emails";
 
 async function sendViaResend(to: string, subject: string, html: string): Promise<void> {
-  const apiKey = Deno.env.get("RESEND_API_KEY")?.trim();
-  if (!apiKey) throw new Error("[Resend] RESEND_API_KEY non configurée.");
+  const apiKey = Deno.env.get("Resend_API_KEY_Fowards")?.trim();
+  if (!apiKey) throw new Error("[Resend] Resend_API_KEY_Fowards non configurée.");
   console.log(`[Resend] Envoi à ${to} | clé longueur: ${apiKey.length}`);
 
   const res = await fetch(RESEND_API_URL, {
@@ -5713,6 +5717,40 @@ app.put("/make-server-218684af/user-stats/hours/:userId", async (c) => {
     return c.json({ hours: newTotal });
   } catch (err) {
     return c.json({ error: `Erreur: ${err}` }, 500);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// EMAIL SENDING VIA RESEND
+// ════════════════════════════════════════════════════════════════════════════
+
+// POST /send-email — Envoyer un email via Resend
+app.post("/make-server-218684af/send-email", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { to, subject, html } = body;
+
+    if (!to || !subject || !html) {
+      return c.json({ error: "to, subject et html sont requis." }, 400);
+    }
+
+    const { data, error } = await resend.emails.send({
+      from: "FuturFeed <contact@email.futurfeed.com>", // Remplace par ton domaine vérifié chez Resend
+      to: [to],
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error("Erreur envoi email:", error);
+      return c.json({ error: `Échec envoi: ${error.message}` }, 500);
+    }
+
+    console.log(`Email envoyé à ${to} | ID: ${data?.id}`);
+    return c.json({ success: true, data });
+  } catch (err) {
+    console.error("Erreur send-email:", err);
+    return c.json({ error: `Échec serveur: ${err}` }, 500);
   }
 });
 
