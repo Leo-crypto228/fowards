@@ -288,6 +288,7 @@ export function CreateCommunityPost() {
               outline: "none", resize: "none", fontSize: 16, fontWeight: 400,
               color: "#f0f0f5", lineHeight: 1.7, letterSpacing: "0.1px",
               caretColor: "#6366f1", opacity: loading ? 0.5 : 1,
+              whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word",
             }}
             className="placeholder:text-[rgba(144,144,168,0.40)]"
           />

@@ -93,7 +93,7 @@ export function CommentSection({ postAuthor, initialCount }: CommentSectionProps
                   <span className="text-sm text-foreground" style={{ fontWeight: 600 }}>{c.author}</span>
                   <span className="text-xs text-muted-foreground">{c.time}</span>
                 </div>
-                <p className="text-sm text-foreground/85 leading-snug">{c.text}</p>
+                <p className="text-sm text-foreground/85 leading-snug" style={{ whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word" }}>{c.text}</p>
               </div>
             </motion.div>
           ))}
@@ -101,19 +101,19 @@ export function CommentSection({ postAuthor, initialCount }: CommentSectionProps
 
         {/* Input */}
         <div
-          className="flex items-center gap-2 rounded-full px-3"
+          className="flex items-start gap-2 rounded-lg px-3 py-2"
           style={{
-            height: 38,
             background: "rgba(255,255,255,0.06)",
             border: "1px solid rgba(255,255,255,0.10)",
+            minHeight: 38,
           }}
         >
-          <input
-            type="text"
+          <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
             placeholder={`Répondre à ${postAuthor}...`}
+            rows={1}
             style={{
               flex: 1,
               background: "transparent",
@@ -122,14 +122,27 @@ export function CommentSection({ postAuthor, initialCount }: CommentSectionProps
               fontSize: 13,
               color: "#f0f0f5",
               caretColor: "#6366f1",
+              resize: "none",
+              maxHeight: 80,
+              overflowY: "auto",
+              whiteSpace: "pre-wrap",
+              wordWrap: "break-word",
+              overflowWrap: "break-word",
+              wordBreak: "break-word",
+              lineHeight: 1.4,
             }}
             className="placeholder:text-[rgba(144,144,168,0.40)]"
+            onInput={(e) => {
+              const t = e.currentTarget;
+              t.style.height = "auto";
+              t.style.height = Math.min(t.scrollHeight, 80) + "px";
+            }}
           />
           <motion.button
             onClick={handleSubmit}
             whileTap={{ scale: 0.88 }}
             disabled={!input.trim()}
-            style={{ opacity: input.trim() ? 1 : 0.35 }}
+            style={{ opacity: input.trim() ? 1 : 0.35, marginTop: 4, flexShrink: 0 }}
           >
             <Send style={{ width: 15, height: 15, color: "#6366f1" }} />
           </motion.button>

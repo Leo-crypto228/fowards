@@ -302,6 +302,7 @@ export function EditProfilePage() {
     fontSize: 15, color: "rgba(235,235,245,0.92)",
     outline: "none", caretColor: "#6366f1",
     resize: "none" as const, fontFamily: "inherit",
+    whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word",
   };
   const lbl: React.CSSProperties = {
     fontSize: 11, fontWeight: 700,

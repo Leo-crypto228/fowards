@@ -1459,11 +1459,11 @@ const AVATAR_OVERLAP = 82;
 const MY_USERNAME = "thomasdubois"; // fallback — remplacé dynamiquement via useAuth
 
 const DEFAULT_PROFILE_DATA = {
-  name: "Thomas Dubois", handle: "@thomas_dubois",
-  avatar: AVATAR_URL, banner: BANNER_URL, bio: BIO_FULL,
-  objective: "Construire mon premier SaaS", objectiveDesc: OBJECTIVE_DESC,
-  descriptor: "Builder", hashtags: HASHTAGS,
-  streak: 27, constance: 86, progressPct: 63, objectifsAccomplis: 12, daysOnFF: 143,
+  name: "", handle: "",
+  avatar: "", banner: "", bio: "",
+  objective: "", objectiveDesc: "",
+  descriptor: "", hashtags: [],
+  streak: 0, constance: 0, progressPct: 0, objectifsAccomplis: 0, daysOnFF: 1,
 };
 
 
@@ -1630,20 +1630,44 @@ export function Profile() {
             }
           }
         } catch {}
-        // Vraiment nouveau profil — créer avec les données auth
+        // Vraiment nouveau profil — créer avec les données auth et zéro pour tous les indicateurs
         const seeded = await upsertProfile(MY_EFFECTIVE_USERNAME, {
-          ...DEFAULT_PROFILE_DATA,
-          name: authUser?.name || DEFAULT_PROFILE_DATA.name,
-          objective: authUser?.objective || DEFAULT_PROFILE_DATA.objective,
+          name: authUser?.name || "",
+          handle: `@${MY_EFFECTIVE_USERNAME}`,
+          avatar: authUser?.avatar || "",
+          banner: "",
+          bio: "",
+          objective: authUser?.objective || "",
+          objectiveDesc: "",
+          descriptor: "",
+          hashtags: [],
+          streak: 0,
+          constance: 0,
+          progressPct: 0,
+          objectifsAccomplis: 0,
+          daysOnFF: 1,
+          onboardingDone: false,
         });
         setSupaProfile({ ...seeded, postsCount: 0, followersCount: 0, followingCount: 0 });
       } else if (!found) {
         const seeded = await upsertProfile(MY_EFFECTIVE_USERNAME, {
-          ...DEFAULT_PROFILE_DATA,
-          name: authUser?.name || DEFAULT_PROFILE_DATA.name,
-          objective: authUser?.objective || DEFAULT_PROFILE_DATA.objective,
+          name: authUser?.name || "",
+          handle: `@${MY_EFFECTIVE_USERNAME}`,
+          avatar: authUser?.avatar || "",
+          banner: "",
+          bio: "",
+          objective: authUser?.objective || "",
+          objectiveDesc: "",
+          descriptor: "",
+          hashtags: [],
+          streak: 0,
+          constance: 0,
+          progressPct: 0,
+          objectifsAccomplis: 0,
+          daysOnFF: 1,
+          onboardingDone: false,
         });
-        setSupaProfile({ ...seeded, postsCount: 0, followersCount: 235, followingCount: 80 });
+        setSupaProfile({ ...seeded, postsCount: 0, followersCount: 0, followingCount: 0 });
       }
     } catch (err) {
       console.error("Erreur chargement profil:", err);

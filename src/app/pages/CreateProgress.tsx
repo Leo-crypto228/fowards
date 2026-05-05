@@ -309,7 +309,7 @@ export function CreateProgress() {
             placeholder="Sur quoi tu bosses aujourd'hui ?"
             maxLength={1000}
             rows={7}
-            style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 17, fontWeight: 400, color: "#f0f0f5", lineHeight: 1.65, letterSpacing: "0.1px", caretColor: "#6366f1" }}
+            style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 17, fontWeight: 400, color: "#f0f0f5", lineHeight: 1.65, letterSpacing: "0.1px", caretColor: "#6366f1", whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word" }}
             className="placeholder:text-[rgba(144,144,168,0.45)]"
           />
 

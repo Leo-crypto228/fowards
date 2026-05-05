@@ -210,6 +210,10 @@ const TEXTAREA_STYLE: React.CSSProperties = {
   caretColor: "#6366f1",
   lineHeight: 1.6,
   boxSizing: "border-box",
+  whiteSpace: "pre-wrap",
+  wordWrap: "break-word",
+  overflowWrap: "break-word",
+  wordBreak: "break-word",
 };
 
 const INPUT_STYLE: React.CSSProperties = {

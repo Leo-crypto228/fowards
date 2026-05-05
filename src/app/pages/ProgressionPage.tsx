@@ -810,6 +810,7 @@ export function ProgressionPage() {
                           outline: "none", resize: "none", caretColor: "#6366f1",
                           boxSizing: "border-box", fontFamily: "inherit",
                           opacity: sending ? 0.7 : 1,
+                          whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word",
                         }}
                         className="placeholder:text-[rgba(144,144,168,0.35)]"
                       />
@@ -910,7 +911,7 @@ export function ProgressionPage() {
                           style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.10)", borderRadius: 12, fontSize: 14, color: "rgba(235,235,245,0.90)", outline: "none", caretColor: "#6366f1", marginBottom: 10, boxSizing: "border-box", fontFamily: "inherit" }}
                           className="placeholder:text-[rgba(144,144,168,0.35)]" />
                         <textarea value={newGoalDesc} onChange={(e) => setNewGoalDesc(e.target.value)} placeholder="Description (optionnel)…" rows={2}
-                          style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.10)", borderRadius: 12, fontSize: 13, color: "rgba(235,235,245,0.80)", outline: "none", caretColor: "#6366f1", resize: "none", marginBottom: 12, boxSizing: "border-box", fontFamily: "inherit" }}
+                          style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.10)", borderRadius: 12, fontSize: 13, color: "rgba(235,235,245,0.80)", outline: "none", caretColor: "#6366f1", resize: "none", marginBottom: 12, boxSizing: "border-box", fontFamily: "inherit", whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word" }}
                           className="placeholder:text-[rgba(144,144,168,0.30)]" />
 
                         {/* ── Durée obligatoire ── */}

@@ -126,7 +126,7 @@ function CommentItem({ comment, isLast }: CommentItemProps) {
           </span>
         </div>
 
-        <div style={{ fontSize: 14.5, color: "rgba(235,235,245,0.82)", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
+        <div style={{ fontSize: 14.5, color: "rgba(235,235,245,0.82)", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word" }}>
           {isGifUrl(comment.content)
             ? <GifMessage url={comment.content} />
             : <span>{stripAt(comment.content)}</span>
@@ -466,7 +466,7 @@ export function CommentModal({
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                     placeholder={`Répondre à ${postAuthor}…`}
                     rows={1}
-                    style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 15, color: "rgba(235,235,245,0.90)", caretColor: "#6366f1", lineHeight: 1.5, maxHeight: 80, overflowY: "auto" }}
+                    style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 15, color: "rgba(235,235,245,0.90)", caretColor: "#6366f1", lineHeight: 1.5, maxHeight: 80, overflowY: "auto", whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word" }}
                     className="placeholder:text-[rgba(144,144,168,0.35)]"
                     onInput={(e) => {
                       const t = e.currentTarget;

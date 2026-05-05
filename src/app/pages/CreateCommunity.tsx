@@ -363,6 +363,7 @@ export function CreateCommunity() {
               outline: "none", resize: "none",
               lineHeight: 1.55, fontFamily: "inherit",
               transition: "border-color 0.2s",
+              whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word",
             }}
             className="placeholder:text-[rgba(144,144,168,0.30)]"
           />
@@ -621,6 +622,7 @@ export function CreateCommunity() {
               outline: "none", resize: "none",
               lineHeight: 1.6, fontFamily: "inherit",
               transition: "border-color 0.2s",
+              whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word",
             }}
             className="placeholder:text-[rgba(144,144,168,0.28)]"
           />
