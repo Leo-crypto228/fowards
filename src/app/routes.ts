@@ -1,29 +1,34 @@
 import { createBrowserRouter } from "react-router";
+import { lazy } from "react";
 import { Layout } from "./components/Layout";
-import { Feed } from "./pages/Feed";
-import { Profile } from "./pages/Profile";
-import { CreateProgress } from "./pages/CreateProgress";
-import { Tribes } from "./pages/Tribes";
-import { TribeDetail } from "./pages/TribeDetail";
-import { CreateCommunity } from "./pages/CreateCommunity";
-import { EditCommunity } from "./pages/EditCommunity";
-import { CreateCommunityPost } from "./pages/CreateCommunityPost";
-import { UserProfile } from "./pages/UserProfile";
-import { HashtagFeed } from "./pages/HashtagFeed";
-import { PostDetail } from "./pages/PostDetail";
-import { Search } from "./pages/Search";
-import { FcoinsPage } from "./pages/FcoinsPage";
-import { ProgressionPage } from "./pages/ProgressionPage";
-import { EditProfilePage } from "./pages/EditProfilePage";
-import { ProfileSettings } from "./pages/ProfileSettings";
+
+// Auth pages — eager (small forms, entry points for unauthenticated users)
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
-import { AdminProtected } from "./pages/AdminProtected";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { FirstPostPage } from "./pages/FirstPostPage";
-import { NotificationsPage } from "./pages/NotificationsPage";
+import { AdminProtected } from "./pages/AdminProtected";
+
+// App pages — lazy loaded (code-split per route, speeds up initial load and navigation)
+const Feed              = lazy(() => import("./pages/Feed").then(m => ({ default: m.Feed })));
+const Profile           = lazy(() => import("./pages/Profile").then(m => ({ default: m.Profile })));
+const CreateProgress    = lazy(() => import("./pages/CreateProgress").then(m => ({ default: m.CreateProgress })));
+const Tribes            = lazy(() => import("./pages/Tribes").then(m => ({ default: m.Tribes })));
+const TribeDetail       = lazy(() => import("./pages/TribeDetail").then(m => ({ default: m.TribeDetail })));
+const CreateCommunity   = lazy(() => import("./pages/CreateCommunity").then(m => ({ default: m.CreateCommunity })));
+const EditCommunity     = lazy(() => import("./pages/EditCommunity").then(m => ({ default: m.EditCommunity })));
+const CreateCommunityPost = lazy(() => import("./pages/CreateCommunityPost").then(m => ({ default: m.CreateCommunityPost })));
+const UserProfile       = lazy(() => import("./pages/UserProfile").then(m => ({ default: m.UserProfile })));
+const HashtagFeed       = lazy(() => import("./pages/HashtagFeed").then(m => ({ default: m.HashtagFeed })));
+const PostDetail        = lazy(() => import("./pages/PostDetail").then(m => ({ default: m.PostDetail })));
+const Search            = lazy(() => import("./pages/Search").then(m => ({ default: m.Search })));
+const FcoinsPage        = lazy(() => import("./pages/FcoinsPage").then(m => ({ default: m.FcoinsPage })));
+const ProgressionPage   = lazy(() => import("./pages/ProgressionPage").then(m => ({ default: m.ProgressionPage })));
+const EditProfilePage   = lazy(() => import("./pages/EditProfilePage").then(m => ({ default: m.EditProfilePage })));
+const ProfileSettings   = lazy(() => import("./pages/ProfileSettings").then(m => ({ default: m.ProfileSettings })));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage").then(m => ({ default: m.NotificationsPage })));
 
 export const router = createBrowserRouter([
   // ── Auth pages (hors Layout, hors guard) ─────────────────────────────────

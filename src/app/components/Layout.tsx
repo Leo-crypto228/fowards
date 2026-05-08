@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { Home, Users, PlusCircle, Target, Loader2, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Toaster } from "sonner";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useProgression } from "../context/ProgressionContext";
 import { useAuth } from "../context/AuthContext";
 import { useActiveCommunity } from "../context/ActiveCommunityContext";
@@ -115,7 +115,13 @@ export function Layout() {
         className="flex-1 overflow-y-auto overflow-x-hidden"
         style={{ paddingBottom: isPostDetail ? 0 : "7rem" }}
       >
-        <Outlet />
+        <Suspense fallback={
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", border: "2.5px solid rgba(99,102,241,0.18)", borderTop: "2.5px solid #6366f1", animation: "spin 0.7s linear infinite" }} />
+          </div>
+        }>
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* ── BOTTOM NAV ─────────────────────────────────────────────── */}
