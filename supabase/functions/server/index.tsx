@@ -2600,7 +2600,7 @@ function handleSupabaseOtpError(raw: string): { status: number; message: string 
 }
 
 // ── Resend via fetch REST (sans SDK, compatible Deno Edge) ────────────────────
-const FROM_ADDRESS = "FuturFeed <contact@email.futurfeed.com>";
+const FROM_ADDRESS = "FuturFeed <contact@notify.fowards.net>";
 const RESEND_API_URL = "https://api.resend.com/emails";
 
 async function sendViaResend(to: string, subject: string, html: string): Promise<void> {
@@ -5735,7 +5735,7 @@ app.post("/make-server-218684af/send-email", async (c) => {
     }
 
     const { data, error } = await resend.emails.send({
-      from: "FuturFeed <contact@email.futurfeed.com>", // Remplace par ton domaine vérifié chez Resend
+      from: "FuturFeed <contact@notify.fowards.net>", // Domaine vérifié chez Resend
       to: [to],
       subject,
       html,
