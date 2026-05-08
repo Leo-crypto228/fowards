@@ -605,7 +605,7 @@ export function ProgressionPage() {
   const longestStreak = streak?.longestStreak ?? 0;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#000", paddingBottom: 120 }}>
+    <div style={{ minHeight: "100dvh", background: "#000", paddingBottom: 120 }}>
       <div style={{ maxWidth: 540, margin: "0 auto" }}>
 
         {/* ── Header ── */}

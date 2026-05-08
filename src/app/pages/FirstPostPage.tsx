@@ -218,13 +218,13 @@ export function FirstPostPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#050508", position: "relative", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100dvh", background: "#050508", position: "relative", overflowX: "hidden" }}>
       <StarField />
 
       {/* Violet glow */}
       <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "80%", height: 320, background: "radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.14) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
 
-      <div style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "relative", zIndex: 1, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
 
         <AnimatePresence mode="wait">
 

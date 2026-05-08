@@ -342,7 +342,7 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
   return (
     <div style={{
       display: "flex", flexDirection: "column",
-      height: "calc(100vh - 280px)",
+      height: "calc(100dvh - 280px)",
       minHeight: 400,
       background: "#000",
       position: "relative",

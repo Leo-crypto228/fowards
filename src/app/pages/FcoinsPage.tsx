@@ -170,7 +170,7 @@ export function FcoinsPage() {
   const totalAll = CATEGORIES.flatMap((c) => c.coins).length;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#000000", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100dvh", background: "#000000", overflowX: "hidden" }}>
 
       {/* ── Header row: back button + title aligned ── */}
       <div

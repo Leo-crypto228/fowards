@@ -313,7 +313,7 @@ export function EditProfilePage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#000000", paddingBottom: 120 }}>
+    <div style={{ minHeight: "100dvh", background: "#000000", paddingBottom: 120 }}>
       <div style={{ maxWidth: 540, margin: "0 auto" }}>
 
         {/* ── Header ── */}

@@ -1694,7 +1694,7 @@ export function Profile() {
   const showInfo = activeTab === "evolution";
 
   return (
-    <div className="select-none" style={{ minHeight: "100vh", background: "#000000", position: "relative", paddingBottom: 120 }}>
+    <div className="select-none" style={{ minHeight: "100dvh", background: "#000000", position: "relative", paddingBottom: 120 }}>
 
       <div style={{ maxWidth: 672, marginLeft: "auto", marginRight: "auto" }}>
 

@@ -251,7 +251,7 @@ export function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a" }}>
+    <div style={{ minHeight: "100dvh", background: "#0a0a0a" }}>
       {/* Header */}
       <div style={{
         position: "sticky", top: 0, zIndex: 10,

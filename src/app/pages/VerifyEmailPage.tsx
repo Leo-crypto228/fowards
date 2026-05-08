@@ -220,7 +220,7 @@ export function VerifyEmailPage() {
 
   if (authLoading || !email) {
     return (
-      <div style={{ minHeight: "100vh", background: "#000000", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100dvh", background: "#000000", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Loader2 style={{ width: 28, height: 28, color: "#8b5cf6", animation: "spin 1s linear infinite" }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -231,7 +231,7 @@ export function VerifyEmailPage() {
 
   return (
     <div style={{
-      minHeight: "100vh",
+      minHeight: "100dvh",
       background: "#000000",
       display: "flex",
       flexDirection: "column",

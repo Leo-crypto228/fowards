@@ -66,7 +66,7 @@ export function Layout() {
   if (loading || !user || !user.onboardingDone || !user.firstPostCreated) {
     return (
       <div style={{
-        minHeight: "100vh", background: "#050510",
+        minHeight: "100dvh", background: "#050510",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         <Loader2 style={{ width: 28, height: 28, color: "#6366f1", animation: "spin 1s linear infinite" }} />

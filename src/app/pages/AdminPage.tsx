@@ -153,7 +153,7 @@ export function AdminPage() {
     : [];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#060612", color: "#e0e0ef", fontFamily: "system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100dvh", background: "#060612", color: "#e0e0ef", fontFamily: "system-ui, sans-serif" }}>
       {/* ── Header ── */}
       <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", gap: 12, maxWidth: 480, margin: "0 auto" }}>
         <motion.button

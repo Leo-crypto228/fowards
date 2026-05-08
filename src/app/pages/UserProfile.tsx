@@ -247,7 +247,7 @@ function ProfileSkeleton() {
     <div style={{ width: w, height: h, borderRadius: r, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
   );
   return (
-    <div style={{ background: "#000", minHeight: "100vh" }}>
+    <div style={{ background: "#000", minHeight: "100dvh" }}>
       <div style={{ height: 180, background: "rgba(255,255,255,0.05)" }} />
       <div style={{ padding: "0 20px", marginTop: -48 }}>
         {sh("96px", 96, 999)}
@@ -1068,7 +1068,7 @@ export function UserProfile() {
   // ── Error ──
   if (profileError || !profile) {
     return (
-      <div style={{ minHeight: "100vh", background: "#000", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", gap: 16 }}>
+      <div style={{ minHeight: "100dvh", background: "#000", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", gap: 16 }}>
         <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <UserX style={{ width: 28, height: 28, color: "rgba(255,255,255,0.25)", strokeWidth: 1.5 }} />
         </div>
@@ -1092,7 +1092,7 @@ export function UserProfile() {
   const visitorId = authUser?.username || "";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#000", paddingBottom: 120 }}>
+    <div style={{ minHeight: "100dvh", background: "#000", paddingBottom: 120 }}>
       <div style={{ maxWidth: 672, margin: "0 auto" }}>
 
         {/* ── Bannière ── */}

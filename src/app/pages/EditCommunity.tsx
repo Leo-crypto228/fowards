@@ -225,7 +225,7 @@ export function EditCommunity() {
   // ── Loading state ──
   if (fetchLoading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100dvh", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <style>{`@keyframes ec-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         <Loader2 style={{ width: 28, height: 28, color: "#6366f1", animation: "ec-spin 1s linear infinite" }} />
       </div>
@@ -234,7 +234,7 @@ export function EditCommunity() {
 
   if (fetchError) {
     return (
-      <div style={{ minHeight: "100vh", background: "#000", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+      <div style={{ minHeight: "100dvh", background: "#000", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
         <div style={{ fontSize: 15, color: "#fca5a5" }}>{fetchError}</div>
         <button onClick={() => navigate(`/tribes/${id}`)} style={{ fontSize: 14, color: "#a5b4fc", background: "none", border: "none", cursor: "pointer" }}>
           Retour
@@ -244,7 +244,7 @@ export function EditCommunity() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#000", paddingBottom: 48 }}>
+    <div style={{ minHeight: "100dvh", background: "#000", paddingBottom: 48 }}>
       <style>{`@keyframes ec-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
       {/* ── Header ── */}

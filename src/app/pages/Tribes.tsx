@@ -276,7 +276,7 @@ export function Tribes() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         padding: "16px 16px 100px",
         display: "flex",
         flexDirection: "column",

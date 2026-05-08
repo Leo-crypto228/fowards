@@ -193,7 +193,7 @@ export function Search() {
   const hasResults  = hasPosts || hasUsers || hasHashtags;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#000000", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100dvh", background: "#000000", overflowX: "hidden" }}>
 
       {/* ── Back button ── */}
       <div style={{ padding: "56px 16px 0" }}>

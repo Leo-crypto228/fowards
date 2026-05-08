@@ -140,7 +140,7 @@ export function LoginPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100dvh", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Loader2 style={{ width: 28, height: 28, color: "#8b5cf6", animation: "spin 1s linear infinite" }} />
         <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
       </div>
@@ -149,7 +149,7 @@ export function LoginPage() {
 
   return (
     <div style={{
-      minHeight: "100vh",
+      minHeight: "100dvh",
       background: "#050508",
       display: "flex",
       flexDirection: "column",

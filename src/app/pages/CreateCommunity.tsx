@@ -162,7 +162,7 @@ export function CreateCommunity() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#000", paddingBottom: 48 }}>
+    <div style={{ minHeight: "100dvh", background: "#000", paddingBottom: 48 }}>
       <style>{`@keyframes cc-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
       {/* ── Header ── */}

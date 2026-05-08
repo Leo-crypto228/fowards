@@ -984,7 +984,7 @@ export function PostDetail() {
   }, [postId]);
 
   const [commentInput, setCommentInput] = useState("");
-  const [showTools, setShowTools] = useState(false);
+  // Tools always visible in comments view (layout stable, plus de croissance au focus)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [boldMode, setBoldMode] = useState(false);
   const [selectedTag, setSelectedTag] = useState<CommentTag | null>(null);
@@ -1180,7 +1180,7 @@ export function PostDetail() {
       };
       setApiComments((prev) => [fallback, ...prev]);
     } finally { setSubmittingComment(false); }
-    setCommentInput(""); setShowTools(false); setBoldMode(false);
+    setCommentInput(""); setBoldMode(false);
     setSelectedTag(null); setReplyingTo(null); setActiveReplyTarget(null);
     setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }), 80);
   }, [commentInput, boldMode, selectedTag, replyingTo, postId, submittingComment]);
@@ -1274,7 +1274,6 @@ export function PostDetail() {
   const handleReply = (author: string) => {
     setReplyingTo(author);
     setView("comments");
-    setShowTools(true);
     setTimeout(() => inputRef.current?.focus(), 80);
   };
 
@@ -1323,7 +1322,7 @@ export function PostDetail() {
   const hasImage = !!displayPost.image;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#000000", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100dvh", background: "#000000", display: "flex", flexDirection: "column" }}>
 
       {/* ── Sticky top bar ── */}
       <div style={{ position: "sticky", top: 0, zIndex: 30, padding: "14px 16px 10px", background: "linear-gradient(to bottom, #000000 80%, transparent 100%)" }}>
@@ -1507,7 +1506,7 @@ export function PostDetail() {
               </motion.button>
 
               {/* Comments */}
-              <motion.button whileTap={{ scale: 0.90 }} onClick={() => { setView("comments"); inputRef.current?.focus(); setShowTools(true); }}
+              <motion.button whileTap={{ scale: 0.90 }} onClick={() => { setView("comments"); inputRef.current?.focus(); }}
                 style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 13px", borderRadius: 999, background: "transparent", border: "none", cursor: "pointer", color: "#ffffff" }}
               >
                 <MessageCircle style={{ width: 18, height: 18, strokeWidth: 1.8, opacity: 0.85 }} />
@@ -1668,38 +1667,32 @@ export function PostDetail() {
             initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.2 }}
             style={{ position: "sticky", bottom: 0, zIndex: 40, background: "#000000", borderTop: "0.5px solid rgba(255,255,255,0.07)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
           >
-            {/* ── Comment type pills row (visible when focused) ── */}
-            <AnimatePresence>
-              {showTools && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.18 }} style={{ overflow: "hidden" }}>
-                  <div style={{ display: "flex", gap: 8, padding: "10px 14px 0", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-                    {/* Reply indicator */}
-                    {replyingTo && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, background: "rgba(99,102,241,0.12)", border: "0.5px solid rgba(99,102,241,0.30)", flexShrink: 0 }}>
-                        <Reply style={{ width: 12, height: 12, color: "#818cf8" }} />
-                        <span style={{ fontSize: 12, color: "#a5b4fc", fontWeight: 600, whiteSpace: "nowrap" }}>{replyingTo}</span>
-                        <motion.button whileTap={{ scale: 0.85 }} onClick={() => setReplyingTo(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
-                          <X style={{ width: 11, height: 11, color: "rgba(165,180,252,0.60)" }} />
-                        </motion.button>
-                      </div>
-                    )}
-                    {COMMENT_TAGS.map((tag) => (
-                      <motion.button key={tag} whileTap={{ scale: 0.90 }}
-                        onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                        style={{
-                          padding: "6px 14px", borderRadius: 999, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
-                          background: selectedTag === tag ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.10)",
-                          border: selectedTag === tag ? "none" : "0.5px solid rgba(255,255,255,0.18)",
-                          transition: "all 0.18s",
-                        }}
-                      >
-                        <span style={{ fontSize: 13, fontWeight: 700, color: selectedTag === tag ? "#111" : "rgba(255,255,255,0.70)" }}>{tag}</span>
-                      </motion.button>
-                    ))}
-                  </div>
-                </motion.div>
+            {/* ── Comment type pills row (toujours visible en mode commentaires : layout stable, pas de croissance au focus) ── */}
+            <div style={{ display: "flex", gap: 8, padding: "10px 14px 0", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              {/* Reply indicator */}
+              {replyingTo && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, background: "rgba(99,102,241,0.12)", border: "0.5px solid rgba(99,102,241,0.30)", flexShrink: 0 }}>
+                  <Reply style={{ width: 12, height: 12, color: "#818cf8" }} />
+                  <span style={{ fontSize: 12, color: "#a5b4fc", fontWeight: 600, whiteSpace: "nowrap" }}>{replyingTo}</span>
+                  <motion.button whileTap={{ scale: 0.85 }} onClick={() => setReplyingTo(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
+                    <X style={{ width: 11, height: 11, color: "rgba(165,180,252,0.60)" }} />
+                  </motion.button>
+                </div>
               )}
-            </AnimatePresence>
+              {COMMENT_TAGS.map((tag) => (
+                <motion.button key={tag} whileTap={{ scale: 0.90 }}
+                  onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                  style={{
+                    padding: "6px 14px", borderRadius: 999, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
+                    background: selectedTag === tag ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.10)",
+                    border: selectedTag === tag ? "none" : "0.5px solid rgba(255,255,255,0.18)",
+                    transition: "all 0.18s",
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 700, color: selectedTag === tag ? "#111" : "rgba(255,255,255,0.70)" }}>{tag}</span>
+                </motion.button>
+              ))}
+            </div>
 
             {/* ── Input row ── */}
             <div style={{ padding: "10px 14px 0", display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
@@ -1770,12 +1763,12 @@ export function PostDetail() {
                   )}
                 </AnimatePresence>
 
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 10, minHeight: 46, borderRadius: 22, padding: "8px 14px", background: boldMode ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.07)", border: showTools ? (boldMode ? "0.5px solid rgba(99,102,241,0.45)" : "0.5px solid rgba(99,102,241,0.28)") : "0.5px solid rgba(255,255,255,0.11)", transition: "all 0.2s" }}>
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 10, minHeight: 46, borderRadius: 22, padding: "8px 14px", background: boldMode ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.07)", border: boldMode ? "0.5px solid rgba(99,102,241,0.45)" : "0.5px solid rgba(99,102,241,0.28)", transition: "all 0.2s" }}>
                   <HighlightInput
                     inputRef={inputRef}
                     value={commentInput}
                     onChange={(v) => { setCommentInput(v); setShowCommentAutocomplete(true); }}
-                    onFocus={() => { setShowTools(true); setShowEmojiPicker(false); }}
+                    onFocus={() => { setShowEmojiPicker(false); }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey && !hasCommentAutocomplete) {
                         e.preventDefault();
@@ -1800,39 +1793,33 @@ export function PostDetail() {
               </div>
             </div>
 
-            {/* ── Formatting toolbar (below input, violet icons + Important) ── */}
-            <AnimatePresence>
-              {showTools && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.20 }} style={{ overflow: "hidden" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px 14px" }}>
-                    {/* Emoji */}
-                    <motion.button whileTap={{ scale: 0.82 }} onClick={() => setShowEmojiPicker((v) => !v)} style={{ background: "none", border: "none", cursor: "pointer", padding: "6px", display: "flex" }}>
-                      <Smile style={{ width: 22, height: 22, color: showEmojiPicker ? "#818cf8" : "rgba(99,102,241,0.75)", strokeWidth: 1.8 }} />
-                    </motion.button>
-                    {/* GIF */}
-                    <motion.button whileTap={{ scale: 0.82 }} onClick={() => setGifOpen(true)} style={{ background: gifOpen ? "rgba(99,102,241,0.20)" : "none", border: gifOpen ? "0.5px solid rgba(99,102,241,0.40)" : "none", borderRadius: 8, cursor: "pointer", padding: "6px 8px", display: "flex", transition: "all 0.18s" }}>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: gifOpen ? "#818cf8" : "rgba(99,102,241,0.75)", fontFamily: "monospace", letterSpacing: "0.04em" }}>GIF</span>
-                    </motion.button>
-                    {/* Hashtag */}
-                    <motion.button whileTap={{ scale: 0.82 }} onClick={insertHashtag} style={{ background: "none", border: "none", cursor: "pointer", padding: "6px", display: "flex" }}>
-                      <Hash style={{ width: 22, height: 22, color: "rgba(99,102,241,0.75)", strokeWidth: 1.8 }} />
-                    </motion.button>
-                    {/* Bold */}
-                    <motion.button whileTap={{ scale: 0.82 }} onClick={() => setBoldMode((v) => !v)}
-                      style={{ background: boldMode ? "rgba(99,102,241,0.20)" : "none", border: boldMode ? "0.5px solid rgba(99,102,241,0.40)" : "none", borderRadius: 8, cursor: "pointer", padding: "6px 8px", display: "flex", transition: "all 0.18s" }}
-                    >
-                      <Bold style={{ width: 22, height: 22, color: boldMode ? "#818cf8" : "rgba(99,102,241,0.75)", strokeWidth: boldMode ? 2.5 : 1.8 }} />
-                    </motion.button>
-                    {/* Important / Bookmark */}
-                    <motion.button whileTap={{ scale: 0.82 }} onClick={toggleSave}
-                      style={{ background: isSaved ? "rgba(99,102,241,0.20)" : "none", border: isSaved ? "0.5px solid rgba(99,102,241,0.40)" : "none", borderRadius: 8, cursor: "pointer", padding: "6px 8px", display: "flex", transition: "all 0.18s", marginLeft: "auto" }}
-                    >
-                      <Bookmark style={{ width: 22, height: 22, color: isSaved ? "#818cf8" : "rgba(99,102,241,0.75)", fill: isSaved ? "#818cf8" : "none", strokeWidth: isSaved ? 2 : 1.8 }} />
-                    </motion.button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* ── Formatting toolbar (toujours visible en mode commentaires : layout stable) ── */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px 14px" }}>
+              {/* Emoji */}
+              <motion.button whileTap={{ scale: 0.82 }} onClick={() => setShowEmojiPicker((v) => !v)} style={{ background: "none", border: "none", cursor: "pointer", padding: "6px", display: "flex" }}>
+                <Smile style={{ width: 22, height: 22, color: showEmojiPicker ? "#818cf8" : "rgba(99,102,241,0.75)", strokeWidth: 1.8 }} />
+              </motion.button>
+              {/* GIF */}
+              <motion.button whileTap={{ scale: 0.82 }} onClick={() => setGifOpen(true)} style={{ background: gifOpen ? "rgba(99,102,241,0.20)" : "none", border: gifOpen ? "0.5px solid rgba(99,102,241,0.40)" : "none", borderRadius: 8, cursor: "pointer", padding: "6px 8px", display: "flex", transition: "all 0.18s" }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: gifOpen ? "#818cf8" : "rgba(99,102,241,0.75)", fontFamily: "monospace", letterSpacing: "0.04em" }}>GIF</span>
+              </motion.button>
+              {/* Hashtag */}
+              <motion.button whileTap={{ scale: 0.82 }} onClick={insertHashtag} style={{ background: "none", border: "none", cursor: "pointer", padding: "6px", display: "flex" }}>
+                <Hash style={{ width: 22, height: 22, color: "rgba(99,102,241,0.75)", strokeWidth: 1.8 }} />
+              </motion.button>
+              {/* Bold */}
+              <motion.button whileTap={{ scale: 0.82 }} onClick={() => setBoldMode((v) => !v)}
+                style={{ background: boldMode ? "rgba(99,102,241,0.20)" : "none", border: boldMode ? "0.5px solid rgba(99,102,241,0.40)" : "none", borderRadius: 8, cursor: "pointer", padding: "6px 8px", display: "flex", transition: "all 0.18s" }}
+              >
+                <Bold style={{ width: 22, height: 22, color: boldMode ? "#818cf8" : "rgba(99,102,241,0.75)", strokeWidth: boldMode ? 2.5 : 1.8 }} />
+              </motion.button>
+              {/* Important / Bookmark */}
+              <motion.button whileTap={{ scale: 0.82 }} onClick={toggleSave}
+                style={{ background: isSaved ? "rgba(99,102,241,0.20)" : "none", border: isSaved ? "0.5px solid rgba(99,102,241,0.40)" : "none", borderRadius: 8, cursor: "pointer", padding: "6px 8px", display: "flex", transition: "all 0.18s", marginLeft: "auto" }}
+              >
+                <Bookmark style={{ width: 22, height: 22, color: isSaved ? "#818cf8" : "rgba(99,102,241,0.75)", fill: isSaved ? "#818cf8" : "none", strokeWidth: isSaved ? 2 : 1.8 }} />
+              </motion.button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1841,11 +1828,6 @@ export function PostDetail() {
       <AnimatePresence>
         {showPertinentList && <PertinentModal count={relevantCount} onClose={() => setShowPertinentList(false)} />}
       </AnimatePresence>
-
-      {/* Tap outside to dismiss tools */}
-      {showTools && !commentInput && !showEmojiPicker && (
-        <div className="fixed inset-0 z-10" onClick={() => { setShowTools(false); setReplyingTo(null); }} />
-      )}
 
       {/* GIF Picker */}
       <GifPicker isOpen={gifOpen} onClose={() => setGifOpen(false)} onSelect={handleGifComment} anchor="bottom" />
