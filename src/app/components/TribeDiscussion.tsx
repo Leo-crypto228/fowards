@@ -182,7 +182,7 @@ function MessageThread({ msg, all, depth, replyingToId, onSelect, animDelay = 0 
           </div>
 
           {msg.text && (
-            <p style={{ fontSize, color: isSelected ? "rgba(255,255,255,0.78)" : "rgba(255,255,255,0.58)", lineHeight: 1.55, margin: 0, transition: "color 0.18s ease" }}>
+            <p style={{ fontSize, color: isSelected ? "rgba(255,255,255,0.78)" : "rgba(255,255,255,0.58)", lineHeight: 1.55, margin: 0, transition: "color 0.18s ease", whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere" }}>
               {msg.text}
             </p>
           )}
@@ -271,7 +271,7 @@ export function TribeDiscussion({ isStatic = true, channelKey }: { isStatic?: bo
   const [replyingTo, setReplyingTo]   = useState<Msg | null>(null);
   const [inputText, setInputText]     = useState("");
   const [sending, setSending]         = useState(false);
-  const inputRef                      = useRef<HTMLInputElement>(null);
+  const inputRef                      = useRef<HTMLTextAreaElement>(null);
   const listRef                       = useRef<HTMLDivElement>(null);
 
   // ── Chargement messages depuis Supabase ───────────────────────────────────
@@ -419,7 +419,7 @@ export function TribeDiscussion({ isStatic = true, channelKey }: { isStatic?: bo
                 </div>
               </div>
               {share.message && (
-                <p style={{ fontSize: 14, color: "rgba(240,240,245,0.82)", lineHeight: 1.55, padding: "0 14px 10px", margin: 0 }}>
+                <p style={{ fontSize: 14, color: "rgba(240,240,245,0.82)", lineHeight: 1.55, padding: "0 14px 10px", margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere" }}>
                   {share.message}
                 </p>
               )}
@@ -534,8 +534,8 @@ export function TribeDiscussion({ isStatic = true, channelKey }: { isStatic?: bo
         <form onSubmit={handleSend}>
           <motion.div
             style={{
-              display: "flex", alignItems: "center", gap: 12, height: 50,
-              borderRadius: 999, padding: "0 18px",
+              display: "flex", alignItems: "flex-end", gap: 12, minHeight: 50,
+              borderRadius: 24, padding: "9px 18px",
               background: "rgba(255,255,255,0.07)",
               backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
               border: replyingTo ? "0.5px solid rgba(99,102,241,0.30)" : "0.5px solid rgba(255,255,255,0.12)",
@@ -543,14 +543,31 @@ export function TribeDiscussion({ isStatic = true, channelKey }: { isStatic?: bo
               transition: "border-color 0.2s ease",
             }}
           >
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={replyingTo ? `Répondre à ${stripAt(replyingTo.handle)}…` : "Nouveau message…"}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend(e as unknown as React.FormEvent);
+                }
+              }}
+              onInput={(e) => {
+                const t = e.currentTarget;
+                t.style.height = "auto";
+                t.style.height = Math.min(t.scrollHeight, 120) + "px";
+              }}
+              placeholder={replyingTo ? `Répondre à ${stripAt(replyingTo.handle)}…` : "Nouveau message… (Maj+Entrée pour saut de ligne)"}
               disabled={sending}
-              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: "#f0f0f5", caretColor: "#6366f1" }}
+              rows={1}
+              style={{
+                flex: 1, background: "transparent", border: "none", outline: "none",
+                fontSize: 14, color: "#f0f0f5", caretColor: "#6366f1",
+                resize: "none", lineHeight: 1.5, maxHeight: 120, minHeight: 22,
+                whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere",
+                fontFamily: "inherit", paddingTop: 4, paddingBottom: 4,
+              }}
               className="placeholder:text-[rgba(144,144,168,0.38)]"
             />
             <motion.button

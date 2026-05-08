@@ -200,7 +200,7 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
   const [gifOpen, setGifOpen]     = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef  = useRef<HTMLInputElement>(null);
+  const inputRef  = useRef<HTMLTextAreaElement>(null);
   const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Use channel-scoped key for messages ───────────────────────────────────
@@ -299,7 +299,7 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend(e as unknown as React.FormEvent);
@@ -439,7 +439,7 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
         <form
           onSubmit={handleSend}
           style={{
-            display: "flex", alignItems: "center", gap: 10,
+            display: "flex", alignItems: "flex-end", gap: 10,
             background: "rgba(255,255,255,0.05)",
             border: "0.5px solid rgba(255,255,255,0.10)",
             borderRadius: 24,
@@ -449,19 +449,31 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
           onFocus={() => {}}
         >
           {/* Current user avatar */}
-          <Avatar src={userAvatar || undefined} name={userName} size={28} />
+          <div style={{ paddingBottom: 0, alignSelf: "flex-end" }}>
+            <Avatar src={userAvatar || undefined} name={userName} size={28} />
+          </div>
 
-          <input
+          <textarea
             ref={inputRef}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Message dans ${channelEmoji && channelEmoji !== "#" ? channelEmoji : "#"}${channelName}…`}
+            onInput={(e) => {
+              const t = e.currentTarget;
+              t.style.height = "auto";
+              t.style.height = Math.min(t.scrollHeight, 120) + "px";
+            }}
+            placeholder={`Message dans ${channelEmoji && channelEmoji !== "#" ? channelEmoji : "#"}${channelName}… (Maj+Entrée pour saut de ligne)`}
             disabled={!userId}
+            rows={1}
             style={{
               flex: 1, background: "none", border: "none", outline: "none",
               fontSize: 14, color: "rgba(255,255,255,0.85)",
               caretColor: "#6366f1",
+              resize: "none", lineHeight: 1.5, maxHeight: 120, minHeight: 22,
+              whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere",
+              fontFamily: "inherit", paddingTop: 4, paddingBottom: 4,
+              alignSelf: "stretch",
             }}
           />
 

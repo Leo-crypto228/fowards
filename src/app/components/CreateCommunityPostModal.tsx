@@ -415,6 +415,7 @@ export function CreateCommunityPostModal({
                   padding: "12px 14px", fontSize: 15,
                   color: "rgba(255,255,255,0.88)", lineHeight: 1.6,
                   resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit",
+                  whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere",
                 }}
                 onFocus={e => { e.target.style.borderColor = "rgba(99,102,241,0.40)"; }}
                 onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.10)"; }}

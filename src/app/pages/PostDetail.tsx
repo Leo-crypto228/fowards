@@ -206,7 +206,7 @@ function ApiCommentRow({
             <TagPill tag={comment.commentType as CommentTag} small />
           </div>
         )}
-        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.55, margin: "0 0 11px" }}>
+        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.55, margin: "0 0 11px", whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere" }}>
           {isGifUrl(comment.content)
             ? <GifMessage url={comment.content} />
             : renderPostText(comment.content, navigate)
@@ -274,7 +274,7 @@ function ApiCommentRow({
                       <span style={{ fontSize: "0.68em", color: "rgba(255,255,255,0.28)" }}>{reply.author.toLowerCase().replace(/\s+/g, "_")}</span>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)" }}>• {reply.timestamp ?? "À l'instant"}</span>
                     </div>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.68)", lineHeight: 1.5, margin: 0 }}>{reply.content}</p>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.68)", lineHeight: 1.5, margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere" }}>{reply.content}</p>
                   </div>
                 </motion.div>
               ))}
@@ -791,13 +791,24 @@ function SharePanel({
       <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.09em", textTransform: "uppercase", marginBottom: 14 }}>Partager dans :</p>
 
       {/* Message input — en haut pour visibilité */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, borderRadius: 999, padding: "0 16px", height: 46, background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.13)" }}>
-        <input
-          type="text"
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 14, borderRadius: 22, padding: "11px 16px", minHeight: 46, background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.13)" }}>
+        <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Ajouter un message..."
-          style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: "#f0f0f5", caretColor: "#6366f1" }}
+          onInput={(e) => {
+            const t = e.currentTarget;
+            t.style.height = "auto";
+            t.style.height = Math.min(t.scrollHeight, 120) + "px";
+          }}
+          placeholder="Ajouter un message... (Maj+Entrée pour saut de ligne)"
+          rows={1}
+          style={{
+            flex: 1, background: "transparent", border: "none", outline: "none",
+            fontSize: 14, color: "#f0f0f5", caretColor: "#6366f1",
+            resize: "none", lineHeight: 1.5, maxHeight: 120, minHeight: 22,
+            whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere",
+            fontFamily: "inherit",
+          }}
           className="placeholder:text-[rgba(144,144,168,0.35)]"
         />
       </div>
@@ -1029,7 +1040,7 @@ export function PostDetail() {
     } catch { setMenuAction("notrelevant", "error", "Erreur réseau"); }
   };
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const sectionsRef = useRef<HTMLDivElement>(null);
 
@@ -1565,11 +1576,26 @@ export function PostDetail() {
                           <span style={{ fontSize: 13, color: "#c7d2fe", fontWeight: 600, whiteSpace: "nowrap" }}>
                             → <span style={{ color: "#a5b4fc" }}>{activeReplyTarget.authorName.toLowerCase().replace(/\s+/g, "_")}</span>
                           </span>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, background: "rgba(255,255,255,0.07)", borderRadius: 999, padding: "6px 12px", border: "0.5px solid rgba(99,102,241,0.28)" }}>
-                            <input autoFocus value={replyInput} onChange={(e) => setReplyInput(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === "Enter") handleSendReply(); if (e.key === "Escape") setActiveReplyTarget(null); }}
-                              placeholder="Votre réponse..."
-                              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 13, color: "#f0f0f5", caretColor: "#6366f1" }}
+                          <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flex: 1, background: "rgba(255,255,255,0.07)", borderRadius: 18, padding: "6px 12px", border: "0.5px solid rgba(99,102,241,0.28)" }}>
+                            <textarea autoFocus value={replyInput} onChange={(e) => setReplyInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendReply(); }
+                                if (e.key === "Escape") setActiveReplyTarget(null);
+                              }}
+                              onInput={(e) => {
+                                const t = e.currentTarget;
+                                t.style.height = "auto";
+                                t.style.height = Math.min(t.scrollHeight, 100) + "px";
+                              }}
+                              placeholder="Votre réponse... (Maj+Entrée pour saut de ligne)"
+                              rows={1}
+                              style={{
+                                flex: 1, background: "transparent", border: "none", outline: "none",
+                                fontSize: 13, color: "#f0f0f5", caretColor: "#6366f1",
+                                resize: "none", lineHeight: 1.5, maxHeight: 100, minHeight: 20,
+                                whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere",
+                                fontFamily: "inherit", paddingTop: 2, paddingBottom: 2,
+                              }}
                               className="placeholder:text-[rgba(144,144,168,0.35)]"
                             />
                             {submittingReply ? (
@@ -1744,18 +1770,26 @@ export function PostDetail() {
                   )}
                 </AnimatePresence>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 46, borderRadius: 999, padding: "0 14px", background: boldMode ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.07)", border: showTools ? (boldMode ? "0.5px solid rgba(99,102,241,0.45)" : "0.5px solid rgba(99,102,241,0.28)") : "0.5px solid rgba(255,255,255,0.11)", transition: "all 0.2s" }}>
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 10, minHeight: 46, borderRadius: 22, padding: "8px 14px", background: boldMode ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.07)", border: showTools ? (boldMode ? "0.5px solid rgba(99,102,241,0.45)" : "0.5px solid rgba(99,102,241,0.28)") : "0.5px solid rgba(255,255,255,0.11)", transition: "all 0.2s" }}>
                   <HighlightInput
                     inputRef={inputRef}
                     value={commentInput}
                     onChange={(v) => { setCommentInput(v); setShowCommentAutocomplete(true); }}
                     onFocus={() => { setShowTools(true); setShowEmojiPicker(false); }}
-                    onKeyDown={(e) => { if (e.key === "Enter" && !hasCommentAutocomplete) handleSendComment(); }}
-                    placeholder={replyingTo ? `Répondre à @${replyingTo}…` : "Écrire un commentaire…"}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey && !hasCommentAutocomplete) {
+                        e.preventDefault();
+                        handleSendComment();
+                      }
+                    }}
+                    placeholder={replyingTo ? `Répondre à @${replyingTo}…` : "Écrire un commentaire… (Maj+Entrée pour saut de ligne)"}
                     fontWeight={boldMode ? 700 : 400}
                     placeholderClassName="placeholder:text-[rgba(144,144,168,0.35)]"
+                    multiline
+                    maxHeight={140}
+                    minHeight={22}
                   />
-                  <motion.button whileTap={commentInput.trim() && !submittingComment ? { scale: 0.82 } : {}} onClick={handleSendComment} disabled={!commentInput.trim() || submittingComment} style={{ background: "none", border: "none", cursor: commentInput.trim() && !submittingComment ? "pointer" : "default", padding: 0, display: "flex", flexShrink: 0 }}>
+                  <motion.button whileTap={commentInput.trim() && !submittingComment ? { scale: 0.82 } : {}} onClick={handleSendComment} disabled={!commentInput.trim() || submittingComment} style={{ background: "none", border: "none", cursor: commentInput.trim() && !submittingComment ? "pointer" : "default", padding: 0, display: "flex", flexShrink: 0, alignSelf: "flex-end", paddingBottom: 6 }}>
                     {submittingComment ? (
                       <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}><Loader2 style={{ width: 17, height: 17, color: "#818cf8" }} /></motion.div>
                     ) : (

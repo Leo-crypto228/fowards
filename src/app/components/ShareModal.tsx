@@ -340,6 +340,8 @@ export function ShareModal({
                     outline: "none", resize: "none",
                     fontSize: 15, color: "rgba(235,235,245,0.88)",
                     caretColor: "#6366f1", lineHeight: 1.55,
+                    whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere",
+                    fontFamily: "inherit",
                   }}
                   className="placeholder:text-[rgba(144,144,168,0.35)]"
                 />
