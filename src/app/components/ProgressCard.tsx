@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import {
   Share2, MoreHorizontal,
-  MessageCircle, Check, AlertTriangle, Loader2, TrendingDown, ThumbsDown, Trash2,
+  MessageCircle, Check, AlertTriangle, TrendingDown, ThumbsDown, Trash2,
 } from "lucide-react";
 import { getPostReactions, addPostReaction, type PostReactionType } from "../api/sharesApi";
 import { useFollow } from "../context/FollowContext";
@@ -561,7 +561,7 @@ export function ProgressCard({
   }, [postId, reactionPending, activeReaction]);
 
   const handlePertinentClick = useCallback(() => {
-    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(8);
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(14);
     setSparkleKey((k) => k + 1);
     if (postId) {
       persistReaction("Pertinent");
@@ -581,7 +581,7 @@ export function ProgressCard({
     if (showPostMenu) { setShowPostMenu(false); return; }
     if (disableDetailNav) return;
     const id = postId ?? `${user?.name || "post"}-${progress.timestamp}`.replace(/\s+/g, "-");
-    const postData = { user, progress, image, verified, relevantCount: count, commentsCount, sharesCount, viewsCount: liveViewsCount, isNew, hashtags };
+    const postData = { user, progress, image, images: imagesProp, verified, relevantCount: count, commentsCount, sharesCount, viewsCount: liveViewsCount, isNew, hashtags };
     try { sessionStorage.setItem("ff_last_post", JSON.stringify(postData)); } catch {}
     navigate(`/post/${encodeURIComponent(id)}`, { state: { post: postData } });
   };
@@ -589,7 +589,7 @@ export function ProgressCard({
   // ── Navigate to PostDetail with section scroll + optional prefill ─────────
   const navigateToPost = useCallback((scrollTo?: "comments" | "share" | "stats", prefillText?: string) => {
     const id = postId ?? `${user?.name || "post"}-${progress.timestamp}`.replace(/\s+/g, "-");
-    const postData = { user, progress, image, verified, relevantCount: count, commentsCount, sharesCount, viewsCount: liveViewsCount, isNew, hashtags };
+    const postData = { user, progress, image, images: imagesProp, verified, relevantCount: count, commentsCount, sharesCount, viewsCount: liveViewsCount, isNew, hashtags };
     try { sessionStorage.setItem("ff_last_post", JSON.stringify(postData)); } catch {}
     navigate(`/post/${encodeURIComponent(id)}`, { state: { post: postData, scrollTo, prefillText } });
   }, [postId, user, progress, image, verified, count, commentsCount, sharesCount, liveViewsCount, isNew, hashtags, navigate]);
@@ -608,9 +608,9 @@ export function ProgressCard({
   })();
 
   const ICON_SM      = 18;
-  const ICON_SPARKLE = isActive ? 26 : 20;
+  const ICON_SPARKLE = 22;
   const PAD_SM       = "7px 13px";
-  const PAD_SPARKLE  = isActive ? "9px 16px" : "7px 13px";
+  const PAD_SPARKLE  = "7px 13px";
 
   // ── Action row ─────────────────────────────────────────────────────────────
   const renderActions = () => (
@@ -623,12 +623,11 @@ export function ProgressCard({
         onClick={handlePertinentClick}
         whileTap={{ scale: 1.06 }}
         transition={{ type: "spring", stiffness: 600, damping: 18 }}
-        disabled={reactionPending}
         style={{
           display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
           padding: PAD_SPARKLE, borderRadius: 999,
           background: "transparent", border: "none",
-          cursor: reactionPending ? "default" : "pointer",
+          cursor: "pointer",
           userSelect: "none",
           WebkitTapHighlightColor: "transparent",
           touchAction: "manipulation",
@@ -636,19 +635,15 @@ export function ProgressCard({
           transition: "padding 0.18s ease",
         }}
       >
-        {reactionPending ? (
-          <Loader2 style={{ width: ICON_SPARKLE, height: ICON_SPARKLE, color: "rgba(255,255,255,0.50)" }} className="animate-spin" />
-        ) : (
-          <motion.div
-            key={sparkleKey}
-            initial={{ scale: 1 }}
-            animate={sparkleKey > 0 ? { scale: [1, 2, 1] } : { scale: 1 }}
-            transition={{ duration: 1.25, times: [0, 0.22, 1], ease: ["easeOut", "easeIn"] }}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", willChange: "transform" }}
-          >
-            <SparkleIcon active={isActive} size={ICON_SPARKLE} />
-          </motion.div>
-        )}
+        <motion.div
+          key={sparkleKey}
+          initial={{ scale: 1 }}
+          animate={sparkleKey > 0 ? { scale: [1, 1.5, 1] } : { scale: 1 }}
+          transition={{ duration: 0.45, times: [0, 0.28, 1], ease: ["easeOut", "easeIn"] }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", willChange: "transform" }}
+        >
+          <SparkleIcon active={isActive} size={ICON_SPARKLE} />
+        </motion.div>
         {count > 0 && (
           <span style={{
             fontSize: isActive ? 14 : 13,

@@ -212,6 +212,9 @@ export function CreateProgress() {
           image:    uploadedUrls[0] ?? selectedGif ?? undefined,
         });
 
+        // Signale au feed que le post est prêt (toutes les images uploadées)
+        window.dispatchEvent(new CustomEvent("fowards:post-created"));
+
         // Lien réponse si post quoté
         if (quotedPost?.postId) {
           linkPostReply(quotedPost.postId, result.post.id).catch((e) => console.error("Erreur liaison post-réponse:", e));

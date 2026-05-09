@@ -398,6 +398,13 @@ export function Feed() {
     fetchApiPosts(!!location.state?.refreshPosts);
   }, [fetchApiPosts, location.state?.refreshPosts]);
 
+  // Rafraîchit le feed quand le post est entièrement créé (toutes les images uploadées)
+  useEffect(() => {
+    const handler = () => fetchApiPosts(true);
+    window.addEventListener("fowards:post-created", handler);
+    return () => window.removeEventListener("fowards:post-created", handler);
+  }, [fetchApiPosts]);
+
   // ── Feed Abonnements depuis Supabase ─────────────────────────────────────
   const [followingPosts, setFollowingPosts] = useState<FeedPost[]>([]);
   const [followingProfiles, setFollowingProfiles] = useState<{
