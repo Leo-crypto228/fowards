@@ -16,7 +16,6 @@ import { useAuth } from "../context/AuthContext";
 import { GLOBAL_PROFILES_MAP } from "../data/profiles";
 import { useNotifications } from "../context/NotificationContext";
 import { getWaysFeed, type WaysFeedEntry } from "../api/waysApi";
-import { Plus } from "lucide-react";
 
 const USER_AVATAR =
   "https://images.unsplash.com/photo-1584940121730-93ffb8aa88b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200";
@@ -730,13 +729,13 @@ export function Feed() {
             </AnimatePresence>
           </div>
 
-          {/* Row 3: Tabs + create buttons */}
-          <div style={{ display: "flex", alignItems: "center" }}>
+          {/* Row 3: Tabs */}
+          <div className="flex">
             {TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className="relative py-3 transition-colors"
+                className="relative flex-1 py-3 transition-colors"
                 style={{
                   color: activeTab === tab ? "var(--foreground)" : "var(--muted-foreground)",
                   fontWeight: activeTab === tab ? 600 : 400,
@@ -744,54 +743,19 @@ export function Feed() {
                   background: "transparent",
                   border: "none",
                   cursor: "pointer",
-                  flex: "0 0 auto",
-                  paddingLeft: 0,
-                  paddingRight: 20,
                 }}
               >
                 {tab}
                 {activeTab === tab && (
                   <motion.div
-                    className="absolute bottom-0 left-0 rounded-full"
-                    style={{ height: 2, background: "#6366f1", right: 20 }}
+                    className="absolute bottom-0 left-0 right-0 rounded-full"
+                    style={{ height: 2, background: "#6366f1" }}
                     layoutId="feedTabIndicator"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
               </button>
             ))}
-            {/* Create buttons — right side, styled like the tabs */}
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, paddingBottom: 0 }}>
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                onClick={() => navigate("/ways/create")}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 999,
-                  background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
-                  border: "none", cursor: "pointer",
-                  fontSize: 12, fontWeight: 700, color: "#fff",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                + Ways
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                onClick={() => navigate("/create")}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 999,
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  cursor: "pointer",
-                  fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.65)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                + Partage
-              </motion.button>
-            </div>
           </div>
         </div>
       </motion.div>

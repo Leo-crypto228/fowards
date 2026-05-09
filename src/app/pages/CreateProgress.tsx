@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Check, ArrowLeft, AlertCircle, X, ImagePlus, ChevronDown, Globe, Users, Info } from "lucide-react";
+import { Check, ArrowLeft, AlertCircle, X, ImagePlus, ChevronDown, Globe, Users, Info, Send } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { createPost, extractHashtags, LABEL_TO_TYPE, PostType } from "../api/postsApi";
+import { createWays } from "../api/waysApi";
 import { compressImage } from "../utils/compressImage";
 import { linkPostReply } from "../api/sharesApi";
 import { postCheckin } from "../api/progressionApi";
@@ -106,6 +107,53 @@ export function CreateProgress() {
   const navigate   = useNavigate();
   const location   = useLocation();
   const quotedPost = location.state?.quotedPost ?? null;
+
+  // ── Mode : Partage (post classique) ou Ways (story 24h) ───────────────────
+  const [mode, setMode] = useState<"partage" | "ways">("partage");
+
+  // ── Ways state ────────────────────────────────────────────────────────────
+  const [waysText, setWaysText]           = useState("");
+  const [waysImageFile, setWaysImageFile] = useState<File | null>(null);
+  const [waysImagePreview, setWaysImagePreview] = useState<string | null>(null);
+  const [waysSubmitting, setWaysSubmitting] = useState(false);
+  const waysFileInputRef = useRef<HTMLInputElement>(null);
+  const WAYS_MAX = 300;
+
+  const handleWaysImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { toast.error(err); return; }
+    const compressed = await compressImage(file, { maxWidth: 1080, quality: 0.82 });
+    setWaysImageFile(compressed);
+    setWaysImagePreview(URL.createObjectURL(compressed));
+    e.target.value = "";
+  };
+
+  const handleWaysSubmit = async () => {
+    if ((!waysText.trim() && !waysImageFile) || waysSubmitting) return;
+    const username = MY_USER_ID;
+    if (!username) { toast.error("Connecte-toi pour créer un Ways."); return; }
+    setWaysSubmitting(true);
+    try {
+      let imageUrl: string | undefined;
+      if (waysImageFile) {
+        const form = new FormData();
+        form.append("file", waysImageFile, waysImageFile.name);
+        const upRes = await fetch(`${BASE}/upload-image`, { method: "POST", headers: { Authorization: `Bearer ${publicAnonKey}` }, body: form });
+        const upData = await upRes.json();
+        if (!upRes.ok) throw new Error(upData.error || "Erreur upload image");
+        imageUrl = upData.url;
+      }
+      await createWays({ username, text: waysText.trim() || undefined, image: imageUrl });
+      toast.success("Ton Ways est en ligne !");
+      navigate("/", { replace: true });
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setWaysSubmitting(false);
+    }
+  };
 
   const [selectedType, setSelectedType] = useState<string>("");
   const [isAnonymous, setIsAnonymous]   = useState(false);
@@ -256,9 +304,128 @@ export function CreateProgress() {
           </div>
         )}
 
-        {/* ── Type de post ── */}
+        {/* ── Sélecteur de mode : Partage | Ways ── */}
         <motion.div
           className={quotedPost ? "mt-6" : "mt-14"}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.04, duration: 0.3 }}
+          style={{ marginBottom: 24 }}
+        >
+          <div style={{ display: "inline-flex", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", padding: 4, gap: 4 }}>
+            {(["partage", "ways"] as const).map((m) => (
+              <motion.button
+                key={m}
+                type="button"
+                whileTap={{ scale: 0.94 }}
+                onClick={() => setMode(m)}
+                style={{
+                  padding: "7px 20px", borderRadius: 999, border: "none", cursor: "pointer",
+                  fontSize: 14, fontWeight: 700, letterSpacing: "-0.01em",
+                  background: mode === m
+                    ? m === "ways"
+                      ? "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)"
+                      : "rgba(255,255,255,0.13)"
+                    : "transparent",
+                  color: mode === m ? "#fff" : "rgba(255,255,255,0.38)",
+                  transition: "background 0.2s, color 0.2s",
+                  boxShadow: mode === m && m === "ways" ? "0 2px 12px rgba(124,58,237,0.35)" : "none",
+                }}
+              >
+                {m === "partage" ? "Partage" : "Ways"}
+              </motion.button>
+            ))}
+          </div>
+          {mode === "ways" && (
+            <p style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.30)" }}>
+              Visible 24h · commentaires privés
+            </p>
+          )}
+        </motion.div>
+
+        {/* ── Mode Ways : interface de création ── */}
+        <AnimatePresence mode="wait">
+        {mode === "ways" && (
+          <motion.div
+            key="ways-editor"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            {/* Textarea */}
+            <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.09)", padding: "14px 16px", position: "relative", marginBottom: 16 }}>
+              <textarea
+                value={waysText}
+                onChange={(e) => setWaysText(e.target.value.slice(0, WAYS_MAX))}
+                placeholder="Partage quelque chose avec tes abonnés..."
+                rows={6}
+                style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 16, color: "rgba(240,240,245,0.90)", lineHeight: 1.6, fontFamily: "inherit" }}
+              />
+              <span style={{ position: "absolute", bottom: 10, right: 14, fontSize: 12, fontWeight: 600, color: WAYS_MAX - waysText.length < 30 ? "#f87171" : "rgba(255,255,255,0.22)" }}>
+                {WAYS_MAX - waysText.length}
+              </span>
+            </div>
+
+            {/* Image preview */}
+            <AnimatePresence>
+              {waysImagePreview && (
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                  style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 16 }}>
+                  <img src={waysImagePreview} alt="" style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block", borderRadius: 16 }} />
+                  <motion.button whileTap={{ scale: 0.88 }} onClick={() => { setWaysImageFile(null); setWaysImagePreview(null); }}
+                    style={{ position: "absolute", top: 10, right: 10, width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.65)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <X style={{ width: 13, height: 13, color: "#fff" }} />
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Image picker + submit */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {!waysImagePreview && (
+                <motion.button whileTap={{ scale: 0.94 }} type="button" onClick={() => waysFileInputRef.current?.click()}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 16px", borderRadius: 14, background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.14)", cursor: "pointer", flex: 1 }}>
+                  <ImagePlus style={{ width: 18, height: 18, color: "rgba(255,255,255,0.38)" }} />
+                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.38)" }}>Ajouter une image</span>
+                </motion.button>
+              )}
+              <input ref={waysFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={handleWaysImagePick} />
+
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                type="button"
+                onClick={handleWaysSubmit}
+                disabled={(!waysText.trim() && !waysImageFile) || waysSubmitting}
+                style={{
+                  display: "flex", alignItems: "center", gap: 7,
+                  padding: "11px 22px", borderRadius: 999,
+                  background: (waysText.trim() || waysImageFile) && !waysSubmitting
+                    ? "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)"
+                    : "rgba(255,255,255,0.08)",
+                  border: "none", cursor: (waysText.trim() || waysImageFile) ? "pointer" : "not-allowed",
+                  opacity: (waysText.trim() || waysImageFile) ? 1 : 0.45, flexShrink: 0,
+                }}
+              >
+                {waysSubmitting ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.30)", borderTopColor: "#fff", borderRadius: "50%" }} />
+                ) : (
+                  <>
+                    <Send style={{ width: 14, height: 14, color: "#fff" }} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Publier</span>
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+        </AnimatePresence>
+
+        {/* ── Type de post ── */}
+        <motion.div
+          className={quotedPost ? "mt-6" : "mt-0"}
+          style={{ display: mode === "partage" ? undefined : "none" }}
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.4 }}
