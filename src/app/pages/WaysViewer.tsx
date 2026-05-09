@@ -39,7 +39,7 @@ export function WaysViewer() {
   const [imgFailed, setImgFailed] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const currentUserId = MY_USER_ID();
+  const currentUserId = MY_USER_ID;
   const isAuthor = ways?.author.username === currentUserId;
 
   useEffect(() => {

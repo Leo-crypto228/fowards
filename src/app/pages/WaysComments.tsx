@@ -192,7 +192,7 @@ export function WaysComments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const currentUserId = MY_USER_ID();
+  const currentUserId = MY_USER_ID;
 
   useEffect(() => {
     if (!id || !currentUserId) return;

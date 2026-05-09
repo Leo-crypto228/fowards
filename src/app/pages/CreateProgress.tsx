@@ -492,8 +492,8 @@ export function CreateProgress() {
           </motion.div>
         )}
 
-        {/* ── Zone de texte ── */}
-        <motion.div className="mt-8" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.4 }}>
+        {/* ── Zone de texte (Partage only) ── */}
+        <motion.div className="mt-8" style={{ display: mode === "partage" ? undefined : "none" }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.4 }}>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -619,8 +619,8 @@ export function CreateProgress() {
           </div>
         </motion.div>
 
-        {/* ── Erreur ── */}
-        <AnimatePresence>
+        {/* ── Erreur (Partage only) ── */}
+        {mode === "partage" && <AnimatePresence>
           {error && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
               style={{ marginTop: 16, padding: "12px 16px", borderRadius: 14, background: "rgba(239,68,68,0.10)", border: "0.5px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", gap: 10 }}>
@@ -628,10 +628,11 @@ export function CreateProgress() {
               <span style={{ fontSize: 13, color: "rgba(239,68,68,0.90)" }}>{error}</span>
             </motion.div>
           )}
-        </AnimatePresence>
+        </AnimatePresence>}
 
-        {/* ── Bouton Publier — inline, au-dessus de la zone de nav ── */}
+        {/* ── Bouton Publier Partage — masqué en mode Ways ── */}
         <motion.div
+          style={{ display: mode === "partage" ? undefined : "none" }}
           className="mt-8 mb-4"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
