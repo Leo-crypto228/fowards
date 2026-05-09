@@ -23,16 +23,31 @@ type Screen = "landing" | "signup" | "login" | "verify";
 // ── Star mascot SVG ───────────────────────────────────────────────────────────
 function StarMascot() {
   return (
-    <img
-      src={exampleImage}
-      alt="FF mascot"
-      style={{
-        width: 225,
-        height: 225,
-        objectFit: "contain",
-        display: "block",
-      }}
-    />
+    <>
+      {/* Filtre SVG : rend les pixels noirs transparents */}
+      <svg style={{ position: "absolute", width: 0, height: 0 }}>
+        <defs>
+          <filter id="remove-black">
+            <feColorMatrix type="matrix"
+              values="1 0 0 0 0
+                      0 1 0 0 0
+                      0 0 1 0 0
+                      1 1 1 1 -1" />
+          </filter>
+        </defs>
+      </svg>
+      <img
+        src={exampleImage}
+        alt="Fowards mascot"
+        style={{
+          width: 225,
+          height: 225,
+          objectFit: "contain",
+          display: "block",
+          filter: "url(#remove-black)",
+        }}
+      />
+    </>
   );
 }
 
@@ -179,7 +194,7 @@ export function LoginPage() {
           fontSize: 17, fontWeight: 800, color: "#fff", letterSpacing: "-0.3px",
         }}
       >
-        Fowards
+        <span translate="no" className="notranslate">Fowards</span>
       </motion.div>
 
       {/* ── Screens ──────────────────────────────────────────────────────────── */}
@@ -214,9 +229,9 @@ export function LoginPage() {
               lineHeight: 1.18,
               letterSpacing: "-0.8px",
               margin: "0 0 44px",
-              whiteSpace: "nowrap",
+              textAlign: "center",
             }}>
-              FF l'allié des ambitieux<br />qui deviennent inarrêtables
+              Plonge dans la manière<br />dont avance vraiment les entrepreneurs
             </h1>
 
             {/* CTA — Rejoins FF */}

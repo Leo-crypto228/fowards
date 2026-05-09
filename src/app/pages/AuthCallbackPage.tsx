@@ -88,7 +88,7 @@ export function AuthCallbackPage() {
       >
         {/* Logo */}
         <h1 style={{ fontSize: 26, fontWeight: 800, color: "#f0f0f5", margin: "0 0 8px", letterSpacing: "-0.5px" }}>
-          Fowards
+          <span translate="no" className="notranslate">Fowards</span>
         </h1>
 
         {/* Icon */}
