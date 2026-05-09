@@ -807,7 +807,11 @@ export function ProgressCard({
         {/* Row 2: objective or "ton post anonyme" badge */}
         {isAnonymous ? (
           isMineAnonymous && (
-            <span style={{ fontSize: 11, color: "rgba(192,132,252,0.60)", fontStyle: "italic" }}>Ton post anonyme</span>
+            <div style={{ marginTop: 3 }}>
+              <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 999, background: "rgba(255,255,255,0.09)", border: "0.5px solid rgba(255,255,255,0.14)", fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.72)", letterSpacing: "0.02em" }}>
+                Ton post anonyme
+              </span>
+            </div>
           )
         ) : (
           <div style={{ ...SEC, marginTop: 1, overflowX: "auto", whiteSpace: "nowrap", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", maxWidth: "100%" } as React.CSSProperties}>

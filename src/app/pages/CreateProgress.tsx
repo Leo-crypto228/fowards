@@ -282,20 +282,29 @@ export function CreateProgress() {
             {/* Toggle anonyme — visible uniquement quand Blocage est sélectionné */}
             <AnimatePresence>
               {selectedType === "Blocage" && (
-                <motion.button
+                <motion.div
                   key="anon-toggle"
-                  type="button"
                   initial={{ opacity: 0, scale: 0.88 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.88 }}
                   transition={{ duration: 0.16 }}
-                  whileTap={{ scale: 0.95 }}
+                  style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", userSelect: "none" }}
                   onClick={() => setIsAnonymous((v) => !v)}
-                  style={{ padding: "7px 15px", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease", background: isAnonymous ? "rgba(168,85,247,0.20)" : "rgba(255,255,255,0.06)", border: isAnonymous ? "1px solid rgba(168,85,247,0.50)" : "1px solid rgba(255,255,255,0.11)", color: isAnonymous ? "#c084fc" : "rgba(240,240,245,0.45)", boxShadow: isAnonymous ? "0 0 14px rgba(168,85,247,0.22)" : "none", display: "flex", alignItems: "center", gap: 5 }}
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="2" y="8" width="20" height="10" rx="5" fill="currentColor" opacity="0.85"/><circle cx="8" cy="13" r="2.5" fill={isAnonymous ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.06)"}/><circle cx="16" cy="13" r="2.5" fill={isAnonymous ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.06)"}/></svg>
-                  Anonyme {isAnonymous ? "ON" : "OFF"}
-                </motion.button>
+                  {/* Track */}
+                  <div style={{ width: 46, height: 26, borderRadius: 999, background: isAnonymous ? "#7c3aed" : "rgba(255,255,255,0.10)", border: isAnonymous ? "none" : "1px solid rgba(255,255,255,0.14)", position: "relative", transition: "background 0.22s ease", flexShrink: 0 }}>
+                    {/* Thumb */}
+                    <motion.div
+                      animate={{ x: isAnonymous ? 22 : 2 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      style={{ position: "absolute", top: 3, width: 20, height: 20, borderRadius: "50%", background: "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.40)" }}
+                    />
+                  </div>
+                  {/* Label */}
+                  <span style={{ fontSize: 13, fontWeight: 600, color: isAnonymous ? "#c084fc" : "rgba(240,240,245,0.40)", transition: "color 0.2s" }}>
+                    {isAnonymous ? "Anonyme" : "Non anonyme"}
+                  </span>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
