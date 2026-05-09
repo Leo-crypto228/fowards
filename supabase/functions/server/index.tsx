@@ -1,3 +1,4 @@
+// v2 — includes Ways (stories 24h) routes
 import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
