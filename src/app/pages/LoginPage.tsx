@@ -255,7 +255,7 @@ export function LoginPage() {
                 marginBottom: 20,
               }}
             >
-              Rejoins FF
+              Plonge à ton tour
             </motion.button>
 
             {/* Separator */}
