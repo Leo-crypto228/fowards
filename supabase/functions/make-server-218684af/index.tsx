@@ -5798,26 +5798,6 @@ app.get("/make-server-218684af/elo/user/:userId", async (c) => {
   return c.json({ userId, eloScore: score });
 });
 
-// ── Elo history + boost helpers ──────────────────────────────────────────────
-
-async function _appendEloHistory(postId: string, score: number, reason: string): Promise<void> {
-  const key = `ff:elo:history:${postId}`;
-  const raw = await kv.get(key);
-  const history: { score: number; timestamp: string; reason: string }[] = raw ? JSON.parse(raw) : [];
-  history.push({ score, timestamp: new Date().toISOString(), reason });
-  if (history.length > 100) history.splice(0, history.length - 100);
-  await kv.set(key, JSON.stringify(history));
-}
-
-async function _updateBoostCounts(postId: string, field: "like" | "actionnable" | "motivant"): Promise<void> {
-  const key = `ff:post-engagement:${postId}`;
-  const raw = await kv.get(key);
-  const stats = raw ? JSON.parse(raw) : { engagedCount: 0, distributedCount: 0, boostCounts: { like: 0, actionnable: 0, motivant: 0 } };
-  if (!stats.boostCounts) stats.boostCounts = { like: 0, actionnable: 0, motivant: 0 };
-  stats.boostCounts[field] = (stats.boostCounts[field] || 0) + 1;
-  await kv.set(key, JSON.stringify(stats));
-}
-
 // POST /elo/like — mise à jour après un like confirmé (R = 0.7)
 app.post("/make-server-218684af/elo/like", async (c) => {
   try {
@@ -5830,8 +5810,6 @@ app.post("/make-server-218684af/elo/like", async (c) => {
     const pH = _eloProb(su, sp);
     const newSp = sp + K * (0.7 - pH);
     await kv.set(`ff:elo:post:${postId}`, String(newSp));
-    await _appendEloHistory(postId, newSp, "like");
-    await _updateBoostCounts(postId, "like");
     return c.json({ success: true, eloScore: newSp });
   } catch (err) {
     return c.json({ error: `Échec elo like: ${err}` }, 500);
@@ -5851,9 +5829,6 @@ app.post("/make-server-218684af/elo/comment", async (c) => {
     const R  = _eloCommentUtil(0, charCount, 0, eloType);
     const newSp = sp + K * (R - pH);
     await kv.set(`ff:elo:post:${postId}`, String(newSp));
-    const reason = eloType === "actionnable" ? "comment_actionnable" : eloType === "motivant" ? "comment_motivant" : "comment";
-    await _appendEloHistory(postId, newSp, reason);
-    if (eloType === "actionnable" || eloType === "motivant") await _updateBoostCounts(postId, eloType as "actionnable" | "motivant");
     return c.json({ success: true, eloScore: newSp });
   } catch (err) {
     return c.json({ error: `Échec elo comment: ${err}` }, 500);
@@ -5876,89 +5851,9 @@ app.post("/make-server-218684af/elo/impression", async (c) => {
     const pH = _eloProb(su, sp);
     const newSp = sp + K * (0 - pH); // R = 0
     await kv.set(`ff:elo:post:${postId}`, String(newSp));
-    await _appendEloHistory(postId, newSp, "impression");
     return c.json({ success: true, eloScore: newSp });
   } catch (err) {
     return c.json({ error: `Échec elo impression: ${err}` }, 500);
-  }
-});
-
-// POST /posts/:postId/engaged — Incrémenter les engagements (+10s sur le post). Idempotent par user.
-app.post("/make-server-218684af/posts/:postId/engaged", async (c) => {
-  try {
-    const postId = c.req.param("postId");
-    const { userId } = await c.req.json().catch(() => ({ userId: "" }));
-    const engKey = `ff:post-eng:${postId}:${userId || "anon"}`;
-    if (await kv.get(engKey)) return c.json({ success: true, skipped: true });
-    await kv.set(engKey, "1");
-    const key = `ff:post-engagement:${postId}`;
-    const raw = await kv.get(key);
-    const stats = raw ? JSON.parse(raw) : { engagedCount: 0, distributedCount: 0, boostCounts: { like: 0, actionnable: 0, motivant: 0 } };
-    stats.engagedCount = (stats.engagedCount || 0) + 1;
-    await kv.set(key, JSON.stringify(stats));
-    return c.json({ success: true, engagedCount: stats.engagedCount });
-  } catch (err) {
-    return c.json({ error: `Échec engaged: ${err}` }, 500);
-  }
-});
-
-// POST /posts/:postId/distribute — Incrémenter la distribution (post montré dans le feed). Idempotent par user.
-app.post("/make-server-218684af/posts/:postId/distribute", async (c) => {
-  try {
-    const postId = c.req.param("postId");
-    const { userId } = await c.req.json().catch(() => ({ userId: "" }));
-    const distKey = `ff:post-dist:${postId}:${userId || "anon"}`;
-    if (await kv.get(distKey)) return c.json({ success: true, skipped: true });
-    await kv.set(distKey, "1");
-    const key = `ff:post-engagement:${postId}`;
-    const raw = await kv.get(key);
-    const stats = raw ? JSON.parse(raw) : { engagedCount: 0, distributedCount: 0, boostCounts: { like: 0, actionnable: 0, motivant: 0 } };
-    stats.distributedCount = (stats.distributedCount || 0) + 1;
-    await kv.set(key, JSON.stringify(stats));
-    return c.json({ success: true, distributedCount: stats.distributedCount });
-  } catch (err) {
-    return c.json({ error: `Échec distribute: ${err}` }, 500);
-  }
-});
-
-// GET /posts/:postId/private-stats — Stats privées auteur uniquement
-app.get("/make-server-218684af/posts/:postId/private-stats", async (c) => {
-  try {
-    const postId = c.req.param("postId");
-    const userId = c.req.query("userId") || "";
-
-    const postRaw = await kv.get(`ff:post:${postId}`);
-    if (!postRaw) return c.json({ error: "Post introuvable." }, 404);
-    const post = JSON.parse(postRaw);
-
-    // Auth check : userId doit matcher le username de l'auteur
-    const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, "");
-    if (!userId || norm(userId) !== norm(post.username || "")) {
-      return c.json({ error: "Accès refusé." }, 403);
-    }
-
-    const [eloRaw, histRaw, engRaw, analyticsRaw] = await Promise.all([
-      kv.get(`ff:elo:post:${postId}`),
-      kv.get(`ff:elo:history:${postId}`),
-      kv.get(`ff:post-engagement:${postId}`),
-      kv.get(`ff:analytics:${postId}`),
-    ]);
-
-    const eloScore   = eloRaw   ? parseFloat(eloRaw) : 500;
-    const eloHistory = histRaw  ? JSON.parse(histRaw) : [];
-    const engagement = engRaw   ? JSON.parse(engRaw)  : { engagedCount: 0, distributedCount: 0, boostCounts: { like: 0, actionnable: 0, motivant: 0 } };
-    const analytics  = analyticsRaw ? JSON.parse(analyticsRaw) : { viewsCount: 0 };
-
-    return c.json({
-      eloScore,
-      eloHistory,
-      engagedCount:     engagement.engagedCount     || 0,
-      distributedCount: engagement.distributedCount || 0,
-      viewsCount:       analytics.viewsCount        || 0,
-      boostCounts:      engagement.boostCounts       || { like: 0, actionnable: 0, motivant: 0 },
-    });
-  } catch (err) {
-    return c.json({ error: `Échec private-stats: ${err}` }, 500);
   }
 });
 

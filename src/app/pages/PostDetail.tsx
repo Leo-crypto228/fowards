@@ -19,6 +19,8 @@ import {
   REACTION_TYPES,
 } from "../api/commentsApi";
 import { triggerEloComment } from "../api/eloApi";
+import { getPrivateStats, recordEngaged, recordDistributed, type PrivateStats } from "../api/privateStatsApi";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import {
   sharePost, getPostAnalytics, incrementPostView, getPostReactions, addPostReaction,
   getSessionId, type ApiAnalytics, type PostReactionType, sendCommunityMessage,
@@ -547,6 +549,187 @@ function PertinentModal({ onClose, count }: { onClose: () => void; count: number
   );
 }
 
+/* ── Private Stats Panel — auteur uniquement ── */
+function PrivateStatsPanel({ postId, userId }: { postId: string; userId: string }) {
+  const [stats, setStats] = useState<PrivateStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!postId || !userId) return;
+    getPrivateStats(postId, userId)
+      .then(setStats)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [postId, userId]);
+
+  if (loading) return null;
+  if (!stats) return null;
+
+  const elo = Math.round(stats.eloScore);
+  const pct = elo < 700 ? 5 : elo < 800 ? 30 : elo < 900 ? 60 : 100;
+  const gaugeW = Math.min(100, Math.max(0, ((elo - 500) / 500) * 100));
+
+  // Top boost type
+  const { like, actionnable, motivant } = stats.boostCounts;
+  const topBoostLabel = (() => {
+    if (actionnable === 0 && motivant === 0 && like === 0) return null;
+    if (actionnable >= like && actionnable >= motivant && actionnable > 0)
+      return `${actionnable} commentaire${actionnable > 1 ? "s" : ""} Actionnable${actionnable > 1 ? "s" : ""} ont généré le plus de boost`;
+    if (motivant >= like && motivant > 0)
+      return `${motivant} commentaire${motivant > 1 ? "s" : ""} Motivant${motivant > 1 ? "s" : ""} ont généré le plus de boost`;
+    return "Les likes ont été le principal moteur";
+  })();
+
+  // Elo history for chart
+  const chartData = stats.eloHistory.length > 0
+    ? stats.eloHistory.slice(-20).map((e, i) => ({
+        i,
+        score: Math.round(e.score),
+        label: new Date(e.timestamp).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }),
+        reason: e.reason,
+      }))
+    : [{ i: 0, score: 500, label: "Départ", reason: "start" }];
+
+  const reasonLabel: Record<string, string> = {
+    like: "Like",
+    comment_actionnable: "Commentaire Actionnable",
+    comment_motivant: "Commentaire Motivant",
+    comment: "Commentaire",
+    impression: "Vue ignorée",
+    start: "Score initial",
+  };
+
+  const surface = { background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 18 };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }}
+      style={{ marginBottom: 20 }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <div style={{ width: 3, height: 18, borderRadius: 999, background: "linear-gradient(to bottom, #6366f1, #a78bfa)" }} />
+        <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.09em", textTransform: "uppercase" }}>
+          Vos stats · privé
+        </p>
+      </div>
+
+      {/* Section 1 — Score Elo + distribution */}
+      <div style={{ ...surface, padding: "16px 18px", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.50)" }}>Score Elo</span>
+          <span style={{ fontSize: 22, fontWeight: 800, color: "#a5b4fc", fontVariantNumeric: "tabular-nums" }}>{elo}</span>
+        </div>
+
+        {/* Gauge */}
+        <div style={{ position: "relative", height: 8, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: 6 }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${gaugeW}%` }}
+            transition={{ duration: 0.9, ease: "easeOut" }}
+            style={{ position: "absolute", inset: 0, borderRadius: 999,
+              background: elo >= 900 ? "linear-gradient(to right, #6366f1, #22c55e)"
+                : elo >= 800 ? "linear-gradient(to right, #6366f1, #f59e0b)"
+                : elo >= 700 ? "linear-gradient(to right, #6366f1, #818cf8)"
+                : "linear-gradient(to right, #4f46e5, #6366f1)" }}
+          />
+          {/* Threshold markers */}
+          {[40, 60, 80].map((p, i) => (
+            <div key={i} style={{ position: "absolute", top: 0, bottom: 0, left: `${p}%`, width: 1, background: "rgba(0,0,0,0.4)" }} />
+          ))}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+          {["500", "700", "800", "900+"].map((l) => (
+            <span key={l} style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontWeight: 600 }}>{l}</span>
+          ))}
+        </div>
+
+        {/* Distribution text */}
+        <div style={{ padding: "8px 12px", borderRadius: 12, background: "rgba(99,102,241,0.10)", border: "0.5px solid rgba(99,102,241,0.22)", marginBottom: 14 }}>
+          <span style={{ fontSize: 13, color: "#a5b4fc", fontWeight: 600 }}>
+            Distribué à <span style={{ fontWeight: 800 }}>{pct}%</span> de la communauté
+          </span>
+          <span style={{ fontSize: 12, color: "rgba(165,180,252,0.60)" }}> — sur 100%</span>
+        </div>
+
+        {/* 3 metrics */}
+        <div style={{ display: "flex", gap: 8 }}>
+          {[
+            { label: "Distribués", value: stats.distributedCount, color: "#818cf8" },
+            { label: "Vus",        value: stats.viewsCount,       color: "#f9a8d4" },
+            { label: "Engagés",    value: stats.engagedCount,     color: "#6ee7b7" },
+          ].map((m) => (
+            <div key={m.label} style={{ flex: 1, textAlign: "center", padding: "10px 6px", borderRadius: 12,
+              background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: m.color, lineHeight: 1 }}>{m.value}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 4, fontWeight: 600 }}>{m.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Section 2 — Top boost */}
+      {topBoostLabel && (
+        <div style={{ ...surface, padding: "12px 16px", marginBottom: 10, display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>⚡</span>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.30)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Ce qui a le plus boosté</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>{topBoostLabel}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Section 3 — Historique Elo */}
+      <div style={{ ...surface, padding: "14px 12px 10px" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.30)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Historique du score</p>
+        {chartData.length < 2 ? (
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", textAlign: "center", padding: "20px 0" }}>
+            Les interactions apparaîtront ici au fil du temps.
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={130}>
+            <LineChart data={chartData} margin={{ top: 8, right: 4, bottom: 0, left: -20 }}>
+              <YAxis
+                domain={["auto", "auto"]}
+                tick={{ fontSize: 9, fill: "rgba(255,255,255,0.28)" }}
+                tickFormatter={(v: number) => String(Math.round(v))}
+                width={40}
+              />
+              <XAxis dataKey="label" tick={{ fontSize: 9, fill: "rgba(255,255,255,0.22)" }} interval="preserveStartEnd" />
+              <Tooltip
+                contentStyle={{ background: "#0d0d0d", border: "0.5px solid rgba(255,255,255,0.12)", borderRadius: 12, fontSize: 11, padding: "6px 10px" }}
+                formatter={(v: number, _: string, props: { payload?: { reason?: string } }) => [
+                  `${Math.round(v)} pts`,
+                  reasonLabel[props?.payload?.reason ?? ""] ?? props?.payload?.reason ?? "",
+                ]}
+                labelFormatter={() => ""}
+              />
+              <ReferenceLine y={700} stroke="rgba(251,191,36,0.25)" strokeDasharray="4 3" />
+              <ReferenceLine y={800} stroke="rgba(251,191,36,0.25)" strokeDasharray="4 3" />
+              <ReferenceLine y={900} stroke="rgba(34,197,94,0.30)" strokeDasharray="4 3" />
+              <Line
+                type="monotone" dataKey="score" stroke="#818cf8" strokeWidth={2}
+                dot={{ r: 3, fill: "#818cf8", strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: "#a5b4fc" }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+        {/* Legend */}
+        <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
+          {[
+            { color: "rgba(251,191,36,0.50)", label: "Seuils 700 / 800" },
+            { color: "rgba(34,197,94,0.50)",  label: "Seuil 900 (100%)" },
+          ].map((l) => (
+            <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 18, height: 1, background: l.color, borderRadius: 1 }} />
+              <span style={{ fontSize: 9, color: "rgba(255,255,255,0.28)" }}>{l.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 /* ── Inline Stats Panel — données réelles depuis le backend ── */
 function StatsPanel({ postId, fallbackViews }: { postId: string; fallbackViews: number }) {
   const [activeMetric, setActiveMetric] = useState<"views" | "reactions" | "comments">("views");
@@ -979,6 +1162,15 @@ export function PostDetail() {
       console.error("Erreur incrémentation vue:", err)
     );
   }, [postId]);
+
+  // ── Engagement timer — 10s de lecture = engaged ───────────────────────────
+  useEffect(() => {
+    if (!postId || !myUserId) return;
+    const t = setTimeout(() => {
+      recordEngaged(postId, myUserId);
+    }, 10_000);
+    return () => clearTimeout(t);
+  }, [postId, myUserId]);
 
   // ── Chargement de la réaction existante de l'utilisateur ─────────────────
   useEffect(() => {
@@ -1705,7 +1897,10 @@ export function PostDetail() {
                 />
               )}
               {view === "stats" && (
-                <StatsPanel key="stats" postId={postId} fallbackViews={post?.viewsCount ?? 1200} />
+                <>
+                  {isSelfPost && <PrivateStatsPanel postId={postId} userId={myUserId} />}
+                  <StatsPanel key="stats" postId={postId} fallbackViews={post?.viewsCount ?? 1200} />
+                </>
               )}
             </AnimatePresence>
           </div>

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { getPostReactions, addPostReaction, type PostReactionType } from "../api/sharesApi";
 import { triggerEloLike, triggerEloImpression } from "../api/eloApi";
+import { recordDistributed } from "../api/privateStatsApi";
 import { useFollow } from "../context/FollowContext";
 import { FollowButton } from "./FollowButton";
 import { fetchProfile, getCachedProfile, normalizeUsername } from "../api/profileCache";
@@ -530,15 +531,23 @@ export function ProgressCard({
   }, [postId]);
 
   // Elo impression — fires R=0 once per user/post after 3 s of visibility without a like
+  // Also records distribution (post shown to user in feed) on first viewport entry
   useEffect(() => {
     if (!postId || !currentUserId) return;
     const sessionKey = `ff:elo:imp:${postId}`;
+    const distKey = `ff:dist:${postId}`;
     try { if (sessionStorage.getItem(sessionKey)) return; } catch {}
     const el = cardRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
+          try {
+            if (!sessionStorage.getItem(distKey)) {
+              sessionStorage.setItem(distKey, "1");
+              recordDistributed(postId, currentUserId);
+            }
+          } catch {}
           eloImpressionTimer.current = setTimeout(() => {
             if (eloLiked.current) return;
             try { sessionStorage.setItem(sessionKey, "1"); } catch {}
