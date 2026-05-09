@@ -31,7 +31,6 @@ function StarMascot() {
         height: 225,
         objectFit: "contain",
         display: "block",
-        mixBlendMode: "screen",
       }}
     />
   );
@@ -180,7 +179,7 @@ export function LoginPage() {
           fontSize: 17, fontWeight: 800, color: "#fff", letterSpacing: "-0.3px",
         }}
       >
-        FuturFeed
+        Fowards
       </motion.div>
 
       {/* ── Screens ──────────────────────────────────────────────────────────── */}
