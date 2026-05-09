@@ -29,6 +29,11 @@ logs/
 
 # Supabase
 .supabase/
+supabase/.temp/
+supabase.exe
+supabase.tar.gz
+*.exe
+*.tar.gz
 
 # Temporary files
 *.tmp
