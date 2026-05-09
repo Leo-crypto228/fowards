@@ -789,7 +789,7 @@ export function Feed() {
                       postId={post.id} user={post.user} streak={post.streak}
                       authorUsername={post.username}
                       progress={post.progress as { type: "infos"|"conseil"|"new"|"avancement"|"objectif"|"lecon"|"question"|"bilan"; description: string; timestamp: string }}
-                      hashtags={post.hashtags} image={post.image ?? undefined}
+                      hashtags={post.hashtags} image={post.image ?? undefined} images={post.images}
                       verified={post.verified} isNew={post.isNew}
                       relevantCount={post.relevantCount} commentsCount={post.commentsCount}
                       sharesCount={post.sharesCount} viewsCount={post.viewsCount}
@@ -867,7 +867,7 @@ export function Feed() {
                     authorUsername={(post as any).username ?? undefined}
                     progress={post.progress as { type: "infos"|"conseil"|"new"|"avancement"|"objectif"|"lecon"|"question"|"bilan"; description: string; timestamp: string }}
                     hashtags={post.hashtags}
-                    image={post.image ?? undefined}
+                    image={post.image ?? undefined} images={post.images}
                     verified={post.verified}
                     isNew={post.isNew}
                     relevantCount={post.relevantCount}

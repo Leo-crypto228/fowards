@@ -552,7 +552,7 @@ function PostsSection({ username, profileUser }: { username: string; profileUser
               streak={post.streak}
               progress={post.progress}
               hashtags={post.hashtags}
-              image={post.image ?? undefined}
+              image={post.image ?? undefined} images={post.images}
               verified={post.verified}
               isNew={post.isNew}
               relevantCount={post.relevantCount}

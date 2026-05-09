@@ -49,6 +49,7 @@ interface ProgressCardProps {
     timestamp: string;
   };
   image?: string;
+  images?: string[];
   verified?: boolean;
   isRelevant?: boolean;
   relevantCount?: number;
@@ -365,6 +366,42 @@ function BarStatsIcon({ size = 11 }: { size?: number }) {
   );
 }
 
+// ── Multi-image carousel ──────────────────────────────────────────────────────
+function MultiImageCarousel({ images }: { images: string[] }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setActiveIdx(Math.round(el.scrollLeft / el.clientWidth));
+  };
+
+  return (
+    <div style={{ marginTop: 4, position: "relative", overflow: "hidden" }}>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        style={{ display: "flex", overflowX: "scroll", scrollSnapType: "x mandatory", scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
+        className="[&::-webkit-scrollbar]:hidden"
+      >
+        {images.map((url, i) => (
+          <div key={i} style={{ flexShrink: 0, width: "100%", scrollSnapAlign: "start", aspectRatio: "3/4" }}>
+            <img src={url} alt="" loading={i === 0 ? "eager" : "lazy"}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          </div>
+        ))}
+      </div>
+      {/* Dots */}
+      <div style={{ position: "absolute", bottom: 10, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 5, pointerEvents: "none" }}>
+        {images.map((_, i) => (
+          <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: i === activeIdx ? "#ffffff" : "rgba(255,255,255,0.38)", transition: "background 0.2s" }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export function ProgressCard({
   user,
@@ -372,6 +409,7 @@ export function ProgressCard({
   streak: _streak = 0,
   progress,
   image,
+  images: imagesProp,
   verified = false,
   isRelevant = false,
   relevantCount = 0,
@@ -843,21 +881,20 @@ export function ProgressCard({
             )}
           </div>
 
-          {/* ── IMAGE (if present) ───────────────────────────────────────────── */}
-          {image && (
-            <div style={{ marginTop: 4, overflow: "hidden" }}>
-              <img
-                src={image}
-                alt="post media"
-                style={{
-                  width: "100%",
-                  maxHeight: 380,
-                  objectFit: "cover",
-                  display: "block",
-                }}
-              />
-            </div>
-          )}
+          {/* ── IMAGE / CAROUSEL ────────────────────────────────────────────── */}
+          {(() => {
+            const allImages = imagesProp?.length ? imagesProp : (image ? [image] : []);
+            if (!allImages.length) return null;
+            if (allImages.length === 1) {
+              return (
+                <div style={{ marginTop: 4, overflow: "hidden", aspectRatio: "3/4" }}>
+                  <img src={allImages[0]} alt="post media" loading="lazy"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+              );
+            }
+            return <MultiImageCarousel images={allImages} />;
+          })()}
 
           {/* ── ACTIONS ROW ─────────────────────────────────────────────────── */}
           {!hideActions && renderActions()}

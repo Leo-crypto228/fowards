@@ -862,7 +862,7 @@ export function TribeDetail() {
                           authorUsername={(post as any).username ?? undefined}
                           streak={post.streak}
                           progress={post.progress}
-                          image={post.image ?? undefined}
+                          image={post.image ?? undefined} images={post.images}
                           verified={post.verified}
                           isRelevant={false}
                           relevantCount={post.relevantCount}

@@ -293,7 +293,7 @@ export function HashtagFeed() {
                       memberSince={post.memberSince}
                       badge={post.badge}
                       text={post.text}
-                      image={post.image}
+                      image={post.image} images={post.images}
                       repliesCount={post.liveCommentsCount ?? post.repliesCount}
                       hashtags={post.hashtags}
                       onReply={() => {}}

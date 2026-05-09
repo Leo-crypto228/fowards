@@ -693,7 +693,7 @@ app.post("/make-server-218684af/posts", async (c) => {
       id, user: { name: user.name, avatar: user.avatar || "", objective: user.objective || "", followers: user.followers || 0 },
       streak: streak || 0,
       progress: { type: progress.type, description: progress.description.trim(), timestamp: "À l'instant" },
-      hashtags: hashtags || [], image: body.image || null, verified: false,
+      hashtags: hashtags || [], image: body.image || null, images: body.images || (body.image ? [body.image] : []), verified: false,
       relevantCount: 0, commentsCount: 0, sharesCount: 0, viewsCount: 0,
       isNew: true, createdAt, username: resolvedUsername,
     };

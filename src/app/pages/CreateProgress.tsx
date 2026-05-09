@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Check, ArrowLeft, AlertCircle, X, ImagePlus, ChevronDown, Globe, Users, Info } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { createPost, extractHashtags, LABEL_TO_TYPE, PostType } from "../api/postsApi";
+import { compressImage } from "../utils/compressImage";
 import { linkPostReply } from "../api/sharesApi";
 import { postCheckin } from "../api/progressionApi";
 import { MY_USER_ID, MY_USER_NAME, MY_USER_AVATAR, MY_USER_OBJECTIVE, MY_USER_STREAK } from "../api/authStore";
@@ -189,15 +190,16 @@ export function CreateProgress() {
         const postType = LABEL_TO_TYPE[selectedType] as PostType;
         const hashtags = extractHashtags(text);
 
-        // Upload image si présente
-        let uploadedImageUrl: string | undefined;
-        if (images.length > 0) {
+        // Upload images compressées (toutes, dans l'ordre, max 4)
+        const uploadedUrls: string[] = [];
+        for (const { file } of images.slice(0, 4)) {
+          const compressed = await compressImage(file);
           const formData = new FormData();
-          formData.append("file", images[0].file);
+          formData.append("file", compressed, "image.jpg");
           const upRes  = await fetch(`${BASE}/upload-image`, { method: "POST", headers: { Authorization: `Bearer ${publicAnonKey}` }, body: formData });
           const upData = await upRes.json();
           if (!upRes.ok || !upData.url) throw new Error(upData.error ?? "Erreur upload image");
-          uploadedImageUrl = upData.url;
+          uploadedUrls.push(upData.url);
         }
 
         const result = await createPost({
@@ -206,7 +208,8 @@ export function CreateProgress() {
           progress: { type: postType, description: text.trim() },
           hashtags,
           username: MY_USER_ID,
-          image:    uploadedImageUrl ?? selectedGif ?? undefined,
+          images:   uploadedUrls.length > 0 ? uploadedUrls : undefined,
+          image:    uploadedUrls[0] ?? selectedGif ?? undefined,
         });
 
         // Lien réponse si post quoté
@@ -329,20 +332,26 @@ export function CreateProgress() {
             </div>
           )}
 
-          {/* Aperçu images */}
+          {/* Aperçu images — carousel horizontal 3:4 */}
           <AnimatePresence>
             {images.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                style={{ display: "grid", gridTemplateColumns: images.length === 1 ? "1fr" : "1fr 1fr", gap: 8, marginTop: 14, borderRadius: 16, overflow: "hidden" }}>
-                {images.map((img, i) => (
-                  <div key={i} style={{ position: "relative", aspectRatio: images.length === 1 ? "16/9" : "1/1" }}>
-                    <img src={img.preview} alt={`Image ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} />
-                    <motion.button whileTap={{ scale: 0.88 }} onClick={() => removeImage(i)}
-                      style={{ position: "absolute", top: 6, right: 6, width: 24, height: 24, borderRadius: "50%", background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <X style={{ width: 12, height: 12, color: "#fff" }} />
-                    </motion.button>
-                  </div>
-                ))}
+                style={{ marginTop: 14, position: "relative" }}>
+                <div style={{ display: "flex", gap: 10, overflowX: "auto", scrollSnapType: "x mandatory", scrollBehavior: "smooth", WebkitOverflowScrolling: "touch", paddingBottom: 4 }}
+                  className="[&::-webkit-scrollbar]:hidden">
+                  {images.map((img, i) => (
+                    <div key={i} style={{ flexShrink: 0, width: "72%", scrollSnapAlign: "start", position: "relative", aspectRatio: "3/4", borderRadius: 14, overflow: "hidden", border: "0.5px solid rgba(255,255,255,0.10)" }}>
+                      <img src={img.preview} alt={`Image ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <motion.button whileTap={{ scale: 0.88 }} onClick={() => removeImage(i)}
+                        style={{ position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <X style={{ width: 13, height: 13, color: "#fff" }} />
+                      </motion.button>
+                      <div style={{ position: "absolute", bottom: 8, left: 8, background: "rgba(0,0,0,0.55)", borderRadius: 8, padding: "2px 7px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>{i + 1}/{images.length}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

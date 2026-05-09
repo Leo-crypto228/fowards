@@ -38,6 +38,7 @@ export interface ApiPost {
   };
   hashtags: string[];
   image?: string | null;
+  images?: string[];
   verified: boolean;
   relevantCount: number;
   commentsCount: number;
@@ -62,6 +63,7 @@ export interface CreatePostPayload {
   };
   hashtags?: string[];
   image?: string;
+  images?: string[];
   username: string;
 }
 

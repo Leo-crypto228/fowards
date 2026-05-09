@@ -502,7 +502,7 @@ function ProfilePostAdapter({ post }: { post: MockPost }) {
         <ProgressCard
           user={PROFILE_USER} streak={PROFILE_STREAK}
           progress={{ type: post.type as any, description: post.text, timestamp: post.time }}
-          image={post.image}
+          image={post.image} images={post.images}
           relevantCount={post.relevant} commentsCount={post.comments}
           sharesCount={post.shares || 0} viewsCount={post.views}
           isNew={post.isImpactant} hashtags={post.hashtags} disableDetailNav
@@ -516,7 +516,7 @@ function ProfilePostAdapter({ post }: { post: MockPost }) {
     <ProgressCard
       user={PROFILE_USER} streak={PROFILE_STREAK}
       progress={{ type: post.type as any, description: post.text, timestamp: post.time }}
-      image={post.image}
+      image={post.image} images={post.images}
       relevantCount={post.relevant} commentsCount={post.comments}
       sharesCount={post.shares || 0} viewsCount={post.views}
       isNew={post.isImpactant} hashtags={post.hashtags} disableDetailNav

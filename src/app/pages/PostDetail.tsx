@@ -911,6 +911,38 @@ function SharePanel({
   );
 }
 
+/* ─── Carousel multi-images (PostDetail) ────────────────────────────────────── */
+function PostDetailCarousel({ images }: { images: string[] }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setActiveIdx(Math.round(el.scrollLeft / el.clientWidth));
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div ref={scrollRef} onScroll={handleScroll}
+        style={{ display: "flex", overflowX: "scroll", scrollSnapType: "x mandatory", scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
+        className="[&::-webkit-scrollbar]:hidden">
+        {images.map((url, i) => (
+          <div key={i} style={{ flexShrink: 0, width: "100%", scrollSnapAlign: "start", aspectRatio: "3/4" }}>
+            <img src={url} alt="" loading={i === 0 ? "eager" : "lazy"}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ position: "absolute", bottom: 12, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 6, pointerEvents: "none" }}>
+        {images.map((_, i) => (
+          <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: i === activeIdx ? "#ffffff" : "rgba(255,255,255,0.38)", transition: "background 0.2s" }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Page ─────────────────────────────────────────────────────────────── */
 
 export function PostDetail() {
@@ -1323,7 +1355,10 @@ export function PostDetail() {
   };
 
   const typeLabel = post ? (TYPE_LABELS[post.progress.type] ?? "Avancement") : "Avancement";
-  const hasImage = !!displayPost.image;
+  const postImages: string[] = (displayPost as any).images?.length
+    ? (displayPost as any).images
+    : displayPost.image ? [displayPost.image] : [];
+  const hasImage = postImages.length > 0;
 
   return (
     <div style={{ minHeight: "100dvh", background: "#000000", display: "flex", flexDirection: "column" }}>
@@ -1470,8 +1505,14 @@ export function PostDetail() {
               )}
             </div>
             {hasImage && (
-              <div style={{ width: "100%", background: "rgba(0,0,0,0.30)" }}>
-                <img src={displayPost.image} alt="" style={{ width: "100%", height: "auto", display: "block", maxHeight: 520, objectFit: "contain" }} />
+              <div style={{ width: "100%" }}>
+                {postImages.length === 1 ? (
+                  <div style={{ aspectRatio: "3/4" }}>
+                    <img src={postImages[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  </div>
+                ) : (
+                  <PostDetailCarousel images={postImages} />
+                )}
               </div>
             )}
           </motion.div>
