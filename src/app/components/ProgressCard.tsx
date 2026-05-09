@@ -67,6 +67,22 @@ interface ProgressCardProps {
   postCreatedAt?: string;
   disableDetailNav?: boolean;
   onPostDeleted?: () => void;
+  isAnonymous?: boolean;
+  isMineAnonymous?: boolean;
+}
+
+// Masque gris avec oculi — affiché à la place de l'avatar sur les posts anonymes
+function AnonAvatar({ size }: { size: number }) {
+  const icon = Math.round(size * 0.6);
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "#3a3a4e", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid rgba(255,255,255,0.10)", flexShrink: 0 }}>
+      <svg width={icon} height={icon} viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="8" width="20" height="10" rx="5" fill="white" opacity="0.88"/>
+        <circle cx="8" cy="13" r="2.8" fill="#3a3a4e"/>
+        <circle cx="16" cy="13" r="2.8" fill="#3a3a4e"/>
+      </svg>
+    </div>
+  );
 }
 
 let _cardMountCounter = 0;
@@ -428,6 +444,8 @@ export function ProgressCard({
   postCreatedAt,
   disableDetailNav = false,
   onPostDeleted,
+  isAnonymous = false,
+  isMineAnonymous = false,
 }: ProgressCardProps) {
   const navigate = useNavigate();
   const { currentUserId } = useFollow();
@@ -448,7 +466,7 @@ export function ProgressCard({
   );
 
   useEffect(() => {
-    if (!postUsername) return;
+    if (!postUsername || isAnonymous) return;
     const cached = getCachedProfile(postUsername);
     if (cached) {
       if (cached.avatar)    setLiveAvatar(cached.avatar);
@@ -462,7 +480,7 @@ export function ProgressCard({
       if (p.objective) setLiveObjective(p.objective);
       setLiveFollowers(p.followers);
     });
-  }, [postUsername]);
+  }, [postUsername, isAnonymous]);
 
   useEffect(() => {
     if (!postUsername) return;
@@ -758,41 +776,48 @@ export function ProgressCard({
   const renderHeader = () => (
     <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "12px 12px 10px 10px" }}>
       {/* Avatar */}
-      <div style={{ flexShrink: 0 }} onClick={handleUserClick}>
-        <div style={{
-          width: 42, height: 42, borderRadius: "50%", overflow: "hidden",
-          border: "2px solid rgba(99,102,241,0.28)", cursor: "pointer", flexShrink: 0,
-        }}>
-          {liveAvatar ? (
-            <img src={liveAvatar} alt={user?.name || ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#4f46e5,#a78bfa)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 14 }}>
-              {(user?.name || "??").substring(0, 2).toUpperCase()}
-            </div>
-          )}
+      {isAnonymous ? (
+        <AnonAvatar size={42} />
+      ) : (
+        <div style={{ flexShrink: 0 }} onClick={handleUserClick}>
+          <div style={{ width: 42, height: 42, borderRadius: "50%", overflow: "hidden", border: "2px solid rgba(99,102,241,0.28)", cursor: "pointer", flexShrink: 0 }}>
+            {liveAvatar ? (
+              <img src={liveAvatar} alt={user?.name || ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#4f46e5,#a78bfa)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 14 }}>
+                {(user?.name || "??").substring(0, 2).toUpperCase()}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Name + followers + objective */}
-      <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={handleUserClick}>
+      <div style={{ flex: 1, minWidth: 0, cursor: isAnonymous ? "default" : "pointer" }} onClick={isAnonymous ? undefined : handleUserClick}>
         {/* Row 1: name · followers */}
         <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0 4px", lineHeight: 1.3 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: "#f0f0f5", whiteSpace: "nowrap" }}>
-            {user?.name || ""}
+          <span style={{ fontWeight: 700, fontSize: 14, color: isAnonymous ? "rgba(240,240,245,0.55)" : "#f0f0f5", whiteSpace: "nowrap" }}>
+            {isAnonymous ? "Anonyme" : (user?.name || "")}
           </span>
-          {verified && <VerifiedBadge />}
-          {liveFollowers !== undefined && (
+          {!isAnonymous && verified && <VerifiedBadge />}
+          {!isAnonymous && liveFollowers !== undefined && (
             <span style={{ ...SEC, whiteSpace: "nowrap" }}>· {formatFollowers(liveFollowers)} abonnés</span>
           )}
         </div>
-        {/* Row 2: objective */}
-        <div style={{ ...SEC, marginTop: 1, overflowX: "auto", whiteSpace: "nowrap", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", maxWidth: "100%" } as React.CSSProperties}>
-          {memberSince !== undefined ? `Présent depuis ${memberSince} jours` : liveObjective}
-        </div>
+        {/* Row 2: objective or "ton post anonyme" badge */}
+        {isAnonymous ? (
+          isMineAnonymous && (
+            <span style={{ fontSize: 11, color: "rgba(192,132,252,0.60)", fontStyle: "italic" }}>Ton post anonyme</span>
+          )
+        ) : (
+          <div style={{ ...SEC, marginTop: 1, overflowX: "auto", whiteSpace: "nowrap", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", maxWidth: "100%" } as React.CSSProperties}>
+            {memberSince !== undefined ? `Présent depuis ${memberSince} jours` : liveObjective}
+          </div>
+        )}
       </div>
 
-      {/* Follow button (right side, only if not self) */}
-      {!isSelfPost && (
+      {/* Follow button (right side, uniquement si pas soi-même et pas anonyme) */}
+      {!isSelfPost && !isAnonymous && (
         <div className="scale-90 origin-right sm:scale-100" style={{ flexShrink: 0 }}>
           <FollowButton username={postUsername} size="sm" />
         </div>

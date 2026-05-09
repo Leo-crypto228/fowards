@@ -186,19 +186,25 @@ function ApiCommentRow({
       style={{ display: "flex", gap: 12, paddingBottom: 20, borderBottom: "0.5px solid rgba(255,255,255,0.05)", position: "relative" }}
     >
       {isTopConseil && <ConseilGlowBar />}
-      <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: isTopConseil ? "1.5px solid rgba(99,102,241,0.55)" : "1.5px solid rgba(99,102,241,0.20)" }}>
-        {comment.avatar ? (
-          <img src={comment.avatar} alt={comment.author} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        ) : (
-          <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#6366f1,#a78bfa)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{comment.author.slice(0, 2).toUpperCase()}</span>
-          </div>
-        )}
-      </div>
+      {comment.author === "Anonyme" ? (
+        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#3a3a4e", display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid rgba(255,255,255,0.10)", flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="8" width="20" height="10" rx="5" fill="white" opacity="0.88"/><circle cx="8" cy="13" r="2.8" fill="#3a3a4e"/><circle cx="16" cy="13" r="2.8" fill="#3a3a4e"/></svg>
+        </div>
+      ) : (
+        <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: isTopConseil ? "1.5px solid rgba(99,102,241,0.55)" : "1.5px solid rgba(99,102,241,0.20)" }}>
+          {comment.avatar ? (
+            <img src={comment.avatar} alt={comment.author} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#6366f1,#a78bfa)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{comment.author.slice(0, 2).toUpperCase()}</span>
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: comment.commentType ? 6 : 5, flexWrap: "wrap" }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.90)" }}>{comment.author}</span>
-          <span style={{ fontSize: "0.70em", color: "rgba(255,255,255,0.30)", fontWeight: 400 }}>{handle}</span>
+          {comment.author !== "Anonyme" && <span style={{ fontSize: "0.70em", color: "rgba(255,255,255,0.30)", fontWeight: 400 }}>{handle}</span>}
           <span style={{ fontSize: 12, color: "rgba(255,255,255,0.22)" }}>•</span>
           <span style={{ fontSize: 12, color: "rgba(255,255,255,0.28)" }}>{comment.timestamp ?? "À l'instant"}</span>
         </div>
@@ -1145,9 +1151,11 @@ export function PostDetail() {
       return saved ? (JSON.parse(saved) as PostData) : null;
     } catch { return null; }
   })();
-  const isSelfPost = myUserName !== "" && post?.user?.name
+  const isMineAnonymous = !!(post as any)?.isMineAnonymous;
+  const isPostAnonymous = !!(post as any)?.isAnonymous;
+  const isSelfPost = isMineAnonymous || (myUserName !== "" && post?.user?.name
     ? myUserName.toLowerCase().trim() === (post.user.name || "").toLowerCase().trim()
-    : false;
+    : false);
   const { save, unsave, getSavedId } = useSavedPosts();
 
   const [view, setView] = useState<"comments" | "share" | "stats">("comments");
@@ -1584,18 +1592,28 @@ export function PostDetail() {
             <ViewProgressBar progress={authorProgress} isNew={displayPost.isNew} />
             <div style={{ padding: "20px 16px 16px" }}>
               <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <div style={{ width: 50, height: 50, borderRadius: "50%", overflow: "hidden", border: "2px solid rgba(99,102,241,0.28)", flexShrink: 0 }}>
-                  <img src={displayPost.user.avatar} alt={displayPost.user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
+                {/* Avatar — masqué si post anonyme */}
+                {isPostAnonymous ? (
+                  <div style={{ width: 50, height: 50, borderRadius: "50%", background: "#3a3a4e", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid rgba(255,255,255,0.10)", flexShrink: 0 }}>
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="2" y="8" width="20" height="10" rx="5" fill="white" opacity="0.88"/><circle cx="8" cy="13" r="2.8" fill="#3a3a4e"/><circle cx="16" cy="13" r="2.8" fill="#3a3a4e"/></svg>
+                  </div>
+                ) : (
+                  <div style={{ width: 50, height: 50, borderRadius: "50%", overflow: "hidden", border: "2px solid rgba(99,102,241,0.28)", flexShrink: 0 }}>
+                    <img src={displayPost.user.avatar} alt={displayPost.user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>{displayPost.user.name}</span>
-                        {displayPost.verified && <VerifiedBadge />}
-                        <span style={{ fontSize: "0.72em", color: "rgba(255,255,255,0.32)", fontWeight: 400 }}>{displayPost.user.name.toLowerCase().replace(/\s+/g, "_")}</span>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: isPostAnonymous ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.92)" }}>
+                          {isPostAnonymous ? "Anonyme" : displayPost.user.name}
+                        </span>
+                        {!isPostAnonymous && displayPost.verified && <VerifiedBadge />}
+                        {!isPostAnonymous && <span style={{ fontSize: "0.72em", color: "rgba(255,255,255,0.32)", fontWeight: 400 }}>{displayPost.user.name.toLowerCase().replace(/\s+/g, "_")}</span>}
+                        {isMineAnonymous && <span style={{ fontSize: 11, color: "rgba(192,132,252,0.60)", fontStyle: "italic" }}>Ton post anonyme</span>}
                       </div>
-                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.38)", marginTop: 3 }}>{displayPost.user.objective}</p>
+                      {!isPostAnonymous && <p style={{ fontSize: 13, color: "rgba(255,255,255,0.38)", marginTop: 3 }}>{displayPost.user.objective}</p>}
                     </div>
 
                     {/* Right side: [More] */}

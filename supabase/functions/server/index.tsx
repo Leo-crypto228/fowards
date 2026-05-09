@@ -675,7 +675,19 @@ app.put("/make-server-218684af/communities/:id/join", async (c) => {
 
 // ════════════════════════════════════════════════════════════════════════════
 // POSTS
-// ═══════════════════════════════════════════════════════════════════��════════
+// ════════════════════════════════════════════════════════════════════════════
+
+const ANON_USER = { name: "Anonyme", avatar: "", objective: "", followers: 0 };
+
+// Retire les données réelles d'un post anonyme avant de l'envoyer au client.
+// Le realAuthorUsername n'est jamais exposé ; isMineAnonymous est injecté si le demandeur est l'auteur.
+function sanitizePost(post: Record<string, unknown>, requestingUserId?: string): Record<string, unknown> {
+  const { realAuthorUsername, ...rest } = post as Record<string, unknown>;
+  if (!post.isAnonymous) return rest;
+  const normStr = (s: unknown) => String(s || "").toLowerCase().replace(/\s+/g, "");
+  const isOwn = requestingUserId && normStr(requestingUserId) === normStr(realAuthorUsername);
+  return { ...rest, user: ANON_USER, username: "anonyme", isMineAnonymous: isOwn ? true : undefined };
+}
 
 app.post("/make-server-218684af/posts", async (c) => {
   try {
@@ -689,6 +701,7 @@ app.post("/make-server-218684af/posts", async (c) => {
     const createdAt = new Date().toISOString();
     const resolvedUsername = normalizeUsername(username || user.name);
 
+    const isAnonymous = !!(body.isAnonymous);
     const post = {
       id, user: { name: user.name, avatar: user.avatar || "", objective: user.objective || "", followers: user.followers || 0 },
       streak: streak || 0,
@@ -697,6 +710,8 @@ app.post("/make-server-218684af/posts", async (c) => {
       relevantCount: 0, commentsCount: 0, sharesCount: 0, viewsCount: 0,
       isNew: true, createdAt, username: resolvedUsername,
       eloScore: 500,
+      isAnonymous,
+      realAuthorUsername: isAnonymous ? resolvedUsername : undefined,
     };
 
     await kv.set(`ff:post:${id}`, JSON.stringify(post));
@@ -750,8 +765,8 @@ app.post("/make-server-218684af/posts", async (c) => {
       }
     } catch (e) { console.log("Erreur analyse post goal:", e); }
 
-    console.log(`Post créé: id=${id}, user=${resolvedUsername}`);
-    return c.json({ success: true, post });
+    console.log(`Post créé: id=${id}, user=${resolvedUsername}, anon=${isAnonymous}`);
+    return c.json({ success: true, post: sanitizePost(post as Record<string, unknown>, resolvedUsername) });
   } catch (err) {
     console.log("Erreur création post:", err);
     return c.json({ error: `Échec création post: ${err}` }, 500);
@@ -761,6 +776,7 @@ app.post("/make-server-218684af/posts", async (c) => {
 app.get("/make-server-218684af/posts", async (c) => {
   try {
     const limit = Math.min(parseInt(c.req.query("limit") || "50", 10), 200);
+    const requestingUserId = c.req.query("userId") || "";
     const allIds: string[] = JSON.parse((await kv.get("ff:posts:all")) || "[]");
     const posts = [];
     // Charger un peu plus que limit pour compenser les manquants, puis trier
@@ -769,7 +785,7 @@ app.get("/make-server-218684af/posts", async (c) => {
       if (raw) {
         const post = JSON.parse(raw);
         if (post.createdAt) post.progress.timestamp = relativeTime(post.createdAt);
-        posts.push(post);
+        posts.push(sanitizePost(post as Record<string, unknown>, requestingUserId));
       }
     }
     // Tri décroissant par createdAt (garantit l'ordre même si l'index KV est désynchronisé)
@@ -788,14 +804,19 @@ app.get("/make-server-218684af/posts/user/:username", async (c) => {
   try {
     const username = c.req.param("username");
     const limit = Math.min(parseInt(c.req.query("limit") || "50", 10), 200);
+    const requestingUserId = c.req.query("requestingUserId") || "";
+    const normStr = (s: string) => s.toLowerCase().replace(/\s+/g, "");
+    const isOwnProfile = requestingUserId && normStr(requestingUserId) === normStr(username);
     const userIds: string[] = JSON.parse((await kv.get(`ff:posts:user:${username}`)) || "[]");
     const posts = [];
     for (const id of userIds.slice(0, Math.min(userIds.length, limit * 2))) {
       const raw = await kv.get(`ff:post:${id}`);
       if (raw) {
         const post = JSON.parse(raw);
+        // Sur le profil d'autrui : masquer les posts anonymes
+        if (post.isAnonymous && !isOwnProfile) continue;
         if (post.createdAt) post.progress.timestamp = relativeTime(post.createdAt);
-        posts.push(post);
+        posts.push(sanitizePost(post as Record<string, unknown>, requestingUserId));
       }
     }
     // Tri décroissant par createdAt
@@ -1037,6 +1058,11 @@ app.get("/make-server-218684af/comments/post/:postId", async (c) => {
     const limit = parseInt(c.req.query("limit") || "100", 10);
     const requestingUser = c.req.query("userId") || "";
 
+    // Déterminer si le post est anonyme (pour masquer l'auteur dans ses propres commentaires)
+    const postRaw = await kv.get(`ff:post:${postId}`);
+    const postObj = postRaw ? JSON.parse(postRaw) : null;
+    const anonRealAuthor: string | null = postObj?.isAnonymous ? (postObj.realAuthorUsername || null) : null;
+
     const commentIds: string[] = JSON.parse((await kv.get(`ff:comments:post:${postId}`)) || "[]");
     const comments = [];
 
@@ -1045,6 +1071,11 @@ app.get("/make-server-218684af/comments/post/:postId", async (c) => {
       if (!raw) continue;
       const comment = JSON.parse(raw);
       if (comment.createdAt) comment.timestamp = relativeTime(comment.createdAt);
+      // Si le commentaire vient de l'auteur anonyme, masquer son identité
+      if (anonRealAuthor && comment.userId === anonRealAuthor) {
+        comment.author = "Anonyme";
+        comment.avatar = "";
+      }
 
       // Réaction de l'utilisateur courant
       if (requestingUser) {

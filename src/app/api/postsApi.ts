@@ -65,6 +65,7 @@ export interface CreatePostPayload {
   image?: string;
   images?: string[];
   username: string;
+  isAnonymous?: boolean;
 }
 
 // Crée un nouveau post
@@ -80,16 +81,20 @@ export async function createPost(payload: CreatePostPayload): Promise<{ success:
 }
 
 // Récupère tous les posts (les plus récents en premier)
-export async function getAllPosts(limit = 50): Promise<{ posts: ApiPost[]; total: number }> {
-  const res = await fetchWithRetry(`${BASE}/posts?limit=${limit}`, { headers: HEADERS });
+export async function getAllPosts(limit = 50, userId?: string): Promise<{ posts: ApiPost[]; total: number }> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (userId) params.set("userId", userId);
+  const res = await fetchWithRetry(`${BASE}/posts?${params}`, { headers: HEADERS });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || `Erreur serveur: ${res.status}`);
   return data;
 }
 
 // Récupère les posts d'un utilisateur spécifique
-export async function getUserPosts(username: string, limit = 50): Promise<{ posts: ApiPost[]; total: number }> {
-  const res = await fetchWithRetry(`${BASE}/posts/user/${encodeURIComponent(username)}?limit=${limit}`, {
+export async function getUserPosts(username: string, limit = 50, requestingUserId?: string): Promise<{ posts: ApiPost[]; total: number }> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (requestingUserId) params.set("requestingUserId", requestingUserId);
+  const res = await fetchWithRetry(`${BASE}/posts/user/${encodeURIComponent(username)}?${params}`, {
     headers: HEADERS,
   });
   const data = await res.json();

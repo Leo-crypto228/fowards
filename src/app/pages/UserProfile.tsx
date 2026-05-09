@@ -484,11 +484,12 @@ function PostsSection({ username, profileUser }: { username: string; profileUser
   const [posts, setPosts] = useState<ApiPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { currentUserId } = useFollow();
 
   const fetchPosts = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const { posts: p } = await getUserPosts(username, 30);
+      const { posts: p } = await getUserPosts(username, 30, currentUserId || undefined);
       setPosts(p);
     } catch (err) {
       console.error("Erreur posts utilisateur:", err);
@@ -496,7 +497,7 @@ function PostsSection({ username, profileUser }: { username: string; profileUser
     } finally {
       setLoading(false);
     }
-  }, [username]);
+  }, [username, currentUserId]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
@@ -535,8 +536,10 @@ function PostsSection({ username, profileUser }: { username: string; profileUser
           <motion.div key={post.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04, duration: 0.22 }} style={{ marginBottom: 10 }}>
             <ProgressCard
               postId={post.id}
-              user={profileUser}
+              user={(post as any).isAnonymous ? { name: "Anonyme", avatar: "", objective: "" } : profileUser}
               authorUsername={post.username || username}
+              isAnonymous={!!(post as any).isAnonymous}
+              isMineAnonymous={!!(post as any).isMineAnonymous}
               streak={post.streak}
               progress={post.progress}
               hashtags={post.hashtags}

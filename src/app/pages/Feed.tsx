@@ -375,7 +375,7 @@ export function Feed() {
     setLoadingApi(true);
     setApiError(null);
     try {
-      const { posts } = await getAllPosts(60);
+      const { posts } = await getAllPosts(60, currentUserId || undefined);
       const valid = posts
         .filter(p => p?.user?.name)
         .filter(p => !p.id?.startsWith("seed-"));
@@ -795,6 +795,8 @@ export function Feed() {
                     <ProgressCard
                       postId={post.id} user={post.user} streak={post.streak}
                       authorUsername={post.username}
+                      isAnonymous={!!(post as any).isAnonymous}
+                      isMineAnonymous={!!(post as any).isMineAnonymous}
                       progress={post.progress as { type: "infos"|"conseil"|"new"|"avancement"|"objectif"|"lecon"|"question"|"bilan"; description: string; timestamp: string }}
                       hashtags={post.hashtags} image={post.image ?? undefined} images={post.images}
                       verified={post.verified} isNew={post.isNew}
@@ -873,6 +875,8 @@ export function Feed() {
                     user={post.user}
                     streak={post.streak}
                     authorUsername={(post as any).username ?? undefined}
+                    isAnonymous={!!(post as any).isAnonymous}
+                    isMineAnonymous={!!(post as any).isMineAnonymous}
                     progress={post.progress as { type: "infos"|"conseil"|"new"|"avancement"|"objectif"|"lecon"|"question"|"bilan"; description: string; timestamp: string }}
                     hashtags={post.hashtags}
                     image={post.image ?? undefined} images={post.images}
