@@ -1150,8 +1150,29 @@ export function PostDetail() {
     const raw = commentInput.trim();
     if (!raw || submittingComment) return;
     setSubmittingComment(true);
+
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: ApiComment = {
+      id: tempId,
+      postId,
+      userId: myUserId,
+      author: myUserName,
+      avatar: myUserAvatar,
+      content: boldMode ? `**${raw}**` : raw,
+      commentType: (selectedTag as CommentType) ?? null,
+      reactionCounts: { Pertinent: 0, Motivant: 0, "J'adore": 0, "Je soutiens": 0 } as Record<string, number>,
+      repliesCount: 0,
+      createdAt: new Date().toISOString(),
+      timestamp: "À l'instant",
+      myReaction: null,
+    };
+    setApiComments((prev) => [optimistic, ...prev]);
+    setCommentInput(""); setBoldMode(false);
+    setSelectedTag(null); setReplyingTo(null); setActiveReplyTarget(null);
+    setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }), 80);
+
     try {
-      const { comment: newApiComment } = await createComment({
+      const { comment: saved } = await createComment({
         postId,
         userId: myUserId,
         author: myUserName,
@@ -1159,30 +1180,13 @@ export function PostDetail() {
         content: boldMode ? `**${raw}**` : raw,
         commentType: (selectedTag as CommentType) ?? null,
       });
-      // Ajout simple — sortedApiComments (useMemo) gère le tri Conseil en premier
-      setApiComments((prev) => [newApiComment, ...prev]);
+      setApiComments((prev) => prev.map((c) => c.id === tempId ? saved : c));
     } catch (err) {
       console.error("Erreur envoi commentaire:", err);
-      // Fallback local — affiche dans la liste API pour qu'il soit visible
-      const fallback: ApiComment = {
-        id: String(Date.now()),
-        postId,
-        userId: myUserId,
-        author: myUserName,
-        avatar: myUserAvatar,
-        content: boldMode ? `**${raw}**` : raw,
-        commentType: (selectedTag as CommentType) ?? null,
-        reactionCounts: { Pertinent: 0, Motivant: 0, "J'adore": 0, "Je soutiens": 0 } as Record<string, number>,
-        repliesCount: 0,
-        createdAt: new Date().toISOString(),
-        timestamp: "À l'instant",
-        myReaction: null,
-      };
-      setApiComments((prev) => [fallback, ...prev]);
-    } finally { setSubmittingComment(false); }
-    setCommentInput(""); setBoldMode(false);
-    setSelectedTag(null); setReplyingTo(null); setActiveReplyTarget(null);
-    setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }), 80);
+      // Keep optimistic comment visible on error — ID stays temp but content is right
+    } finally {
+      setSubmittingComment(false);
+    }
   }, [commentInput, boldMode, selectedTag, replyingTo, postId, submittingComment]);
 
   // GIF → envoyer directement comme commentaire
