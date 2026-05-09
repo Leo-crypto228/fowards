@@ -29,6 +29,9 @@ const ProgressionPage   = lazy(() => import("./pages/ProgressionPage").then(m =>
 const EditProfilePage   = lazy(() => import("./pages/EditProfilePage").then(m => ({ default: m.EditProfilePage })));
 const ProfileSettings   = lazy(() => import("./pages/ProfileSettings").then(m => ({ default: m.ProfileSettings })));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage").then(m => ({ default: m.NotificationsPage })));
+const CreateWays        = lazy(() => import("./pages/CreateWays").then(m => ({ default: m.CreateWays })));
+const WaysViewer        = lazy(() => import("./pages/WaysViewer").then(m => ({ default: m.WaysViewer })));
+const WaysComments      = lazy(() => import("./pages/WaysComments").then(m => ({ default: m.WaysComments })));
 
 export const router = createBrowserRouter([
   // ── Auth pages (hors Layout, hors guard) ─────────────────────────────────
@@ -64,6 +67,9 @@ export const router = createBrowserRouter([
       { path: "fcoins",             Component: FcoinsPage },
       { path: "progression",        Component: ProgressionPage },
       { path: "notifications",      Component: NotificationsPage },
+      { path: "ways/create",        Component: CreateWays },
+      { path: "ways/:id/comments",  Component: WaysComments },
+      { path: "ways/:id",           Component: WaysViewer },
     ],
   },
 ]);

@@ -5993,4 +5993,303 @@ app.get("/make-server-218684af/posts/:postId/private-stats", async (c) => {
   }
 });
 
+// ════════════════════════════════════════════════════════════════════════════
+// WAYS (Stories 24h)
+// ════════════════════════════════════════════════════════════════════════════
+
+const WAYS_TTL_MS = 24 * 60 * 60 * 1000;
+
+app.post("/make-server-218684af/ways", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { username, text, image } = body;
+    if (!username) return c.json({ error: "username requis." }, 400);
+    if (!text?.trim() && !image) return c.json({ error: "Texte ou image requis." }, 400);
+
+    const normUser = normalizeUsername(username);
+    const profileRaw = await kv.get(`ff:profile:${normUser}`);
+    if (!profileRaw) return c.json({ error: "Profil introuvable." }, 404);
+    const profile = JSON.parse(profileRaw);
+
+    const id = genId();
+    const now = new Date();
+    const ways = {
+      id,
+      author: { username: normUser, name: profile.name || username, avatar: profile.avatar || "" },
+      text: (text || "").trim(),
+      image: image || null,
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + WAYS_TTL_MS).toISOString(),
+      likesCount: 0,
+      commentsCount: 0,
+    };
+
+    await kv.set(`ff:ways:${id}`, JSON.stringify(ways));
+
+    const allIds: string[] = JSON.parse((await kv.get("ff:ways:all")) || "[]");
+    allIds.unshift(id);
+    if (allIds.length > 2000) allIds.splice(2000);
+    await kv.set("ff:ways:all", JSON.stringify(allIds));
+
+    const userIds: string[] = JSON.parse((await kv.get(`ff:ways:user:${normUser}`)) || "[]");
+    userIds.unshift(id);
+    await kv.set(`ff:ways:user:${normUser}`, JSON.stringify(userIds));
+
+    console.log(`Ways créé: id=${id}, author=${normUser}`);
+    return c.json({ success: true, ways });
+  } catch (err) {
+    return c.json({ error: `Échec création Ways: ${err}` }, 500);
+  }
+});
+
+// GET /ways/feed — Ways des utilisateurs suivis + soi-même (non expirés)
+app.get("/make-server-218684af/ways/feed", async (c) => {
+  try {
+    const userId = c.req.query("userId") || "";
+    if (!userId) return c.json({ error: "userId requis." }, 400);
+
+    const normUserId = normalizeUsername(userId);
+    const followingRaw = await kv.get(`ff:following:${normUserId}`);
+    const following: string[] = followingRaw ? JSON.parse(followingRaw) : [];
+    const authors = new Set([normUserId, ...following]);
+
+    const now = Date.now();
+    const allIds: string[] = JSON.parse((await kv.get("ff:ways:all")) || "[]");
+
+    const byAuthor = new Map<string, Record<string, unknown>[]>();
+    for (const id of allIds) {
+      const raw = await kv.get(`ff:ways:${id}`);
+      if (!raw) continue;
+      const ways = JSON.parse(raw) as Record<string, unknown>;
+      const author = ways.author as Record<string, unknown>;
+      if (ways.expiresAt && new Date(String(ways.expiresAt)).getTime() < now) continue;
+      if (!authors.has(String(author?.username))) continue;
+      const au = String(author.username);
+      if (!byAuthor.has(au)) byAuthor.set(au, []);
+      byAuthor.get(au)!.push(ways);
+    }
+
+    const result: { author: Record<string, unknown>; ways: Record<string, unknown>[] }[] = [];
+
+    // Soi-même en premier
+    if (byAuthor.has(normUserId)) {
+      const selfWays = byAuthor.get(normUserId)!;
+      result.push({ author: selfWays[0].author as Record<string, unknown>, ways: selfWays });
+    } else {
+      const selfProfileRaw = await kv.get(`ff:profile:${normUserId}`);
+      if (selfProfileRaw) {
+        const sp = JSON.parse(selfProfileRaw);
+        result.push({
+          author: { username: normUserId, name: sp.name || normUserId, avatar: sp.avatar || "" },
+          ways: [],
+        });
+      }
+    }
+
+    for (const [au, ways] of byAuthor.entries()) {
+      if (au === normUserId) continue;
+      result.push({ author: ways[0].author as Record<string, unknown>, ways });
+    }
+
+    return c.json({ feed: result });
+  } catch (err) {
+    return c.json({ error: `Échec feed Ways: ${err}` }, 500);
+  }
+});
+
+app.get("/make-server-218684af/ways/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const raw = await kv.get(`ff:ways:${id}`);
+    if (!raw) return c.json({ error: "Ways introuvable." }, 404);
+    const ways = JSON.parse(raw);
+    if (ways.expiresAt && new Date(ways.expiresAt).getTime() < Date.now()) {
+      return c.json({ error: "Ce Ways a expiré." }, 410);
+    }
+    return c.json({ ways });
+  } catch (err) {
+    return c.json({ error: `Échec récupération Ways: ${err}` }, 500);
+  }
+});
+
+app.delete("/make-server-218684af/ways/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { username } = body;
+    if (!username) return c.json({ error: "username requis." }, 400);
+
+    const raw = await kv.get(`ff:ways:${id}`);
+    if (!raw) return c.json({ error: "Ways introuvable." }, 404);
+    const ways = JSON.parse(raw);
+
+    if ((ways.author as Record<string, unknown>)?.username !== normalizeUsername(username)) {
+      return c.json({ error: "Seul l'auteur peut supprimer ce Ways." }, 403);
+    }
+
+    await kv.del(`ff:ways:${id}`);
+
+    const allIds: string[] = JSON.parse((await kv.get("ff:ways:all")) || "[]");
+    await kv.set("ff:ways:all", JSON.stringify(allIds.filter((i) => i !== id)));
+
+    const normUser = (ways.author as Record<string, unknown>).username as string;
+    const userIds: string[] = JSON.parse((await kv.get(`ff:ways:user:${normUser}`)) || "[]");
+    await kv.set(`ff:ways:user:${normUser}`, JSON.stringify(userIds.filter((i) => i !== id)));
+
+    console.log(`Ways supprimé: id=${id}, author=${username}`);
+    return c.json({ success: true });
+  } catch (err) {
+    return c.json({ error: `Échec suppression Ways: ${err}` }, 500);
+  }
+});
+
+app.post("/make-server-218684af/ways/:id/like", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { username } = await c.req.json();
+    if (!username) return c.json({ error: "username requis." }, 400);
+
+    const raw = await kv.get(`ff:ways:${id}`);
+    if (!raw) return c.json({ error: "Ways introuvable." }, 404);
+    const ways = JSON.parse(raw);
+
+    const normUser = normalizeUsername(username);
+    const likeKey = `ff:ways-like:${id}:${normUser}`;
+    const alreadyLiked = await kv.get(likeKey);
+
+    if (alreadyLiked) {
+      await kv.del(likeKey);
+      ways.likesCount = Math.max(0, (ways.likesCount || 0) - 1);
+    } else {
+      await kv.set(likeKey, "1");
+      ways.likesCount = (ways.likesCount || 0) + 1;
+      const authorUsername = (ways.author as Record<string, unknown>)?.username as string;
+      if (authorUsername && authorUsername !== normUser) {
+        await createSocialNotif({ userId: authorUsername, type: "like", senderId: normUser, postId: id });
+      }
+    }
+
+    await kv.set(`ff:ways:${id}`, JSON.stringify(ways));
+    return c.json({ success: true, liked: !alreadyLiked, likesCount: ways.likesCount });
+  } catch (err) {
+    return c.json({ error: `Échec like Ways: ${err}` }, 500);
+  }
+});
+
+app.post("/make-server-218684af/ways/:id/comments", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { username, name, avatar, text } = body;
+    if (!username || !text?.trim()) return c.json({ error: "username et text requis." }, 400);
+
+    const raw = await kv.get(`ff:ways:${id}`);
+    if (!raw) return c.json({ error: "Ways introuvable." }, 404);
+    const ways = JSON.parse(raw);
+
+    const commentId = genId();
+    const normUser = normalizeUsername(username);
+    const comment = {
+      id: commentId,
+      waysId: id,
+      author: { username: normUser, name: name || username, avatar: avatar || "" },
+      text: text.trim(),
+      createdAt: new Date().toISOString(),
+      replies: [] as unknown[],
+    };
+
+    await kv.set(`ff:ways-comment:${commentId}`, JSON.stringify(comment));
+
+    const commentIds: string[] = JSON.parse((await kv.get(`ff:ways-comments:${id}`)) || "[]");
+    commentIds.push(commentId);
+    await kv.set(`ff:ways-comments:${id}`, JSON.stringify(commentIds));
+
+    ways.commentsCount = (ways.commentsCount || 0) + 1;
+    await kv.set(`ff:ways:${id}`, JSON.stringify(ways));
+
+    const authorUsername = (ways.author as Record<string, unknown>)?.username as string;
+    if (authorUsername && authorUsername !== normUser) {
+      await createSocialNotif({ userId: authorUsername, type: "comment", senderId: normUser, postId: id, commentId });
+    }
+
+    return c.json({ success: true, comment });
+  } catch (err) {
+    return c.json({ error: `Échec commentaire Ways: ${err}` }, 500);
+  }
+});
+
+// Commentaires privés — auteur du Ways uniquement
+app.get("/make-server-218684af/ways/:id/comments", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const userId = c.req.query("userId") || "";
+    if (!userId) return c.json({ error: "userId requis." }, 400);
+
+    const raw = await kv.get(`ff:ways:${id}`);
+    if (!raw) return c.json({ error: "Ways introuvable." }, 404);
+    const ways = JSON.parse(raw);
+
+    if ((ways.author as Record<string, unknown>)?.username !== normalizeUsername(userId)) {
+      return c.json({ error: "Seul l'auteur peut lire les commentaires." }, 403);
+    }
+
+    const commentIds: string[] = JSON.parse((await kv.get(`ff:ways-comments:${id}`)) || "[]");
+    const comments = [];
+    for (const cid of commentIds) {
+      const cRaw = await kv.get(`ff:ways-comment:${cid}`);
+      if (cRaw) comments.push(JSON.parse(cRaw));
+    }
+
+    return c.json({ comments });
+  } catch (err) {
+    return c.json({ error: `Échec lecture commentaires Ways: ${err}` }, 500);
+  }
+});
+
+// Réponse à un commentaire — auteur du Ways uniquement
+app.post("/make-server-218684af/ways/:id/comments/:commentId/reply", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const commentId = c.req.param("commentId");
+    const body = await c.req.json();
+    const { username, text } = body;
+    if (!username || !text?.trim()) return c.json({ error: "username et text requis." }, 400);
+
+    const waysRaw = await kv.get(`ff:ways:${id}`);
+    if (!waysRaw) return c.json({ error: "Ways introuvable." }, 404);
+    const ways = JSON.parse(waysRaw);
+
+    const normUser = normalizeUsername(username);
+    if ((ways.author as Record<string, unknown>)?.username !== normUser) {
+      return c.json({ error: "Seul l'auteur du Ways peut répondre." }, 403);
+    }
+
+    const cRaw = await kv.get(`ff:ways-comment:${commentId}`);
+    if (!cRaw) return c.json({ error: "Commentaire introuvable." }, 404);
+    const comment = JSON.parse(cRaw);
+
+    const reply = {
+      id: genId(),
+      author: { username: normUser, name: (ways.author as Record<string, unknown>).name, avatar: (ways.author as Record<string, unknown>).avatar },
+      text: text.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    comment.replies = [...(comment.replies || []), reply];
+    await kv.set(`ff:ways-comment:${commentId}`, JSON.stringify(comment));
+
+    await createSocialNotif({
+      userId: (comment.author as Record<string, unknown>).username as string,
+      type: "comment",
+      senderId: normUser,
+      postId: id,
+      commentId,
+    });
+
+    return c.json({ success: true, reply });
+  } catch (err) {
+    return c.json({ error: `Échec réponse commentaire Ways: ${err}` }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

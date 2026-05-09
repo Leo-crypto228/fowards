@@ -15,7 +15,8 @@ import { useFollow } from "../context/FollowContext";
 import { useAuth } from "../context/AuthContext";
 import { GLOBAL_PROFILES_MAP } from "../data/profiles";
 import { useNotifications } from "../context/NotificationContext";
-import { FollowsListSection } from "../components/FollowsListSection";
+import { getWaysFeed, type WaysFeedEntry } from "../api/waysApi";
+import { Plus, Pencil } from "lucide-react";
 
 const USER_AVATAR =
   "https://images.unsplash.com/photo-1584940121730-93ffb8aa88b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200";
@@ -405,6 +406,27 @@ export function Feed() {
     return () => window.removeEventListener("fowards:post-created", handler);
   }, [fetchApiPosts]);
 
+  // ── Ways feed ────────────────────────────────────────────────────────────
+  const [waysFeed, setWaysFeed] = useState<WaysFeedEntry[]>([]);
+  const waysLoadedRef = useRef(false);
+
+  const fetchWaysFeed = useCallback(async () => {
+    if (!currentUserId) return;
+    try {
+      const { feed } = await getWaysFeed(currentUserId);
+      setWaysFeed(feed);
+      waysLoadedRef.current = true;
+    } catch {
+      // silently ignore
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (activeTab === "Abonnements" && currentUserId && !waysLoadedRef.current) {
+      fetchWaysFeed();
+    }
+  }, [activeTab, currentUserId, fetchWaysFeed]);
+
   // ── Feed Abonnements depuis Supabase ─────────────────────────────────────
   const [followingPosts, setFollowingPosts] = useState<FeedPost[]>([]);
   const [followingProfiles, setFollowingProfiles] = useState<{
@@ -753,12 +775,117 @@ export function Feed() {
         {/* ── ONGLET ABONNEMENTS ── */}
         {activeTab === "Abonnements" && (
           <>
-            {/* ── Section Abonnement / Abonné avec pill tabs ── */}
-            <div style={{ padding: "4px 16px 0" }}>
-              <FollowsListSection
-                currentUserId={currentUserId}
-                followedList={followedList}
-              />
+            {/* ── Ways circles ── */}
+            <div style={{ padding: "8px 0 4px" }}>
+              {/* Create buttons row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 16px 10px", justifyContent: "flex-end" }}>
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  onClick={() => navigate("/ways/create")}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "7px 14px", borderRadius: 999,
+                    background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
+                    border: "none", cursor: "pointer",
+                  }}
+                >
+                  <Plus style={{ width: 13, height: 13, color: "#fff" }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", whiteSpace: "nowrap" }}>Créer ton Ways</span>
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  onClick={() => navigate("/create")}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "7px 14px", borderRadius: 999,
+                    background: "rgba(255,255,255,0.07)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Pencil style={{ width: 12, height: 12, color: "rgba(255,255,255,0.70)" }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.70)", whiteSpace: "nowrap" }}>Créer ton Partage</span>
+                </motion.button>
+              </div>
+
+              {/* Circles horizontal scroll */}
+              {waysFeed.length > 0 && (
+                <div
+                  style={{
+                    display: "flex", alignItems: "flex-start", gap: 14,
+                    overflowX: "auto", paddingLeft: 16, paddingRight: 16, paddingBottom: 8,
+                    scrollbarWidth: "none",
+                  }}
+                >
+                  {waysFeed.map((entry) => {
+                    const hasWays = entry.ways.length > 0;
+                    const isSelf = entry.author.username === currentUserId;
+                    const initial = (entry.author.name?.[0] ?? "?").toUpperCase();
+                    return (
+                      <motion.button
+                        key={entry.author.username}
+                        whileTap={{ scale: 0.92 }}
+                        onClick={() => hasWays
+                          ? navigate(`/ways/${entry.ways[0].id}`)
+                          : isSelf ? navigate("/ways/create") : undefined
+                        }
+                        style={{
+                          display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                          background: "none", border: "none", cursor: hasWays || isSelf ? "pointer" : "default",
+                          flexShrink: 0, padding: 0,
+                        }}
+                      >
+                        {/* Ring */}
+                        <div
+                          style={{
+                            width: 66, height: 66, borderRadius: "50%", padding: 2.5,
+                            background: hasWays
+                              ? "linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #38bdf8 100%)"
+                              : isSelf
+                                ? "rgba(255,255,255,0.10)"
+                                : "rgba(255,255,255,0.08)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "100%", height: "100%", borderRadius: "50%",
+                              background: "#09090f",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              overflow: "hidden",
+                              border: hasWays ? "2px solid transparent" : "none",
+                            }}
+                          >
+                            {entry.author.avatar ? (
+                              <img
+                                src={entry.author.avatar}
+                                alt=""
+                                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                              />
+                            ) : (
+                              <span style={{ fontSize: 20, fontWeight: 700, color: "rgba(255,255,255,0.75)" }}>{initial}</span>
+                            )}
+                          </div>
+                        </div>
+                        {/* + button for self with no ways */}
+                        {isSelf && !hasWays && (
+                          <div style={{
+                            position: "absolute", bottom: 28, right: -2,
+                            width: 20, height: 20, borderRadius: "50%",
+                            background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            <Plus style={{ width: 11, height: 11, color: "#fff" }} />
+                          </div>
+                        )}
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.60)", fontWeight: isSelf ? 700 : 400, maxWidth: 60, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {isSelf ? "Toi" : entry.author.name}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* ── Séparateur visuel ── */}
