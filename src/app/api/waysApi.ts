@@ -44,13 +44,22 @@ export interface WaysFeedEntry {
   ways: Ways[];
 }
 
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Réponse serveur invalide (${res.status}): ${text.slice(0, 120)}`);
+  }
+}
+
 export async function createWays(params: {
   username: string;
   text?: string;
   image?: string;
 }): Promise<{ ways: Ways }> {
   const res = await fetch(`${BASE}/ways`, { method: "POST", headers: HEADERS, body: JSON.stringify(params) });
-  const data = await res.json();
+  const data = await safeJson(res);
   if (!res.ok) throw new Error(data.error || "Erreur création Ways");
   return data;
 }

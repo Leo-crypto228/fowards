@@ -142,7 +142,9 @@ export function CreateProgress() {
         const ext = waysImageFile.type === "image/png" ? "png" : waysImageFile.type === "image/webp" ? "webp" : "jpg";
         form.append("file", waysImageFile, `image.${ext}`);
         const upRes = await fetch(`${BASE}/upload-image`, { method: "POST", headers: { Authorization: `Bearer ${publicAnonKey}` }, body: form });
-        const upData = await upRes.json();
+        const upText = await upRes.text();
+        let upData: { url?: string; error?: string };
+        try { upData = JSON.parse(upText); } catch { throw new Error(`Upload échoué (${upRes.status}): ${upText.slice(0, 120)}`); }
         if (!upRes.ok) throw new Error(upData.error || "Erreur upload image");
         imageUrl = upData.url;
       }
