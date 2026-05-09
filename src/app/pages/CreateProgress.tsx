@@ -377,7 +377,7 @@ export function CreateProgress() {
                 <ImagePlus style={{ width: 16, height: 16, color: "rgba(255,255,255,0.55)" }} />
                 <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.50)" }}>{waysImageFile ? "Changer" : "Photo"}</span>
               </motion.button>
-              <input ref={waysFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={handleWaysImagePick} />
+              <input ref={waysFileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleWaysImagePick} />
             </div>
 
             {/* Bouton Publier — même style que Partage */}
@@ -566,7 +566,7 @@ export function CreateProgress() {
               <ImagePlus style={{ width: 16, height: 16, color: "rgba(255,255,255,0.55)" }} />
               <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.50)" }}>{images.length > 0 ? `${images.length}/4` : "Photo"}</span>
             </motion.button>
-            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple style={{ display: "none" }} onChange={handleImagePick} />
+            <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleImagePick} />
 
             {/* GIF */}
             <motion.button type="button" whileTap={{ scale: 0.91 }} onClick={() => setGifOpen(true)}
