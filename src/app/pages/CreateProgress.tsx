@@ -117,15 +117,15 @@ export function CreateProgress() {
   const [waysImagePreview, setWaysImagePreview] = useState<string | null>(null);
   const [waysSubmitting, setWaysSubmitting] = useState(false);
   const waysFileInputRef = useRef<HTMLInputElement>(null);
-  const WAYS_MAX = 300;
+  const WAYS_MAX = 1000;
 
   const handleWaysImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const err = validateImageFile(file);
     if (err) { toast.error(err); return; }
-    const compressed = await compressImage(file, { maxWidth: 1080, quality: 0.82 });
-    setWaysImageFile(compressed);
+    const compressed = await compressImage(file);
+    setWaysImageFile(compressed as File);
     setWaysImagePreview(URL.createObjectURL(compressed));
     e.target.value = "";
   };
@@ -139,7 +139,8 @@ export function CreateProgress() {
       let imageUrl: string | undefined;
       if (waysImageFile) {
         const form = new FormData();
-        form.append("file", waysImageFile, waysImageFile.name);
+        const ext = waysImageFile.type === "image/png" ? "png" : waysImageFile.type === "image/webp" ? "webp" : "jpg";
+        form.append("file", waysImageFile, `image.${ext}`);
         const upRes = await fetch(`${BASE}/upload-image`, { method: "POST", headers: { Authorization: `Bearer ${publicAnonKey}` }, body: form });
         const upData = await upRes.json();
         if (!upRes.ok) throw new Error(upData.error || "Erreur upload image");
@@ -304,123 +305,110 @@ export function CreateProgress() {
           </div>
         )}
 
-        {/* ── Sélecteur de mode : Partage | Ways ── */}
-        <motion.div
+        {/* ── Sélecteur de mode : tab style comme le feed ── */}
+        <div
           className={quotedPost ? "mt-6" : "mt-14"}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.04, duration: 0.3 }}
-          style={{ marginBottom: 24 }}
+          style={{ display: "flex", borderBottom: "0.5px solid rgba(255,255,255,0.07)", marginBottom: 24 }}
         >
-          <div style={{ display: "inline-flex", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", padding: 4, gap: 4 }}>
-            {(["partage", "ways"] as const).map((m) => (
-              <motion.button
-                key={m}
-                type="button"
-                whileTap={{ scale: 0.94 }}
-                onClick={() => setMode(m)}
-                style={{
-                  padding: "7px 20px", borderRadius: 999, border: "none", cursor: "pointer",
-                  fontSize: 14, fontWeight: 700, letterSpacing: "-0.01em",
-                  background: mode === m
-                    ? m === "ways"
-                      ? "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)"
-                      : "rgba(255,255,255,0.13)"
-                    : "transparent",
-                  color: mode === m ? "#fff" : "rgba(255,255,255,0.38)",
-                  transition: "background 0.2s, color 0.2s",
-                  boxShadow: mode === m && m === "ways" ? "0 2px 12px rgba(124,58,237,0.35)" : "none",
-                }}
-              >
-                {m === "partage" ? "Partage" : "Ways"}
-              </motion.button>
-            ))}
-          </div>
-          {mode === "ways" && (
-            <p style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.30)" }}>
-              Visible 24h · commentaires privés
-            </p>
-          )}
-        </motion.div>
+          {(["partage", "ways"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              style={{
+                flex: 1, padding: "12px 0",
+                background: "transparent", border: "none", cursor: "pointer",
+                fontSize: 15, fontWeight: mode === m ? 700 : 400,
+                color: "#fff",
+                position: "relative",
+                opacity: mode === m ? 1 : 0.45,
+              }}
+            >
+              {m === "partage" ? "Post ton partage" : "Post ton Ways"}
+              {mode === m && (
+                <motion.div
+                  layoutId="createModeIndicator"
+                  style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "#6366f1", borderRadius: 999 }}
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
 
-        {/* ── Mode Ways : interface de création ── */}
-        <AnimatePresence mode="wait">
+        {/* ── Mode Ways : même design que Partage ── */}
         {mode === "ways" && (
-          <motion.div
-            key="ways-editor"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-          >
-            {/* Textarea */}
-            <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.09)", padding: "14px 16px", position: "relative", marginBottom: 16 }}>
-              <textarea
-                value={waysText}
-                onChange={(e) => setWaysText(e.target.value.slice(0, WAYS_MAX))}
-                placeholder="Partage quelque chose avec tes abonnés..."
-                rows={6}
-                style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 16, color: "rgba(240,240,245,0.90)", lineHeight: 1.6, fontFamily: "inherit" }}
-              />
-              <span style={{ position: "absolute", bottom: 10, right: 14, fontSize: 12, fontWeight: 600, color: WAYS_MAX - waysText.length < 30 ? "#f87171" : "rgba(255,255,255,0.22)" }}>
-                {WAYS_MAX - waysText.length}
+          <div>
+            {/* Textarea — même style que le post */}
+            <textarea
+              value={waysText}
+              onChange={(e) => setWaysText(e.target.value.slice(0, WAYS_MAX))}
+              placeholder="Partage quelque chose avec tes abonnés..."
+              rows={7}
+              style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 17, fontWeight: 400, color: "#f0f0f5", lineHeight: 1.65, letterSpacing: "0.1px", caretColor: "#6366f1", whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word" }}
+              className="placeholder:text-[rgba(144,144,168,0.45)]"
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2, marginBottom: 8 }}>
+              <span style={{ fontSize: 11, color: waysText.length > 900 ? "rgba(251,191,36,0.70)" : "rgba(255,255,255,0.20)", fontWeight: 500 }}>
+                {waysText.length}/{WAYS_MAX}
               </span>
             </div>
 
-            {/* Image preview */}
+            {/* Image preview — 3:4 comme les posts */}
             <AnimatePresence>
               {waysImagePreview && (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                  style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 16 }}>
-                  <img src={waysImagePreview} alt="" style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block", borderRadius: 16 }} />
-                  <motion.button whileTap={{ scale: 0.88 }} onClick={() => { setWaysImageFile(null); setWaysImagePreview(null); }}
-                    style={{ position: "absolute", top: 10, right: 10, width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.65)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <X style={{ width: 13, height: 13, color: "#fff" }} />
-                  </motion.button>
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+                  style={{ marginTop: 6, marginBottom: 14, position: "relative" }}>
+                  <div style={{ width: "72%", aspectRatio: "3/4", borderRadius: 14, overflow: "hidden", border: "0.5px solid rgba(255,255,255,0.10)", position: "relative" }}>
+                    <img src={waysImagePreview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <motion.button whileTap={{ scale: 0.88 }} onClick={() => { setWaysImageFile(null); setWaysImagePreview(null); }}
+                      style={{ position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <X style={{ width: 13, height: 13, color: "#fff" }} />
+                    </motion.button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Image picker + submit */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {!waysImagePreview && (
-                <motion.button whileTap={{ scale: 0.94 }} type="button" onClick={() => waysFileInputRef.current?.click()}
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 16px", borderRadius: 14, background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.14)", cursor: "pointer", flex: 1 }}>
-                  <ImagePlus style={{ width: 18, height: 18, color: "rgba(255,255,255,0.38)" }} />
-                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.38)" }}>Ajouter une image</span>
-                </motion.button>
-              )}
+            {/* Barre d'actions — Photo uniquement */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, paddingBottom: 4 }}>
+              <motion.button type="button" whileTap={{ scale: 0.91 }} onClick={() => waysFileInputRef.current?.click()}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 13px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", cursor: "pointer" }}>
+                <ImagePlus style={{ width: 16, height: 16, color: "rgba(255,255,255,0.55)" }} />
+                <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.50)" }}>{waysImageFile ? "Changer" : "Photo"}</span>
+              </motion.button>
               <input ref={waysFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={handleWaysImagePick} />
+            </div>
 
+            {/* Bouton Publier — même style que Partage */}
+            <motion.div className="mt-8 mb-4">
               <motion.button
-                whileTap={{ scale: 0.92 }}
                 type="button"
                 onClick={handleWaysSubmit}
                 disabled={(!waysText.trim() && !waysImageFile) || waysSubmitting}
+                whileTap={(!waysText.trim() && !waysImageFile) || waysSubmitting ? {} : { scale: 0.97 }}
+                animate={{
+                  background: waysSubmitting ? "#ffffff" : (waysText.trim() || waysImageFile) ? "#111111" : "#0a0a0a",
+                  borderColor: waysSubmitting ? "#ffffff" : (waysText.trim() || waysImageFile) ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.10)",
+                }}
+                transition={{ duration: 0.18 }}
                 style={{
-                  display: "flex", alignItems: "center", gap: 7,
-                  padding: "11px 22px", borderRadius: 999,
-                  background: (waysText.trim() || waysImageFile) && !waysSubmitting
-                    ? "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)"
-                    : "rgba(255,255,255,0.08)",
-                  border: "none", cursor: (waysText.trim() || waysImageFile) ? "pointer" : "not-allowed",
-                  opacity: (waysText.trim() || waysImageFile) ? 1 : 0.45, flexShrink: 0,
+                  width: "100%", padding: "16px", borderRadius: 100,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  color: (waysText.trim() || waysImageFile) ? "rgba(255,255,255,0.90)" : "rgba(255,255,255,0.28)",
+                  fontSize: 16, fontWeight: 700, cursor: (!waysText.trim() && !waysImageFile) || waysSubmitting ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  letterSpacing: "-0.1px", transition: "color 0.18s ease",
                 }}
               >
-                {waysSubmitting ? (
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.30)", borderTopColor: "#fff", borderRadius: "50%" }} />
-                ) : (
-                  <>
-                    <Send style={{ width: 14, height: 14, color: "#fff" }} />
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Publier</span>
-                  </>
-                )}
+                {waysSubmitting
+                  ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.25)", borderTopColor: "#fff", borderRadius: "50%" }} /></>
+                  : "Publier"
+                }
               </motion.button>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         )}
-        </AnimatePresence>
 
         {/* ── Type de post ── */}
         <motion.div

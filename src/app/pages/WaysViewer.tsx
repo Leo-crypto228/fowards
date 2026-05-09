@@ -138,11 +138,12 @@ export function WaysViewer() {
   return (
     <div
       style={{
-        minHeight: "100dvh",
+        height: "100dvh",
         background: "#09090f",
         display: "flex",
         flexDirection: "column",
         position: "relative",
+        overflow: "hidden",
       }}
     >
       {/* Top bar */}
@@ -273,8 +274,8 @@ export function WaysViewer() {
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Content — scrollable */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
         {ways.image && (
           <motion.div
             initial={{ opacity: 0, y: 6 }}
