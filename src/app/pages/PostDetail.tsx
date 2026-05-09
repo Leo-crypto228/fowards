@@ -1145,8 +1145,8 @@ export function PostDetail() {
       return saved ? (JSON.parse(saved) as PostData) : null;
     } catch { return null; }
   })();
-  const isSelfPost = myUserId !== "" && post?.user?.name
-    ? myUserId.toLowerCase() === (post.user.name || "").toLowerCase().replace(/\s+/g, "")
+  const isSelfPost = myUserName !== "" && post?.user?.name
+    ? myUserName.toLowerCase().trim() === (post.user.name || "").toLowerCase().trim()
     : false;
   const { save, unsave, getSavedId } = useSavedPosts();
 
