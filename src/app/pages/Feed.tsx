@@ -800,6 +800,7 @@ export function Feed() {
                       verified={post.verified} isNew={post.isNew}
                       relevantCount={post.relevantCount} commentsCount={post.commentsCount}
                       sharesCount={post.sharesCount} viewsCount={post.viewsCount}
+                      postCreatedAt={(post as any).createdAt}
                     />
                   </motion.div>
                 ))}
@@ -881,6 +882,7 @@ export function Feed() {
                     commentsCount={post.commentsCount}
                     sharesCount={post.sharesCount}
                     viewsCount={post.viewsCount}
+                    postCreatedAt={(post as any).createdAt}
                   />
                 </motion.div>
               ))}

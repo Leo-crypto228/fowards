@@ -696,9 +696,11 @@ app.post("/make-server-218684af/posts", async (c) => {
       hashtags: hashtags || [], image: body.image || null, images: body.images || (body.image ? [body.image] : []), verified: false,
       relevantCount: 0, commentsCount: 0, sharesCount: 0, viewsCount: 0,
       isNew: true, createdAt, username: resolvedUsername,
+      eloScore: 500,
     };
 
     await kv.set(`ff:post:${id}`, JSON.stringify(post));
+    await kv.set(`ff:elo:post:${id}`, "500");
     const allIds: string[] = JSON.parse((await kv.get("ff:posts:all")) || "[]");
     allIds.unshift(id);
     if (allIds.length > 500) allIds.splice(500);
@@ -5751,6 +5753,107 @@ app.post("/make-server-218684af/send-email", async (c) => {
   } catch (err) {
     console.error("Erreur send-email:", err);
     return c.json({ error: `Échec serveur: ${err}` }, 500);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ELO — Score de visibilité des posts
+// Tous les scores sont stockés en KV : ff:elo:post:{id} / ff:elo:user:{id}
+// Score initial : 500 (cold start). Mise à jour : like (+), commentaire (+/-),
+// impression ignorée (-). Invisible côté UI.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function _eloProb(su: number, sp: number): number {
+  return 1 / (1 + Math.pow(10, (su - sp) / 400));
+}
+
+function _eloK(createdAt: string): number {
+  const h = (Date.now() - new Date(createdAt).getTime()) / 3_600_000;
+  if (h < 24)  return 64;
+  if (h < 168) return 32;
+  return 16;
+}
+
+function _eloCommentUtil(likes: number, chars: number, replies: number, type: string | null): number {
+  const b = type === "actionnable" ? 20 : type === "motivant" ? 10 : 0;
+  return Math.min((likes * 10 + Math.min(chars, 1000) / 50 + replies * 15 + b) / 50, 1);
+}
+
+async function _getElo(key: string): Promise<number> {
+  const raw = await kv.get(key);
+  return raw ? parseFloat(raw) : 500;
+}
+
+// GET /elo/post/:postId — score actuel d'un post
+app.get("/make-server-218684af/elo/post/:postId", async (c) => {
+  const postId = c.req.param("postId");
+  const score = await _getElo(`ff:elo:post:${postId}`);
+  return c.json({ postId, eloScore: score });
+});
+
+// GET /elo/user/:userId — score actuel d'un utilisateur
+app.get("/make-server-218684af/elo/user/:userId", async (c) => {
+  const userId = c.req.param("userId");
+  const score = await _getElo(`ff:elo:user:${userId}`);
+  return c.json({ userId, eloScore: score });
+});
+
+// POST /elo/like — mise à jour après un like confirmé (R = 0.7)
+app.post("/make-server-218684af/elo/like", async (c) => {
+  try {
+    const { postId, userId, postCreatedAt } = await c.req.json();
+    if (!postId || !userId) return c.json({ error: "postId et userId requis." }, 400);
+
+    const sp = await _getElo(`ff:elo:post:${postId}`);
+    const su = await _getElo(`ff:elo:user:${userId}`);
+    const K  = _eloK(postCreatedAt || new Date().toISOString());
+    const pH = _eloProb(su, sp);
+    const newSp = sp + K * (0.7 - pH);
+    await kv.set(`ff:elo:post:${postId}`, String(newSp));
+    return c.json({ success: true, eloScore: newSp });
+  } catch (err) {
+    return c.json({ error: `Échec elo like: ${err}` }, 500);
+  }
+});
+
+// POST /elo/comment — mise à jour après un commentaire (R = Rnorm)
+app.post("/make-server-218684af/elo/comment", async (c) => {
+  try {
+    const { postId, userId, postCreatedAt, charCount = 0, eloType = null } = await c.req.json();
+    if (!postId || !userId) return c.json({ error: "postId et userId requis." }, 400);
+
+    const sp = await _getElo(`ff:elo:post:${postId}`);
+    const su = await _getElo(`ff:elo:user:${userId}`);
+    const K  = _eloK(postCreatedAt || new Date().toISOString());
+    const pH = _eloProb(su, sp);
+    const R  = _eloCommentUtil(0, charCount, 0, eloType);
+    const newSp = sp + K * (R - pH);
+    await kv.set(`ff:elo:post:${postId}`, String(newSp));
+    return c.json({ success: true, eloScore: newSp });
+  } catch (err) {
+    return c.json({ error: `Échec elo comment: ${err}` }, 500);
+  }
+});
+
+// POST /elo/impression — post vu sans interaction (R = 0). Idempotent par paire user/post.
+app.post("/make-server-218684af/elo/impression", async (c) => {
+  try {
+    const { postId, userId, postCreatedAt } = await c.req.json();
+    if (!postId || !userId) return c.json({ error: "postId et userId requis." }, 400);
+
+    const impKey = `ff:elo:imp:${postId}:${userId}`;
+    if (await kv.get(impKey)) return c.json({ success: true, skipped: true });
+    await kv.set(impKey, "1");
+
+    const sp = await _getElo(`ff:elo:post:${postId}`);
+    const su = await _getElo(`ff:elo:user:${userId}`);
+    const K  = _eloK(postCreatedAt || new Date().toISOString());
+    const pH = _eloProb(su, sp);
+    const newSp = sp + K * (0 - pH); // R = 0
+    await kv.set(`ff:elo:post:${postId}`, String(newSp));
+    return c.json({ success: true, eloScore: newSp });
+  } catch (err) {
+    return c.json({ error: `Échec elo impression: ${err}` }, 500);
   }
 });
 

@@ -15,9 +15,10 @@ import { HighlightInput } from "../components/HighlightInput";
 import {
   createComment, getPostComments, createReply, getCommentReplies,
   reactToComment, removeReaction,
-  type ApiComment, type ApiReply, type CommentType, type ReactionType,
+  type ApiComment, type ApiReply, type CommentType, type ReactionType, type EloCommentType,
   REACTION_TYPES,
 } from "../api/commentsApi";
+import { triggerEloComment } from "../api/eloApi";
 import {
   sharePost, getPostAnalytics, incrementPostView, getPostReactions, addPostReaction,
   getSessionId, type ApiAnalytics, type PostReactionType, sendCommunityMessage,
@@ -29,7 +30,6 @@ import { fetchAuthorGoalProgress, getCachedGoalProgress } from "../api/goalProgr
 /* ─── Types ───────────────────────────────���─���───────────────────────────────── */
 
 type PostType = "infos" | "conseil" | "new" | "avancement" | "objectif" | "lecon" | "question" | "bilan";
-type CommentTag = "Encouragement" | "Conseil" | "Réaction" | "Motivant";
 
 const TYPE_LABELS: Record<PostType, string> = {
   infos: "Infos perso", conseil: "Conseil(s)", new: "New",
@@ -37,7 +37,6 @@ const TYPE_LABELS: Record<PostType, string> = {
   question: "Question", bilan: "Bilan",
 };
 
-const COMMENT_TAGS: CommentTag[] = ["Conseil", "Encouragement", "Réaction", "Motivant"];
 
 // Current user — resolved from authStore at render time
 const MY_USER_ID   = _authUserId   || "thomasdubois";
@@ -963,6 +962,9 @@ export function PostDetail() {
       return saved ? (JSON.parse(saved) as PostData) : null;
     } catch { return null; }
   })();
+  const isSelfPost = myUserId !== "" && post?.user?.name
+    ? myUserId.toLowerCase() === (post.user.name || "").toLowerCase().replace(/\s+/g, "")
+    : false;
   const { save, unsave, getSavedId } = useSavedPosts();
 
   const [view, setView] = useState<"comments" | "share" | "stats">("comments");
@@ -1019,7 +1021,7 @@ export function PostDetail() {
   // Tools always visible in comments view (layout stable, plus de croissance au focus)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [boldMode, setBoldMode] = useState(false);
-  const [selectedTag, setSelectedTag] = useState<CommentTag | null>(null);
+  const [eloType, setEloType] = useState<EloCommentType>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [isRelevant, setIsRelevant] = useState(false);
   const [myReactionType, setMyReactionType] = useState<PostReactionType | null>(null);
@@ -1191,7 +1193,7 @@ export function PostDetail() {
       author: myUserName,
       avatar: myUserAvatar,
       content: boldMode ? `**${raw}**` : raw,
-      commentType: (selectedTag as CommentType) ?? null,
+      commentType: null,
       reactionCounts: { Pertinent: 0, Motivant: 0, "J'adore": 0, "Je soutiens": 0 } as Record<string, number>,
       repliesCount: 0,
       createdAt: new Date().toISOString(),
@@ -1199,8 +1201,10 @@ export function PostDetail() {
       myReaction: null,
     };
     setApiComments((prev) => [optimistic, ...prev]);
+    const capturedEloType = eloType;
+    const capturedRaw = boldMode ? `**${raw}**` : raw;
     setCommentInput(""); setBoldMode(false);
-    setSelectedTag(null); setReplyingTo(null); setActiveReplyTarget(null);
+    setEloType(null); setReplyingTo(null); setActiveReplyTarget(null);
     setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }), 80);
 
     try {
@@ -1209,17 +1213,20 @@ export function PostDetail() {
         userId: myUserId,
         author: myUserName,
         avatar: myUserAvatar,
-        content: boldMode ? `**${raw}**` : raw,
-        commentType: (selectedTag as CommentType) ?? null,
+        content: capturedRaw,
+        eloType: capturedEloType,
       });
       setApiComments((prev) => prev.map((c) => c.id === tempId ? saved : c));
+      // Elo update — fire-and-forget
+      const postCreatedAt = (post as any)?.postCreatedAt || new Date().toISOString();
+      triggerEloComment(postId, myUserId, postCreatedAt, capturedRaw.length, capturedEloType);
     } catch (err) {
       console.error("Erreur envoi commentaire:", err);
       // Keep optimistic comment visible on error — ID stays temp but content is right
     } finally {
       setSubmittingComment(false);
     }
-  }, [commentInput, boldMode, selectedTag, replyingTo, postId, submittingComment]);
+  }, [commentInput, boldMode, eloType, replyingTo, postId, submittingComment, post]);
 
   // GIF → envoyer directement comme commentaire
   const handleGifComment = async (gifUrl: string) => {
@@ -1724,19 +1731,28 @@ export function PostDetail() {
                   </motion.button>
                 </div>
               )}
-              {COMMENT_TAGS.map((tag) => (
-                <motion.button key={tag} whileTap={{ scale: 0.90 }}
-                  onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                  style={{
-                    padding: "6px 14px", borderRadius: 999, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
-                    background: selectedTag === tag ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.10)",
-                    border: selectedTag === tag ? "none" : "0.5px solid rgba(255,255,255,0.18)",
-                    transition: "all 0.18s",
-                  }}
-                >
-                  <span style={{ fontSize: 13, fontWeight: 700, color: selectedTag === tag ? "#111" : "rgba(255,255,255,0.70)" }}>{tag}</span>
-                </motion.button>
-              ))}
+              {/* Elo comment type — visible reader-side only (not on your own posts) */}
+              {!isSelfPost && (
+                <>
+                  {(["actionnable", "motivant"] as EloCommentType[]).filter(Boolean).map((t) => (
+                    <motion.button
+                      key={t}
+                      whileTap={{ scale: 0.90 }}
+                      onClick={() => setEloType(eloType === t ? null : t)}
+                      style={{
+                        padding: "4px 14px", borderRadius: 999, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
+                        background: eloType === t ? "rgba(99,102,241,0.14)" : "transparent",
+                        border: eloType === t ? "1.5px solid rgba(99,102,241,0.55)" : "1.5px solid rgba(255,255,255,0.18)",
+                        color: eloType === t ? "#a5b4fc" : "rgba(255,255,255,0.55)",
+                        fontSize: 13, fontWeight: eloType === t ? 600 : 400,
+                        transition: "all 0.16s",
+                      }}
+                    >
+                      {t === "actionnable" ? "Actionnable" : "Motivant"}
+                    </motion.button>
+                  ))}
+                </>
+              )}
             </div>
 
             {/* ── Input row ── */}

@@ -6,6 +6,7 @@ import {
   MessageCircle, Check, AlertTriangle, TrendingDown, ThumbsDown, Trash2,
 } from "lucide-react";
 import { getPostReactions, addPostReaction, type PostReactionType } from "../api/sharesApi";
+import { triggerEloLike, triggerEloImpression } from "../api/eloApi";
 import { useFollow } from "../context/FollowContext";
 import { FollowButton } from "./FollowButton";
 import { fetchProfile, getCachedProfile, normalizeUsername } from "../api/profileCache";
@@ -62,6 +63,7 @@ interface ProgressCardProps {
   hideStreak?: boolean;
   hideActions?: boolean;
   postId?: string;
+  postCreatedAt?: string;
   disableDetailNav?: boolean;
   onPostDeleted?: () => void;
 }
@@ -422,6 +424,7 @@ export function ProgressCard({
   hideStreak: _hideStreak = false,
   hideActions = false,
   postId,
+  postCreatedAt,
   disableDetailNav = false,
   onPostDeleted,
 }: ProgressCardProps) {
@@ -484,9 +487,11 @@ export function ProgressCard({
 
   // ── Views ─────────────────────────────────────────────────────────────────
   const [liveViewsCount, setLiveViewsCount] = useState(viewsCount);
-  const cardRef       = useRef<HTMLDivElement>(null);
-  const viewTracked   = useRef(false);
-  const viewTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cardRef           = useRef<HTMLDivElement>(null);
+  const viewTracked       = useRef(false);
+  const viewTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const eloLiked          = useRef(false);
+  const eloImpressionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!postId || viewTracked.current) return;
@@ -524,6 +529,34 @@ export function ProgressCard({
     };
   }, [postId]);
 
+  // Elo impression — fires R=0 once per user/post after 3 s of visibility without a like
+  useEffect(() => {
+    if (!postId || !currentUserId) return;
+    const sessionKey = `ff:elo:imp:${postId}`;
+    try { if (sessionStorage.getItem(sessionKey)) return; } catch {}
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          eloImpressionTimer.current = setTimeout(() => {
+            if (eloLiked.current) return;
+            try { sessionStorage.setItem(sessionKey, "1"); } catch {}
+            triggerEloImpression(postId, currentUserId, postCreatedAt || new Date().toISOString());
+          }, 3000);
+        } else {
+          if (eloImpressionTimer.current) { clearTimeout(eloImpressionTimer.current); eloImpressionTimer.current = null; }
+        }
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      if (eloImpressionTimer.current) clearTimeout(eloImpressionTimer.current);
+    };
+  }, [postId, currentUserId, postCreatedAt]);
+
   useEffect(() => {
     if (!postId) return;
     const mountIndex = _cardMountCounter++;
@@ -553,6 +586,12 @@ export function ProgressCard({
       const result = await addPostReaction(postId, currentUserId, reactionType);
       setActiveReaction(result.myReaction);
       setCount(result.total);
+      // Elo: fire only for new likes, not unlikes
+      if (!willRemove && !result.removed) {
+        eloLiked.current = true;
+        if (eloImpressionTimer.current) { clearTimeout(eloImpressionTimer.current); eloImpressionTimer.current = null; }
+        triggerEloLike(postId, currentUserId, postCreatedAt || new Date().toISOString());
+      }
     } catch (err) {
       console.error(`Erreur persistance réaction (post ${postId}):`, err);
       if (willRemove) { setActiveReaction(reactionType); setCount((c) => c + 1); }
@@ -581,7 +620,7 @@ export function ProgressCard({
     if (showPostMenu) { setShowPostMenu(false); return; }
     if (disableDetailNav) return;
     const id = postId ?? `${user?.name || "post"}-${progress.timestamp}`.replace(/\s+/g, "-");
-    const postData = { user, progress, image, images: imagesProp, verified, relevantCount: count, commentsCount, sharesCount, viewsCount: liveViewsCount, isNew, hashtags };
+    const postData = { user, progress, image, images: imagesProp, verified, relevantCount: count, commentsCount, sharesCount, viewsCount: liveViewsCount, isNew, hashtags, postCreatedAt };
     try { sessionStorage.setItem("ff_last_post", JSON.stringify(postData)); } catch {}
     navigate(`/post/${encodeURIComponent(id)}`, { state: { post: postData } });
   };
@@ -589,10 +628,10 @@ export function ProgressCard({
   // ── Navigate to PostDetail with section scroll + optional prefill ─────────
   const navigateToPost = useCallback((scrollTo?: "comments" | "share" | "stats", prefillText?: string) => {
     const id = postId ?? `${user?.name || "post"}-${progress.timestamp}`.replace(/\s+/g, "-");
-    const postData = { user, progress, image, images: imagesProp, verified, relevantCount: count, commentsCount, sharesCount, viewsCount: liveViewsCount, isNew, hashtags };
+    const postData = { user, progress, image, images: imagesProp, verified, relevantCount: count, commentsCount, sharesCount, viewsCount: liveViewsCount, isNew, hashtags, postCreatedAt };
     try { sessionStorage.setItem("ff_last_post", JSON.stringify(postData)); } catch {}
     navigate(`/post/${encodeURIComponent(id)}`, { state: { post: postData, scrollTo, prefillText } });
-  }, [postId, user, progress, image, verified, count, commentsCount, sharesCount, liveViewsCount, isNew, hashtags, navigate]);
+  }, [postId, user, progress, image, verified, count, commentsCount, sharesCount, liveViewsCount, isNew, hashtags, postCreatedAt, navigate]);
 
   const typeLabel = TYPE_LABELS[progress.type as PostType] ?? progress.type ?? "Avancée";
   const isActive  = activeReaction !== null;

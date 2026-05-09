@@ -1,4 +1,6 @@
 import { projectId, publicAnonKey } from "/utils/supabase/info";
+import type { EloCommentType } from "../lib/eloAlgorithm";
+export type { EloCommentType };
 
 const BASE = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
 
@@ -49,6 +51,7 @@ export interface CreateCommentPayload {
   userId: string;
   content: string;
   commentType?: CommentType | null;
+  eloType?: EloCommentType;
   author?: string;
   avatar?: string;
 }
