@@ -187,8 +187,8 @@ function ApiCommentRow({
     >
       {isTopConseil && <ConseilGlowBar />}
       {comment.author === "Anonyme" ? (
-        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#3a3a4e", display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid rgba(255,255,255,0.10)", flexShrink: 0 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="8" width="20" height="10" rx="5" fill="white" opacity="0.88"/><circle cx="8" cy="13" r="2.8" fill="#3a3a4e"/><circle cx="16" cy="13" r="2.8" fill="#3a3a4e"/></svg>
+        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#636370", display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid rgba(255,255,255,0.10)", flexShrink: 0 }}>
+          <svg width="27" height="27" viewBox="0 0 24 24" fill="none"><path d="M7 9 C7 5.5 8.5 1 12 1 C15.5 1 17 5.5 17 9 Z" fill="#111"/><rect x="1.5" y="8" width="21" height="2.5" rx="1.25" fill="#111"/><ellipse cx="7.5" cy="17.5" rx="4.5" ry="3" fill="#111"/><ellipse cx="16.5" cy="17.5" rx="4.5" ry="3" fill="#111"/><rect x="11.3" y="16.2" width="1.4" height="2.6" fill="#111"/><ellipse cx="7.5" cy="17.5" rx="2.7" ry="1.75" fill="#636370"/><ellipse cx="16.5" cy="17.5" rx="2.7" ry="1.75" fill="#636370"/></svg>
         </div>
       ) : (
         <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: isTopConseil ? "1.5px solid rgba(99,102,241,0.55)" : "1.5px solid rgba(99,102,241,0.20)" }}>
@@ -1594,8 +1594,8 @@ export function PostDetail() {
               <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                 {/* Avatar — masqué si post anonyme */}
                 {isPostAnonymous ? (
-                  <div style={{ width: 50, height: 50, borderRadius: "50%", background: "#3a3a4e", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid rgba(255,255,255,0.10)", flexShrink: 0 }}>
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="2" y="8" width="20" height="10" rx="5" fill="white" opacity="0.88"/><circle cx="8" cy="13" r="2.8" fill="#3a3a4e"/><circle cx="16" cy="13" r="2.8" fill="#3a3a4e"/></svg>
+                  <div style={{ width: 50, height: 50, borderRadius: "50%", background: "#636370", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid rgba(255,255,255,0.10)", flexShrink: 0 }}>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M7 9 C7 5.5 8.5 1 12 1 C15.5 1 17 5.5 17 9 Z" fill="#111"/><rect x="1.5" y="8" width="21" height="2.5" rx="1.25" fill="#111"/><ellipse cx="7.5" cy="17.5" rx="4.5" ry="3" fill="#111"/><ellipse cx="16.5" cy="17.5" rx="4.5" ry="3" fill="#111"/><rect x="11.3" y="16.2" width="1.4" height="2.6" fill="#111"/><ellipse cx="7.5" cy="17.5" rx="2.7" ry="1.75" fill="#636370"/><ellipse cx="16.5" cy="17.5" rx="2.7" ry="1.75" fill="#636370"/></svg>
                   </div>
                 ) : (
                   <div style={{ width: 50, height: 50, borderRadius: "50%", overflow: "hidden", border: "2px solid rgba(99,102,241,0.28)", flexShrink: 0 }}>

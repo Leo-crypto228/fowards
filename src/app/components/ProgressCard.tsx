@@ -71,15 +71,25 @@ interface ProgressCardProps {
   isMineAnonymous?: boolean;
 }
 
-// Masque gris avec oculi — affiché à la place de l'avatar sur les posts anonymes
 function AnonAvatar({ size }: { size: number }) {
-  const icon = Math.round(size * 0.6);
+  const icon = Math.round(size * 0.72);
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: "#3a3a4e", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid rgba(255,255,255,0.10)", flexShrink: 0 }}>
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "#636370", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid rgba(255,255,255,0.10)", flexShrink: 0 }}>
       <svg width={icon} height={icon} viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="8" width="20" height="10" rx="5" fill="white" opacity="0.88"/>
-        <circle cx="8" cy="13" r="2.8" fill="#3a3a4e"/>
-        <circle cx="16" cy="13" r="2.8" fill="#3a3a4e"/>
+        {/* Chapeau — couronne */}
+        <path d="M7 9 C7 5.5 8.5 1 12 1 C15.5 1 17 5.5 17 9 Z" fill="#111"/>
+        {/* Chapeau — bord */}
+        <rect x="1.5" y="8" width="21" height="2.5" rx="1.25" fill="#111"/>
+        {/* Masque — lentille gauche */}
+        <ellipse cx="7.5" cy="17.5" rx="4.5" ry="3" fill="#111"/>
+        {/* Masque — lentille droite */}
+        <ellipse cx="16.5" cy="17.5" rx="4.5" ry="3" fill="#111"/>
+        {/* Pont central */}
+        <rect x="11.3" y="16.2" width="1.4" height="2.6" fill="#111"/>
+        {/* Trou œil gauche */}
+        <ellipse cx="7.5" cy="17.5" rx="2.7" ry="1.75" fill="#636370"/>
+        {/* Trou œil droit */}
+        <ellipse cx="16.5" cy="17.5" rx="2.7" ry="1.75" fill="#636370"/>
       </svg>
     </div>
   );
@@ -453,7 +463,7 @@ export function ProgressCard({
   const postUsername = authorUsername
     ? normalizeUsername(authorUsername)
     : normalizeUsername(user?.name || "");
-  const isSelfPost = currentUserId !== "" && postUsername === normalizeUsername(currentUserId);
+  const isSelfPost = isMineAnonymous || (currentUserId !== "" && postUsername === normalizeUsername(currentUserId));
 
   // ── Live profile data ──────────────────────────────────────────────────────
   const [liveAvatar, setLiveAvatar] = useState(user.avatar);
