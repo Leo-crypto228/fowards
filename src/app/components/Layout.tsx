@@ -131,80 +131,84 @@ export function Layout() {
               position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
               background: "#000",
               borderTop: "0.5px solid rgba(255,255,255,0.10)",
-              display: "flex", alignItems: "center",
+              display: "flex", justifyContent: "center",
               paddingBottom: "env(safe-area-inset-bottom, 16px)",
-              overflow: "visible",
             }}
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 36 }}
           >
-            {/* Home */}
-            <Link to="/" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
-              <motion.div whileTap={{ scale: 0.82 }} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Home style={{ width: 26, height: 26, color: isActive("/") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/") ? 2.2 : 1.7, transition: "color 0.18s" }} />
-              </motion.div>
-            </Link>
+            {/* Inner row — calée sur la largeur des posts (max-w-2xl) */}
+            <div style={{ width: "100%", maxWidth: 672, display: "flex", alignItems: "center" }}>
 
-            {/* Tribes */}
-            <Link to="/tribes" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
-              <motion.div whileTap={{ scale: 0.82 }} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Users style={{ width: 26, height: 26, color: isActive("/tribes") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/tribes") ? 2.2 : 1.7, transition: "color 0.18s" }} />
-              </motion.div>
-            </Link>
-
-            {/* ── Centre : bouton Créer (élevé) ── */}
-            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, position: "relative" }}>
-              <Link to="/create" style={{ textDecoration: "none", position: "absolute", top: "-14px" }}>
-                <motion.div
-                  whileTap={{ scale: 0.88 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                  style={{
-                    width: 54, height: 54, borderRadius: "50%",
-                    background: "#4f46e5",
-                    boxShadow: "0 0 0 4px #000, 0 4px 20px rgba(79,70,229,0.55)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}
-                >
-                  <Plus style={{ width: 26, height: 26, color: "#fff", strokeWidth: 2.4 }} />
+              {/* Home */}
+              <Link to="/" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
+                <motion.div whileTap={{ scale: 0.82 }}>
+                  <Home style={{ width: 25, height: 25, color: isActive("/") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/") ? 2.2 : 1.7, transition: "color 0.18s" }} />
                 </motion.div>
               </Link>
-            </div>
 
-            {/* Notifications */}
-            <Link to="/notifications" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none", position: "relative" }}>
-              <motion.div whileTap={{ scale: 0.82 }} style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                <Bell style={{ width: 26, height: 26, color: isActive("/notifications") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/notifications") ? 2.2 : 1.7, transition: "color 0.18s" }} />
-                <AnimatePresence>
-                  {unreadCount > 0 && (
-                    <motion.div
-                      key="badge"
-                      initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                      style={{
-                        position: "absolute", top: -4, right: -6,
-                        minWidth: 16, height: 16, borderRadius: 999,
-                        background: "#fff", color: "#111",
-                        fontSize: 9, fontWeight: 800,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        padding: "0 3px", lineHeight: 1,
-                        border: "1.5px solid #000",
-                      }}
-                    >
-                      {unreadCount > 99 ? "99+" : unreadCount}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            </Link>
+              {/* Tribes */}
+              <Link to="/tribes" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
+                <motion.div whileTap={{ scale: 0.82 }}>
+                  <Users style={{ width: 25, height: 25, color: isActive("/tribes") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/tribes") ? 2.2 : 1.7, transition: "color 0.18s" }} />
+                </motion.div>
+              </Link>
 
-            {/* Profile */}
-            <Link to="/profile" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
-              <motion.div whileTap={{ scale: 0.82 }} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Target style={{ width: 26, height: 26, color: isActive("/profile") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/profile") ? 2.2 : 1.7, transition: "color 0.18s" }} />
-              </motion.div>
-            </Link>
+              {/* ── Centre : bouton Créer — boudin violet dans la barre ── */}
+              <div style={{ flex: 1.4, display: "flex", justifyContent: "center", alignItems: "center", height: 60 }}>
+                <Link to="/create" style={{ textDecoration: "none" }}>
+                  <motion.div
+                    whileTap={{ scale: 0.90 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 28 }}
+                    style={{
+                      height: 38, paddingLeft: 22, paddingRight: 22,
+                      borderRadius: 999,
+                      background: "#4f46e5",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <Plus style={{ width: 22, height: 22, color: "#fff", strokeWidth: 2.4 }} />
+                  </motion.div>
+                </Link>
+              </div>
+
+              {/* Notifications */}
+              <Link to="/notifications" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
+                <motion.div whileTap={{ scale: 0.82 }} style={{ position: "relative" }}>
+                  <Bell style={{ width: 25, height: 25, color: isActive("/notifications") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/notifications") ? 2.2 : 1.7, transition: "color 0.18s" }} />
+                  <AnimatePresence>
+                    {unreadCount > 0 && (
+                      <motion.div
+                        key="badge"
+                        initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 28 }}
+                        style={{
+                          position: "absolute", top: -4, right: -6,
+                          minWidth: 16, height: 16, borderRadius: 999,
+                          background: "#fff", color: "#111",
+                          fontSize: 9, fontWeight: 800,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          padding: "0 3px", lineHeight: 1,
+                          border: "1.5px solid #000",
+                        }}
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              </Link>
+
+              {/* Profile */}
+              <Link to="/profile" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
+                <motion.div whileTap={{ scale: 0.82 }}>
+                  <Target style={{ width: 25, height: 25, color: isActive("/profile") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/profile") ? 2.2 : 1.7, transition: "color 0.18s" }} />
+                </motion.div>
+              </Link>
+
+            </div>{/* end inner row */}
           </motion.nav>
         )}
       </AnimatePresence>
