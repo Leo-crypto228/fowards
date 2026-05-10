@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'; 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -6,7 +5,7 @@ import {
   ArrowLeft, Mail,
 } from "lucide-react";
 import exampleImage from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
-import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation, Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { normalizeUsername } from "../api/profileCache";
 import { supabase } from "../api/supabaseClient";
