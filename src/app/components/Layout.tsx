@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { Home, Users, PlusCircle, Target, Loader2, Plus } from "lucide-react";
+import { Home, Users, Target, Loader2, Plus, Bell } from "lucide-react";
+import { useNotifications } from "../context/NotificationContext";
 import { motion, AnimatePresence } from "motion/react";
 import { Toaster } from "sonner";
 import { useEffect, useState, Suspense } from "react";
@@ -44,8 +45,10 @@ export function Layout() {
   const { communityId: activeCommunityId, channelId: activeChannelId, channelName: activeChannelName } = useActiveCommunity();
   const isPostDetail = location.pathname.startsWith("/post/");
   const isWaysViewer = location.pathname.startsWith("/ways/") && !location.pathname.endsWith("/create");
-  const hideNav = isPostDetail || isWaysViewer;
+  const isCreatePage = location.pathname === "/create";
+  const hideNav = isPostDetail || isWaysViewer || isCreatePage;
   const [createPostOpen, setCreatePostOpen] = useState(false);
+  const { unreadCount } = useNotifications();
 
   // Show "+" button only on /tribes/:id (a specific community page)
   const communityMatch = location.pathname.match(/^\/tribes\/([^\/]+)$/);
@@ -115,7 +118,7 @@ export function Layout() {
       <FcoinNotificationWatcher />
       <main
         className="flex-1 overflow-y-auto overflow-x-hidden"
-        style={{ paddingBottom: hideNav ? 0 : "7rem" }}
+        style={{ paddingBottom: hideNav ? 0 : "calc(68px + env(safe-area-inset-bottom, 0px))" }}
       >
         <Suspense fallback={
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
@@ -130,177 +133,84 @@ export function Layout() {
       <AnimatePresence>
         {!hideNav && (
           <motion.nav
-            className="fixed bottom-0 left-0 right-0 flex justify-center items-end pb-8 px-5"
-            style={{ zIndex: 50, gap: 10 }}
-            initial={{ y: 0, opacity: 1 }}
+            style={{
+              position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
+              background: "#000",
+              borderTop: "0.5px solid rgba(255,255,255,0.10)",
+              display: "flex", alignItems: "center",
+              paddingBottom: "env(safe-area-inset-bottom, 16px)",
+              overflow: "visible",
+            }}
+            initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 36 }}
           >
-            {/* Pill container principal */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                padding: "5px",
-                borderRadius: 999,
-                background: "rgba(10,10,10,0.55)",
-                backdropFilter: "blur(32px) saturate(180%)",
-                WebkitBackdropFilter: "blur(32px) saturate(180%)",
-                border: "0.5px solid rgba(255,255,255,0.08)",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.3)",
-              }}
-            >
-              {navItems.map(({ path, icon: Icon }) => {
-                const active = isActive(path);
-                return (
-                  <Link key={path} to={path} style={{ textDecoration: "none" }}>
-                    <motion.div
-                      whileTap={{ scale: 0.86 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                      className="relative flex items-center justify-center"
-                      style={{
-                        width: 62,
-                        height: 50,
-                        borderRadius: 999,
-                        position: "relative",
-                      }}
-                    >
-                      {/* ── Bubble active ── */}
-                      {active && (
-                        <motion.div
-                          layoutId="nav-bubble"
-                          style={{
-                            position: "absolute",
-                            inset: 0,
-                            borderRadius: 999,
-                            background: "rgba(255,255,255,0.13)",
-                            zIndex: 0,
-                          }}
-                          transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                        />
-                      )}
+            {/* Home */}
+            <Link to="/" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
+              <motion.div whileTap={{ scale: 0.82 }} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Home style={{ width: 26, height: 26, color: isActive("/") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/") ? 2.2 : 1.7, transition: "color 0.18s" }} />
+              </motion.div>
+            </Link>
 
-                      <Icon
-                        style={{
-                          position: "relative",
-                          zIndex: 1,
-                          width: 27,
-                          height: 27,
-                          color: active ? "#ffffff" : "rgba(255,255,255,0.38)",
-                          transition: "color 0.20s ease",
-                          strokeWidth: active ? 2.1 : 1.75,
-                        }}
-                      />
-                    </motion.div>
-                  </Link>
-                );
-              })}
+            {/* Tribes */}
+            <Link to="/tribes" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
+              <motion.div whileTap={{ scale: 0.82 }} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Users style={{ width: 26, height: 26, color: isActive("/tribes") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/tribes") ? 2.2 : 1.7, transition: "color 0.18s" }} />
+              </motion.div>
+            </Link>
+
+            {/* ── Centre : bouton Créer (élevé) ── */}
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, position: "relative" }}>
+              <Link to="/create" style={{ textDecoration: "none", position: "absolute", top: "-14px" }}>
+                <motion.div
+                  whileTap={{ scale: 0.88 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 28 }}
+                  style={{
+                    width: 54, height: 54, borderRadius: "50%",
+                    background: "#4f46e5",
+                    boxShadow: "0 0 0 4px #000, 0 4px 20px rgba(79,70,229,0.55)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  <Plus style={{ width: 26, height: 26, color: "#fff", strokeWidth: 2.4 }} />
+                </motion.div>
+              </Link>
             </div>
 
-            {/* ── Bouton "+" Créer une communauté — détaché, visible sur /tribes uniquement ── */}
-            <AnimatePresence>
-              {showCreateCommunityBtn && (
-                <motion.div
-                  key="create-community-btn"
-                  initial={{ opacity: 0, scale: 0.75, x: 12 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.75, x: 12 }}
-                  transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                >
-                  <Link to="/tribes/create" style={{ textDecoration: "none" }}>
+            {/* Notifications */}
+            <Link to="/notifications" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none", position: "relative" }}>
+              <motion.div whileTap={{ scale: 0.82 }} style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                <Bell style={{ width: 26, height: 26, color: isActive("/notifications") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/notifications") ? 2.2 : 1.7, transition: "color 0.18s" }} />
+                <AnimatePresence>
+                  {unreadCount > 0 && (
                     <motion.div
-                      whileTap={{ scale: 0.86 }}
+                      key="badge"
+                      initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
                       transition={{ type: "spring", stiffness: 500, damping: 28 }}
                       style={{
-                        width: 62,
-                        height: 60,
-                        borderRadius: 999,
-                        background: "rgba(10,10,10,0.55)",
-                        backdropFilter: "blur(32px) saturate(180%)",
-                        WebkitBackdropFilter: "blur(32px) saturate(180%)",
-                        border: "0.5px solid rgba(255,255,255,0.08)",
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.3)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        position: "relative",
-                        overflow: "hidden",
+                        position: "absolute", top: -4, right: -6,
+                        minWidth: 16, height: 16, borderRadius: 999,
+                        background: "#fff", color: "#111",
+                        fontSize: 9, fontWeight: 800,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        padding: "0 3px", lineHeight: 1,
+                        border: "1.5px solid #000",
                       }}
                     >
-                      {/* Bubble active quand sur /tribes/create */}
-                      {createCommunityActive && (
-                        <motion.div
-                          layoutId="nav-bubble"
-                          style={{
-                            position: "absolute", inset: 0, borderRadius: 999,
-                            background: "rgba(255,255,255,0.13)", zIndex: 0,
-                          }}
-                          transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                        />
-                      )}
-                      <span style={{
-                        position: "relative", zIndex: 1,
-                        fontSize: 46,
-                        fontWeight: 200,
-                        lineHeight: 1,
-                        color: createCommunityActive ? "#ffffff" : "rgba(255,255,255,0.50)",
-                        transition: "color 0.20s ease",
-                        userSelect: "none",
-                        marginTop: -3,
-                      }}>
-                        +
-                      </span>
+                      {unreadCount > 99 ? "99+" : unreadCount}
                     </motion.div>
-                  </Link>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </Link>
 
-            {/* ── Bouton "+" Créer un post dans la communauté ── */}
-            <AnimatePresence>
-              {isInCommunity && !isPostDetail && (
-                <motion.div
-                  key="create-community-post-btn"
-                  initial={{ opacity: 0, scale: 0.75, x: 12 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.75, x: 12 }}
-                  transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                >
-                  <motion.button
-                    whileTap={{ scale: 0.86 }}
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => {
-                      if (activeCommunityId) {
-                        navigate(`/tribes/${activeCommunityId}/post`, {
-                          state: {
-                            channelId: activeChannelId,
-                            channelName: activeChannelName,
-                          },
-                        });
-                      }
-                    }}
-                    transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                    style={{
-                      width: 62,
-                      height: 50,
-                      borderRadius: 999,
-                      background: "#4f46e5",
-                      border: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      position: "relative",
-                    }}
-                  >
-                    <Plus style={{ width: 24, height: 24, color: "#ffffff", strokeWidth: 2.2 }} />
-                  </motion.button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Profile */}
+            <Link to="/profile" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
+              <motion.div whileTap={{ scale: 0.82 }} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Target style={{ width: 26, height: 26, color: isActive("/profile") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/profile") ? 2.2 : 1.7, transition: "color 0.18s" }} />
+              </motion.div>
+            </Link>
           </motion.nav>
         )}
       </AnimatePresence>

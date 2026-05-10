@@ -1,5 +1,5 @@
 import { ProgressCard } from "../components/ProgressCard";
-import { Search, WifiOff, Wifi, RefreshCw, Bell } from "lucide-react";
+import { Search, WifiOff, Wifi, RefreshCw } from "lucide-react";
 import logoImage from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -14,7 +14,6 @@ import { getBatchGoalProgress } from "../api/progressionApi";
 import { useFollow } from "../context/FollowContext";
 import { useAuth } from "../context/AuthContext";
 import { GLOBAL_PROFILES_MAP } from "../data/profiles";
-import { useNotifications } from "../context/NotificationContext";
 import { getWaysFeed, type WaysFeedEntry } from "../api/waysApi";
 
 const USER_AVATAR =
@@ -297,7 +296,6 @@ export function Feed() {
   const navigate = useNavigate();
   const { followedList, currentUserId } = useFollow();
   const { user: authUser } = useAuth();
-  const { unreadCount } = useNotifications();
 
   // ── Scroll-aware header ────────────────────────────────────────────────────
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -614,67 +612,20 @@ export function Feed() {
       >
         <div className="max-w-2xl mx-auto px-3 pt-4 pb-0">
 
-          {/* Row 1: cloche + logo (center) + streak — tous à 47px */}
-          <div className="flex items-center justify-between mb-3">
-            {/* Cloche notifications — 47px */}
-            <motion.button
-              whileTap={{ scale: 0.88 }}
-              onClick={() => navigate("/notifications")}
-              style={{
-                width: 47, height: 47, borderRadius: "50%",
-                background: "rgba(255,255,255,0.07)",
-                border: "1.5px solid rgba(255,255,255,0.11)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", flexShrink: 0, position: "relative",
-              }}
-            >
-              <Bell style={{ width: 21, height: 21, color: "rgba(255,255,255,0.80)" }} strokeWidth={1.8} />
-              {/* Badge non-lus */}
-              <AnimatePresence>
-                {unreadCount > 0 && (
-                  <motion.div
-                    key="badge"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                    style={{
-                      position: "absolute", top: 2, right: 2,
-                      minWidth: 17, height: 17, borderRadius: 999,
-                      background: "#ffffff", color: "#111",
-                      fontSize: 10, fontWeight: 800,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      padding: "0 4px", lineHeight: 1,
-                      border: "1.5px solid rgba(10,10,18,1)",
-                    }}
-                  >
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.button>
-
-            {/* Logo centré — même taille que l'avatar (47px) */}
+          {/* Row 1: logo centré */}
+          <div className="flex items-center justify-center mb-3">
             <motion.div
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: [0.25, 0, 0.35, 1] }}
-              style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <img
                 src={logoImage}
-                alt="FuturFeed"
-                style={{
-                  width: 47,
-                  height: 47,
-                  objectFit: "contain",
-                  mixBlendMode: "screen",
-                  display: "block",
-                }}
+                alt="Fowards"
+                style={{ width: 47, height: 47, objectFit: "contain", mixBlendMode: "screen", display: "block" }}
               />
             </motion.div>
-
-
           </div>
 
           {/* Row 2: Search bar — liquid glass */}

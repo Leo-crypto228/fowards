@@ -294,6 +294,22 @@ export function CreateProgress() {
         <div className="absolute rounded-full" style={{ width: 260, height: 260, bottom: 200, left: -40, background: "radial-gradient(circle,rgba(139,92,246,0.03) 0%,transparent 70%)", filter: "blur(36px)" }} />
       </div>
 
+      {/* ── Croix fermer — fixe en haut à droite ── */}
+      <motion.button
+        whileTap={{ scale: 0.88 }}
+        onClick={() => navigate("/")}
+        style={{
+          position: "fixed", top: 16, right: 16, zIndex: 100,
+          width: 38, height: 38, borderRadius: "50%",
+          background: "rgba(255,255,255,0.10)",
+          border: "1px solid rgba(255,255,255,0.14)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer",
+        }}
+      >
+        <X style={{ width: 18, height: 18, color: "rgba(255,255,255,0.80)", strokeWidth: 2.2 }} />
+      </motion.button>
+
       <div className="relative max-w-md mx-auto px-5" style={{ zIndex: 1 }}>
 
         {/* ── Retour si post quoté ── */}
