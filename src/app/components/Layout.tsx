@@ -80,12 +80,6 @@ export function Layout() {
     );
   }
 
-  const navItems = [
-    { path: "/",        icon: Home,      label: "Feed"   },
-    { path: "/tribes",  icon: Users,     label: "Tribus" },
-    { path: "/create",  icon: PlusCircle,label: "Créer"  },
-    { path: "/profile", icon: Target,    label: "Profil" },
-  ];
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
