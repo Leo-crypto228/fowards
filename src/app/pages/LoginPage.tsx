@@ -196,15 +196,12 @@ export function LoginPage() {
       </motion.div>
 
       {/* ── Screens ──────────────────────────────────────────────────────────── */}
-      <AnimatePresence mode="wait">
-
-        {/* LANDING */}
-        {screen === "landing" && (
+      <AnimatePresence>
+        {screen === "landing" ? (
           <motion.div
             key="landing"
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.45, ease: [0.25, 0, 0.35, 1] }}
             style={{
               position: "relative", zIndex: 1,
@@ -305,27 +302,19 @@ En rejoignant <span translate="no" className="notranslate">Fowards</span>, tu ac
               <Link to="/politique-confidentialite" style={{ color: "rgba(255,255,255,0.35)" }}>politique de confidentialité</Link>.
             </p>
           </motion.div>
-        )}
-       {/* SIGNUP */}
-        {screen === "signup" && (
+        ) : screen === "signup" ? (
           <SignupPanel
             key="signup"
             onBack={() => setScreen("landing")}
             onNavigate={(path, state) => navigate(path, { state })}
           />
-        )}
-
-        {/* LOGIN */}
-        {screen === "login" && (
+        ) : screen === "login" ? (
           <LoginPanel
             key="login"
             onBack={() => setScreen("landing")}
             onForgotPassword={() => setScreen("forgot-password")}
           />
-        )}
-
-        {/* FORGOT PASSWORD */}
-        {screen === "forgot-password" && (
+        ) : (
           <ForgotPasswordPanel
             key="forgot-password"
             onBack={() => setScreen("login")}
@@ -843,7 +832,6 @@ function PanelWrapper({ onBack, title, subtitle, children }: PanelWrapperProps) 
     <motion.div
       initial={{ opacity: 0, y: 28 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
       transition={{ duration: 0.4, ease: [0.25, 0, 0.35, 1] }}
       style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1 }}
     >
