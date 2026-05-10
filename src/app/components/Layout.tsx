@@ -43,6 +43,8 @@ export function Layout() {
   const { user, loading } = useAuth();
   const { communityId: activeCommunityId, channelId: activeChannelId, channelName: activeChannelName } = useActiveCommunity();
   const isPostDetail = location.pathname.startsWith("/post/");
+  const isWaysViewer = location.pathname.startsWith("/ways/") && !location.pathname.endsWith("/create");
+  const hideNav = isPostDetail || isWaysViewer;
   const [createPostOpen, setCreatePostOpen] = useState(false);
 
   // Show "+" button only on /tribes/:id (a specific community page)
@@ -113,7 +115,7 @@ export function Layout() {
       <FcoinNotificationWatcher />
       <main
         className="flex-1 overflow-y-auto overflow-x-hidden"
-        style={{ paddingBottom: isPostDetail ? 0 : "7rem" }}
+        style={{ paddingBottom: hideNav ? 0 : "7rem" }}
       >
         <Suspense fallback={
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
@@ -126,7 +128,7 @@ export function Layout() {
 
       {/* ── BOTTOM NAV ─────────────────────────────────────────────── */}
       <AnimatePresence>
-        {!isPostDetail && (
+        {!hideNav && (
           <motion.nav
             className="fixed bottom-0 left-0 right-0 flex justify-center items-end pb-8 px-5"
             style={{ zIndex: 50, gap: 10 }}

@@ -25,7 +25,7 @@ const TABS = ["Pour vous", "Abonnements"] as const;
 type Tab = (typeof TABS)[number];
 
 // Module-level cache: persists while the page is open, avoids refetch on back-navigation
-const FEED_CACHE_TTL = 90_000;
+const FEED_CACHE_TTL = 300_000;
 let _feedCache: { posts: ApiPost[]; ts: number } | null = null;
 
 // ── Le registre de profils est maintenant centralisé dans /src/app/data/profiles.ts
@@ -420,6 +420,11 @@ export function Feed() {
     }
   }, [currentUserId]);
 
+  // Prefetch Ways feed and following feed in the background on mount
+  useEffect(() => {
+    if (currentUserId && !waysLoadedRef.current) fetchWaysFeed();
+  }, [currentUserId, fetchWaysFeed]);
+
   useEffect(() => {
     if (activeTab === "Abonnements" && currentUserId && !waysLoadedRef.current) {
       fetchWaysFeed();
@@ -499,6 +504,11 @@ export function Feed() {
       setLoadingFollowing(false);
     }
   }, [currentUserId, fetchRealGoalProgress]);
+
+  // Prefetch following feed on mount too
+  useEffect(() => {
+    if (currentUserId && !followingLoadedRef.current) fetchFollowingFeed();
+  }, [currentUserId, fetchFollowingFeed]);
 
   useEffect(() => {
     if (activeTab === "Abonnements" && currentUserId) fetchFollowingFeed();
@@ -789,6 +799,7 @@ export function Feed() {
                     const hasWays = entry.ways.length > 0;
                     const isSelf = entry.author.username === currentUserId;
                     const initial = (entry.author.name?.[0] ?? "?").toUpperCase();
+                    const hasViewed = hasWays && !!localStorage.getItem(`ff:ways:viewed:${entry.ways[0].id}`);
                     return (
                       <motion.button
                         key={entry.author.username}
@@ -807,11 +818,11 @@ export function Feed() {
                         <div
                           style={{
                             width: 66, height: 66, borderRadius: "50%", padding: 2.5,
-                            background: hasWays
+                            background: hasWays && !hasViewed
                               ? "linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #38bdf8 100%)"
                               : isSelf
                                 ? "rgba(255,255,255,0.10)"
-                                : "rgba(255,255,255,0.08)",
+                                : "rgba(255,255,255,0.22)",
                             display: "flex", alignItems: "center", justifyContent: "center",
                           }}
                         >

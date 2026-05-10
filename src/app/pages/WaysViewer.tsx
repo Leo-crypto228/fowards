@@ -1,6 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Heart, MessageCircle, MoreHorizontal, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, MessageCircle, MoreHorizontal, Send, Trash2 } from "lucide-react";
+
+function SparkleIcon({ active, size = 22 }: { active: boolean; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 2C12 8 8 12 2 12C8 12 12 16 12 22C12 16 16 12 22 12C16 12 12 8 12 2Z"
+        fill={active ? "#574fe0" : "none"}
+        stroke={active ? "#574fe0" : "rgba(255,255,255,0.50)"}
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 import { useNavigate, useParams } from "react-router";
 import { getWays, likeWays, deleteWays, addWaysComment, type Ways } from "../api/waysApi";
 import { MY_USER_ID, MY_USER_NAME, MY_USER_AVATAR } from "../api/authStore";
@@ -33,6 +47,7 @@ export function WaysViewer() {
   const [error, setError] = useState<string | null>(null);
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
+  const [sparkleKey, setSparkleKey] = useState(0);
   const [showMenu, setShowMenu] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
@@ -41,6 +56,11 @@ export function WaysViewer() {
 
   const currentUserId = MY_USER_ID;
   const isAuthor = ways?.author.username === currentUserId;
+
+  useEffect(() => {
+    if (!id) return;
+    localStorage.setItem(`ff:ways:viewed:${id}`, "1");
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -65,6 +85,7 @@ export function WaysViewer() {
 
   const handleLike = async () => {
     if (!ways || !currentUserId) return;
+    setSparkleKey((k) => k + 1);
     const prev = liked;
     setLiked(!prev);
     setLikesCount((c) => c + (prev ? -1 : 1));
@@ -276,25 +297,10 @@ export function WaysViewer() {
 
       {/* Content — scrollable */}
       <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
-        {ways.image && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ borderRadius: 18, overflow: "hidden" }}
-          >
-            <img
-              src={ways.image}
-              alt=""
-              style={{ width: "100%", maxHeight: 360, objectFit: "cover", display: "block" }}
-            />
-          </motion.div>
-        )}
-
         {ways.text && (
           <motion.p
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: ways.image ? 0.05 : 0 }}
             style={{
               fontSize: 17,
               lineHeight: 1.65,
@@ -305,6 +311,21 @@ export function WaysViewer() {
           >
             {ways.text}
           </motion.p>
+        )}
+
+        {ways.image && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: ways.text ? 0.05 : 0 }}
+            style={{ margin: "0 -16px" }}
+          >
+            <img
+              src={ways.image}
+              alt=""
+              style={{ width: "100%", maxHeight: 480, objectFit: "cover", display: "block" }}
+            />
+          </motion.div>
         )}
       </div>
 
@@ -328,14 +349,16 @@ export function WaysViewer() {
               background: "none", border: "none", cursor: "pointer", padding: 0,
             }}
           >
-            <motion.div animate={{ scale: liked ? [1, 1.3, 1] : 1 }} transition={{ duration: 0.25 }}>
-              <Heart
-                style={{ width: 22, height: 22, color: liked ? "#f87171" : "rgba(255,255,255,0.50)" }}
-                fill={liked ? "#f87171" : "none"}
-                strokeWidth={1.8}
-              />
+            <motion.div
+              key={sparkleKey}
+              initial={{ scale: 1 }}
+              animate={sparkleKey > 0 ? { scale: [1, 1.5, 1] } : { scale: 1 }}
+              transition={{ duration: 0.45, times: [0, 0.28, 1], ease: ["easeOut", "easeIn"] }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <SparkleIcon active={liked} size={22} />
             </motion.div>
-            <span style={{ fontSize: 14, color: liked ? "#f87171" : "rgba(255,255,255,0.50)", fontWeight: 600 }}>
+            <span style={{ fontSize: 14, color: liked ? "#574fe0" : "rgba(255,255,255,0.50)", fontWeight: 600 }}>
               {likesCount}
             </span>
           </motion.button>
