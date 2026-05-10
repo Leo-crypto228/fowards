@@ -26,13 +26,25 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      // Alias @ to the src directory
       '@': path.resolve(__dirname, './src'),
     },
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
+
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router'],
+          'motion':       ['motion/react'],
+          'icons':        ['lucide-react'],
+          'supabase':     ['@supabase/supabase-js'],
+        },
+      },
+    },
+  },
 
   test: {
     globals: true,

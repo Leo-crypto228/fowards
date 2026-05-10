@@ -10,38 +10,32 @@ import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 const BASE    = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
 const HEADERS = { "Content-Type": "application/json", Authorization: `Bearer ${publicAnonKey}` };
+const LS_KEY  = "ff_auth_user_v1"; // localStorage cache key
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function loadKVProfile(username: string): Promise<Partial<StoredAuthUser> & { _kvUsername?: string }> {
+type KVProfile = Partial<StoredAuthUser> & { _kvUsername?: string };
+
+async function loadKVProfile(username: string, signal: AbortSignal): Promise<KVProfile> {
   try {
-    const res = await fetch(`${BASE}/profiles/${encodeURIComponent(username)}`, { headers: HEADERS });
+    const res = await fetch(`${BASE}/profiles/${encodeURIComponent(username)}`, { headers: HEADERS, signal });
     if (!res.ok) return {};
     const data = await res.json();
     const p = data?.profile;
     if (!p) return {};
     const firstPostCreated =
-      p.firstPostCreated !== undefined
-        ? Boolean(p.firstPostCreated)
-        : Boolean(p.onboardingDone);
+      p.firstPostCreated !== undefined ? Boolean(p.firstPostCreated) : Boolean(p.onboardingDone);
     return {
-      avatar:           p.avatar         || "",
-      objective:        p.objective      || "",
-      streak:           p.streak         || 0,
-      name:             p.name           || username,
-      onboardingDone:   Boolean(p.onboardingDone),
-      firstPostCreated,
-      _kvUsername:      username,
+      avatar: p.avatar || "", objective: p.objective || "", streak: p.streak || 0,
+      name: p.name || username, onboardingDone: Boolean(p.onboardingDone),
+      firstPostCreated, _kvUsername: username,
     };
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 
-/** Chercher le profil par supabase UID — fallback quand le pseudo a changé */
-async function loadKVProfileByUID(supabaseId: string): Promise<Partial<StoredAuthUser> & { _kvUsername?: string }> {
+async function loadKVProfileByUID(supabaseId: string, signal: AbortSignal): Promise<KVProfile> {
   try {
-    const res = await fetch(`${BASE}/profiles/by-uid/${encodeURIComponent(supabaseId)}`, { headers: HEADERS });
+    const res = await fetch(`${BASE}/profiles/by-uid/${encodeURIComponent(supabaseId)}`, { headers: HEADERS, signal });
     if (!res.ok) return {};
     const data = await res.json();
     if (!data?.found || !data?.profile) return {};
@@ -50,63 +44,64 @@ async function loadKVProfileByUID(supabaseId: string): Promise<Partial<StoredAut
     const firstPostCreated =
       p.firstPostCreated !== undefined ? Boolean(p.firstPostCreated) : Boolean(p.onboardingDone);
     return {
-      avatar:          p.avatar    || "",
-      objective:       p.objective || "",
-      streak:          p.streak    || 0,
-      name:            p.name      || kvUsername,
-      onboardingDone:  Boolean(p.onboardingDone),
-      firstPostCreated,
-      _kvUsername:     kvUsername,
+      avatar: p.avatar || "", objective: p.objective || "", streak: p.streak || 0,
+      name: p.name || kvUsername, onboardingDone: Boolean(p.onboardingDone),
+      firstPostCreated, _kvUsername: kvUsername,
     };
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 
+const hasRealData = (kv: KVProfile) => !!(kv.onboardingDone || kv.objective || kv.avatar);
+
 async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
-  const meta        = supabaseUser.user_metadata ?? {};
-  const authUsername = normalizeUsername(
-    meta.username || supabaseUser.email?.split("@")[0] || "user"
-  );
-  const nameDefault = meta.name || meta.username || supabaseUser.email?.split("@")[0] || "Utilisateur";
+  const meta         = supabaseUser.user_metadata ?? {};
+  const authUsername = normalizeUsername(meta.username || supabaseUser.email?.split("@")[0] || "user");
+  const nameDefault  = meta.name || meta.username || supabaseUser.email?.split("@")[0] || "Utilisateur";
 
-  // 1️⃣ Essayer par username courant
-  let kv = await loadKVProfile(authUsername);
+  // 5s timeout — évite de bloquer indéfiniment si le worker KV est lent/cold
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
 
-  // 2️⃣ Si profil vide (pas de données réelles), chercher par UID stable
-  //    Ce cas survient quand le pseudo a changé dans Supabase Auth
-  const hasRealData = kv.onboardingDone || kv.objective || kv.avatar;
-  if (!hasRealData && supabaseUser.id) {
-    const kvByUID = await loadKVProfileByUID(supabaseUser.id);
-    if (kvByUID._kvUsername && kvByUID._kvUsername !== authUsername) {
-      // Profil trouvé sous l'ancien pseudo → déclencher le rename en arrière-plan
-      const oldKvUsername = kvByUID._kvUsername;
-      fetch(`${BASE}/profiles/${encodeURIComponent(oldKvUsername)}/rename`, {
-        method: "PUT",
-        headers: HEADERS,
+  try {
+    // Les deux fetches en parallèle (gagne ~300-800ms sur le cas nominal)
+    const [byUsername, byUID] = await Promise.all([
+      loadKVProfile(authUsername, controller.signal),
+      loadKVProfileByUID(supabaseUser.id, controller.signal),
+    ]);
+    clearTimeout(timer);
+
+    let kv: KVProfile = hasRealData(byUsername) ? byUsername
+      : hasRealData(byUID) ? byUID
+      : byUsername;
+
+    // Profil trouvé sous un ancien pseudo → rename en arrière-plan
+    if (!hasRealData(byUsername) && byUID._kvUsername && byUID._kvUsername !== authUsername) {
+      fetch(`${BASE}/profiles/${encodeURIComponent(byUID._kvUsername)}/rename`, {
+        method: "PUT", headers: HEADERS,
         body: JSON.stringify({ newUsername: authUsername, supabaseId: supabaseUser.id }),
       }).catch((e) => console.warn("Rename profil KV failed:", e));
-      // Invalider le cache des deux usernames
-      kv = kvByUID;
-    } else if (kvByUID._kvUsername) {
-      kv = kvByUID;
+      kv = byUID;
     }
+
+    const firstPostCreated = kv.firstPostCreated !== undefined ? kv.firstPostCreated : Boolean(kv.onboardingDone);
+    return {
+      supabaseId: supabaseUser.id, username: authUsername,
+      name: kv.name || nameDefault, email: supabaseUser.email || "",
+      avatar: kv.avatar || "", objective: kv.objective || "",
+      streak: kv.streak || 0, onboardingDone: kv.onboardingDone || false, firstPostCreated,
+    };
+  } catch {
+    clearTimeout(timer);
+    // KV injoignable (timeout ou réseau) — retourner un utilisateur minimal
+    // onboardingDone: false → redirige vers onboarding si c'est un nouvel utilisateur
+    // Pour un utilisateur existant avec cache, ce code n'est jamais atteint
+    return {
+      supabaseId: supabaseUser.id, username: authUsername,
+      name: nameDefault, email: supabaseUser.email || "",
+      avatar: "", objective: "", streak: 0,
+      onboardingDone: false, firstPostCreated: false,
+    };
   }
-
-  const firstPostCreated =
-    kv.firstPostCreated !== undefined ? kv.firstPostCreated : Boolean(kv.onboardingDone);
-
-  return {
-    supabaseId:      supabaseUser.id,
-    username:        authUsername,
-    name:            kv.name           || nameDefault,
-    email:           supabaseUser.email || "",
-    avatar:          kv.avatar         || "",
-    objective:       kv.objective      || "",
-    streak:          kv.streak         || 0,
-    onboardingDone:  kv.onboardingDone || false,
-    firstPostCreated,
-  };
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -142,16 +137,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabaseUser) {
       setAuthUser(null);
       setUser(null);
+      localStorage.removeItem(LS_KEY);
       return;
     }
+
+    // ── Lecture du cache localStorage ────────────────────────────────────────
+    // Si un profil est déjà mis en cache pour cet utilisateur, on l'affiche
+    // immédiatement et on rafraîchit en arrière-plan → chargement instantané.
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw) as StoredAuthUser;
+        if (cached.supabaseId === supabaseUser.id) {
+          setAuthUser(cached);
+          setUser(cached);
+          setLoading(false);
+          // Rafraîchissement silencieux en arrière-plan
+          buildStoredUser(supabaseUser).then((refreshed) => {
+            setAuthUser(refreshed);
+            setUser(refreshed);
+            localStorage.setItem(LS_KEY, JSON.stringify(refreshed));
+          }).catch(() => {});
+          return;
+        }
+      }
+    } catch { /* cache corrompu, on ignore */ }
+
+    // ── Première connexion (pas de cache) : fetch bloquant ───────────────────
     const stored = await buildStoredUser(supabaseUser);
     setAuthUser(stored);
     setUser(stored);
+    localStorage.setItem(LS_KEY, JSON.stringify(stored));
   }, []);
 
   useEffect(() => {
-    // onAuthStateChange fires INITIAL_SESSION on mount with the current session,
-    // so no separate getSession() call is needed (avoids lock contention).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, sess) => {
         setSession(sess);
@@ -171,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setAuthUser(null);
     setUser(null);
-    // Nettoyer les données de vérification OTP en suspens
+    localStorage.removeItem(LS_KEY);
     sessionStorage.removeItem("ff_verify_email");
     sessionStorage.removeItem("ff_verify_mode");
   }, []);

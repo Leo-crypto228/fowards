@@ -40,7 +40,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
   const checkinDone = useRef(false);
 
   const refresh = useCallback(async () => {
-    if (!MY_USER_ID) return; // guard: auth not ready yet
+    if (!MY_USER_ID) return;
     try {
       const data = await getProgression(MY_USER_ID);
       setState(data);
@@ -51,27 +51,38 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Charger + checkin au démarrage
+  // Charger progression + checkin en parallèle au démarrage
   useEffect(() => {
-    if (!MY_USER_ID) { setLoading(false); return; } // guard: not yet authenticated
-    refresh().then(async () => {
-      if (!checkinDone.current) {
-        checkinDone.current = true;
-        try {
-          const result = await dailyCheckin(MY_USER_ID);
-          const newFcoins: string[] = result?.newFcoins ?? [];
-          const alreadyCheckedIn: boolean = result?.alreadyCheckedIn ?? false;
-          if (!alreadyCheckedIn) {
-            await refresh();
-          }
-          if (newFcoins.length > 0) {
-            setNewFcoinNotification(newFcoins[newFcoins.length - 1]);
-          }
-        } catch (err) {
-          console.error("Erreur checkin:", err);
+    if (!MY_USER_ID) { setLoading(false); return; }
+    if (checkinDone.current) { refresh(); return; }
+    checkinDone.current = true;
+
+    const run = async () => {
+      try {
+        // Les deux requêtes en parallèle : gagne 300-600ms
+        const [progressData, checkinResult] = await Promise.all([
+          getProgression(MY_USER_ID),
+          dailyCheckin(MY_USER_ID),
+        ]);
+        const newFcoins: string[] = checkinResult?.newFcoins ?? [];
+        const alreadyCheckedIn: boolean = checkinResult?.alreadyCheckedIn ?? true;
+
+        if (!alreadyCheckedIn) {
+          // Nouveau checkin → refetch pour avoir la streak mise à jour
+          const updated = await getProgression(MY_USER_ID);
+          setState(updated);
+        } else {
+          setState(progressData);
         }
+
+        setLoading(false);
+        if (newFcoins.length > 0) setNewFcoinNotification(newFcoins[newFcoins.length - 1]);
+      } catch (err) {
+        console.error("Erreur progression/checkin:", err);
+        setLoading(false);
       }
-    });
+    };
+    run();
   }, [refresh]);
 
   const triggerActivity = useCallback(async (actionType: string, data?: Record<string, unknown>) => {
