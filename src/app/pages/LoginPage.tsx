@@ -17,7 +17,7 @@ const CODE_LENGTH     = 8;
 const RESEND_COOLDOWN = 60;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Screen = "landing" | "signup" | "login" | "verify";
+type Screen = "landing" | "signup" | "login" | "forgot-password";
 
 // ── Star mascot SVG ───────────────────────────────────────────────────────────
 function StarMascot() {
@@ -321,12 +321,15 @@ En rejoignant <span translate="no" className="notranslate">Fowards</span>, tu ac
           <LoginPanel
             key="login"
             onBack={() => setScreen("landing")}
-            onVerify={(email) => {
-              // Store email in sessionStorage for VerifyEmailPage
-              sessionStorage.setItem("ff_verify_email", email);
-              sessionStorage.setItem("ff_verify_mode", "login");
-              navigate("/verify-email", { state: { email, mode: "login" } });
-            }}
+            onForgotPassword={() => setScreen("forgot-password")}
+          />
+        )}
+
+        {/* FORGOT PASSWORD */}
+        {screen === "forgot-password" && (
+          <ForgotPasswordPanel
+            key="forgot-password"
+            onBack={() => setScreen("login")}
           />
         )}
       </AnimatePresence>
@@ -584,13 +587,15 @@ function SignupPanel({ onBack, onNavigate }: SignupPanelProps) {
 // ═══════════════════════════════════════════════════════════════════════════════
 interface LoginPanelProps {
   onBack: () => void;
-  onVerify: (email: string) => void;
+  onForgotPassword: () => void;
 }
 
-function LoginPanel({ onBack, onVerify }: LoginPanelProps) {
-  const [email,   setEmail]   = useState("");
-  const [error,   setError]   = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+function LoginPanel({ onBack, onForgotPassword }: LoginPanelProps) {
+  const [email,    setEmail]    = useState("");
+  const [password, setPassword] = useState("");
+  const [showPwd,  setShowPwd]  = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+  const [pending,  setPending]  = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -600,25 +605,30 @@ function LoginPanel({ onBack, onVerify }: LoginPanelProps) {
     const trimmed = email.trim();
     if (!trimmed)               { setError("L'email est requis."); return; }
     if (!trimmed.includes("@")) { setError("L'email n'est pas valide."); return; }
+    if (!password)              { setError("Le mot de passe est requis."); return; }
 
     setPending(true);
     try {
-      const res = await fetch(`${BASE}/auth/send-otp`, {
-        method: "POST", headers: HEADERS,
-        body: JSON.stringify({ email: trimmed }),
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: trimmed,
+        password,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `Erreur serveur (${res.status})`);
-      onVerify(trimmed);
+      if (authError) throw new Error(authError.message);
+      // AuthContext onAuthStateChange handles the redirect automatically
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+      const msg = err instanceof Error ? err.message : "Une erreur est survenue.";
+      if (msg.toLowerCase().includes("invalid login credentials") || msg.toLowerCase().includes("invalid credentials")) {
+        setError("Email ou mot de passe incorrect.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setPending(false);
     }
   };
 
   return (
-    <PanelWrapper onBack={onBack} title="Se connecter" subtitle="Saisis ton email, on t'envoie un code à 8 chiffres. 🔐">
+    <PanelWrapper onBack={onBack} title="Se connecter" subtitle="Connecte-toi avec ton email et ton mot de passe.">
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <Field label="Email">
           <div style={{ position: "relative" }}>
@@ -637,15 +647,42 @@ function LoginPanel({ onBack, onVerify }: LoginPanelProps) {
           </div>
         </Field>
 
-        {/* Info */}
-        <div style={{
-          padding: "10px 14px", borderRadius: 12,
-          background: "rgba(139,92,246,0.08)",
-          border: "0.5px solid rgba(139,92,246,0.20)",
-        }}>
-          <span style={{ fontSize: 13, color: "rgba(165,180,252,0.75)", lineHeight: 1.5 }}>
-            Un code de vérification à 8 chiffres sera envoyé à ton adresse email.
-          </span>
+        <Field label="Mot de passe">
+          <div style={{ position: "relative" }}>
+            <input
+              type={showPwd ? "text" : "password"} value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(null); }}
+              placeholder="Ton mot de passe"
+              autoComplete="current-password"
+              style={{ ...INPUT_STYLE, paddingRight: 46 }}
+              className="focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
+            />
+            <button
+              type="button" onClick={() => setShowPwd((v) => !v)}
+              style={{
+                position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
+                background: "none", border: "none", cursor: "pointer", padding: 0,
+                color: "rgba(255,255,255,0.30)",
+              }}
+            >
+              {showPwd ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
+            </button>
+          </div>
+        </Field>
+
+        {/* Mot de passe oublié */}
+        <div style={{ textAlign: "right", marginTop: -6 }}>
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            style={{
+              background: "none", border: "none", cursor: "pointer", padding: 0,
+              fontSize: 12, color: "rgba(165,180,252,0.65)",
+              fontWeight: 500,
+            }}
+          >
+            Mot de passe oublié ?
+          </button>
         </div>
 
         <ErrorBox error={error} />
@@ -655,19 +692,139 @@ function LoginPanel({ onBack, onVerify }: LoginPanelProps) {
           whileTap={!pending ? { scale: 0.97 } : {}}
           style={{
             width: "100%", padding: "15px", borderRadius: 100,
-            background: pending ? "rgba(139,92,246,0.50)" : "#8b5cf6",
+            background: pending ? "rgba(79,70,229,0.50)" : "#4f46e5",
             border: "none", color: "#fff",
             fontSize: 16, fontWeight: 700,
             cursor: pending ? "default" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            boxShadow: pending ? "none" : "0 4px 20px rgba(139,92,246,0.35)",
+            boxShadow: pending ? "none" : "0 4px 20px rgba(79,70,229,0.30)",
             marginTop: 4,
             transition: "background 0.2s",
           }}
         >
           {pending
-            ? <><Loader2 style={{ width: 17, height: 17, animation: "spin 1s linear infinite" }} /> Envoi du code…</>
-            : "Recevoir mon code"}
+            ? <><Loader2 style={{ width: 17, height: 17, animation: "spin 1s linear infinite" }} /> Connexion…</>
+            : "Se connecter"}
+        </motion.button>
+      </form>
+    </PanelWrapper>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FORGOT PASSWORD PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+interface ForgotPasswordPanelProps {
+  onBack: () => void;
+}
+
+function ForgotPasswordPanel({ onBack }: ForgotPasswordPanelProps) {
+  const [email,   setEmail]   = useState("");
+  const [error,   setError]   = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [sent,    setSent]    = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pending) return;
+    setError(null);
+
+    const trimmed = email.trim();
+    if (!trimmed)               { setError("L'email est requis."); return; }
+    if (!trimmed.includes("@")) { setError("L'email n'est pas valide."); return; }
+
+    setPending(true);
+    try {
+      const { error: authError } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (authError) throw new Error(authError.message);
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  if (sent) {
+    return (
+      <PanelWrapper onBack={onBack} title="Email envoyé !" subtitle="Vérifie ta boîte mail pour réinitialiser ton mot de passe.">
+        <div style={{
+          padding: "20px 0", textAlign: "center",
+          display: "flex", flexDirection: "column", gap: 16, alignItems: "center",
+        }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: "50%",
+            background: "rgba(34,197,94,0.12)",
+            border: "1px solid rgba(34,197,94,0.30)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Check style={{ width: 24, height: 24, color: "#22c55e" }} />
+          </div>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.50)", margin: 0, lineHeight: 1.6 }}>
+            Un lien de réinitialisation a été envoyé à <strong style={{ color: "rgba(255,255,255,0.75)" }}>{email.trim()}</strong>.
+            Clique sur le lien dans l'email pour choisir un nouveau mot de passe.
+          </p>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onBack}
+            style={{
+              marginTop: 8,
+              padding: "13px 28px", borderRadius: 100,
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              color: "#fff", fontSize: 15, fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Retour à la connexion
+          </motion.button>
+        </div>
+      </PanelWrapper>
+    );
+  }
+
+  return (
+    <PanelWrapper onBack={onBack} title="Mot de passe oublié" subtitle="Saisis ton email pour recevoir un lien de réinitialisation.">
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <Field label="Email">
+          <div style={{ position: "relative" }}>
+            <input
+              type="email" value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(null); }}
+              placeholder="ton@email.com"
+              autoComplete="email"
+              style={{ ...INPUT_STYLE, paddingLeft: 44 }}
+              className="focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
+            />
+            <Mail style={{
+              position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)",
+              width: 16, height: 16, color: "rgba(139,92,246,0.50)", pointerEvents: "none",
+            }} />
+          </div>
+        </Field>
+
+        <ErrorBox error={error} />
+
+        <motion.button
+          type="submit" disabled={pending}
+          whileTap={!pending ? { scale: 0.97 } : {}}
+          style={{
+            width: "100%", padding: "15px", borderRadius: 100,
+            background: pending ? "rgba(79,70,229,0.50)" : "#4f46e5",
+            border: "none", color: "#fff",
+            fontSize: 16, fontWeight: 700,
+            cursor: pending ? "default" : "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            boxShadow: pending ? "none" : "0 4px 20px rgba(79,70,229,0.30)",
+            marginTop: 4,
+            transition: "background 0.2s",
+          }}
+        >
+          {pending
+            ? <><Loader2 style={{ width: 17, height: 17, animation: "spin 1s linear infinite" }} /> Envoi…</>
+            : "Envoyer le lien"}
         </motion.button>
       </form>
     </PanelWrapper>

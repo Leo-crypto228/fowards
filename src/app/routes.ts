@@ -13,6 +13,7 @@ import { AdminProtected } from "./pages/AdminProtected";
 import { MentionsLegales } from "./pages/MentionsLegales";
 import { ConditionsGenerales } from "./pages/ConditionsGenerales";
 import { PolitiqueConfidentialite } from "./pages/PolitiqueConfidentialite";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 
 // App pages — lazy loaded (code-split per route, speeds up initial load and navigation)
 const Feed              = lazy(() => import("./pages/Feed").then(m => ({ default: m.Feed })));
@@ -44,9 +45,10 @@ export const router = createBrowserRouter([
   { path: "/verify-email",  Component: VerifyEmailPage },
   { path: "/auth/callback", Component: AuthCallbackPage },
   { path: "/first-post",       Component: FirstPostPage },
-  { path: "/mentions-legales", Component: MentionsLegales },
-  { path: "/conditions",                Component: ConditionsGenerales },
-  { path: "/politique-confidentialite", Component: PolitiqueConfidentialite },
+  { path: "/mentions-legales",           Component: MentionsLegales },
+  { path: "/conditions",                 Component: ConditionsGenerales },
+  { path: "/politique-confidentialite",  Component: PolitiqueConfidentialite },
+  { path: "/reset-password",             Component: ResetPasswordPage },
 
   // ── Admin (accès restreint — UUID admin uniquement) ───────────────────────
   { path: "/admin",            Component: AdminProtected },
