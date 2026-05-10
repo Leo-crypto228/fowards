@@ -300,10 +300,11 @@ export function LoginPage() {
               lineHeight: 1.6,
               maxWidth: 300,
             }}>
-En rejoignant FF, tu acceptes nos{" "}
-              <span style={{ color: "rgba(255,255,255,0.35)", cursor: "pointer" }}>conditions</span>
-              {" "}et notre{" "}
-              <span style={{ color: "rgba(255,255,255,0.35)", cursor: "pointer" }}>politique de confidentialité</span>.
+En rejoignant <span translate="no" className="notranslate">Fowards</span>, tu acceptes nos{" "}
+              <Link to="/mentions-legales" style={{ color: "rgba(255,255,255,0.35)" }}>mentions légales</Link>,{" "}
+              <Link to="/conditions" style={{ color: "rgba(255,255,255,0.35)" }}>conditions</Link>{" "}
+              et notre{" "}
+              <Link to="/politique-confidentialite" style={{ color: "rgba(255,255,255,0.35)" }}>politique de confidentialité</Link>.
             </p>
           </motion.div>
         )}

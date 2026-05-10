@@ -10,6 +10,9 @@ import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { FirstPostPage } from "./pages/FirstPostPage";
 import { AdminProtected } from "./pages/AdminProtected";
+import { MentionsLegales } from "./pages/MentionsLegales";
+import { ConditionsGenerales } from "./pages/ConditionsGenerales";
+import { PolitiqueConfidentialite } from "./pages/PolitiqueConfidentialite";
 
 // App pages — lazy loaded (code-split per route, speeds up initial load and navigation)
 const Feed              = lazy(() => import("./pages/Feed").then(m => ({ default: m.Feed })));
@@ -40,10 +43,13 @@ export const router = createBrowserRouter([
   { path: "/onboarding",    Component: OnboardingPage },
   { path: "/verify-email",  Component: VerifyEmailPage },
   { path: "/auth/callback", Component: AuthCallbackPage },
-  { path: "/first-post",    Component: FirstPostPage },
+  { path: "/first-post",       Component: FirstPostPage },
+  { path: "/mentions-legales", Component: MentionsLegales },
+  { path: "/conditions",                Component: ConditionsGenerales },
+  { path: "/politique-confidentialite", Component: PolitiqueConfidentialite },
 
   // ── Admin (accès restreint — UUID admin uniquement) ───────────────────────
-  { path: "/admin",         Component: AdminProtected },
+  { path: "/admin",            Component: AdminProtected },
 
   // ── App pages (sous Layout + guard auth) ──────────────────────────────────
   {

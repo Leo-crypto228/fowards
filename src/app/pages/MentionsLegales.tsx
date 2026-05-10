@@ -1,41 +1,113 @@
-export default function MentionsLegales() {
+import { useNavigate } from "react-router";
+import { ArrowLeft } from "lucide-react";
+
+export function MentionsLegales() {
+  const navigate = useNavigate();
+
   return (
-    <main style={{ padding: "40px" }}>
-      Mentions légales
-En vigueur au 19/04/2026
+    <div style={{
+      minHeight: "100dvh",
+      background: "#09090f",
+      color: "rgba(255,255,255,0.82)",
+      padding: "24px 20px 60px",
+      maxWidth: 680,
+      margin: "0 auto",
+      fontFamily: "inherit",
+    }}>
+      {/* Back button */}
+      <button
+        onClick={() => navigate(-1)}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          background: "none", border: "none", cursor: "pointer",
+          color: "rgba(255,255,255,0.45)", fontSize: 14, padding: "0 0 28px",
+        }}
+      >
+        <ArrowLeft size={16} />
+        Retour
+      </button>
 
- 
-Conformément aux dispositions de la loi n°2004-575 du 21 juin 2004 pour la Confiance en l’économie numérique, il est porté à la connaissance des utilisateurs et visiteurs, ci-après l' "Utilisateur", du site futurfeed.com , ci-après le "Site", les présentes mentions légales.
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: "#f0f0f5", margin: "0 0 6px", letterSpacing: "-0.4px" }}>
+        Mentions légales
+      </h1>
+      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: "0 0 36px" }}>
+        En vigueur au 10/05/2026
+      </p>
 
-La connexion et la navigation sur le Site par l’Utilisateur implique acceptation intégrale et sans réserve des présentes mentions légales.
+      <Section>
+        <p>
+          Conformément aux dispositions de la loi n°2004-575 du 21 juin 2004 pour la Confiance en l'économie numérique,
+          il est précisé aux utilisateurs du site <span translate="no" className="notranslate">Fowards</span> l'identité
+          des différents intervenants dans le cadre de sa réalisation et de son suivi.
+        </p>
+      </Section>
 
-Ces dernières sont accessibles sur le Site à la rubrique "Mentions légales".
+      <Section title="ÉDITION DU SITE">
+        <p>
+          Le présent site est édité par :<br /><br />
+          <strong>Monsieur Léo Le Guillou</strong><br />
+          Druillat, l'Ain 01<br />
+          Téléphone : 0767913803<br />
+          E-mail : <a href="mailto:neyvo.entreprise@gmail.com" style={{ color: "rgba(255,255,255,0.55)" }}>neyvo.entreprise@gmail.com</a>
+        </p>
+      </Section>
 
-EDITION DU SITE
-L’édition et la direction de la publication du Site est assurée par Monsieur Léo Le Guillou, domicilié Druillat, l'Ain 01, dont le numéro de téléphone est 0767913803, et l'adresse e-mail neyvo.entreprise@gmail.com.
+      <Section title="HÉBERGEUR">
+        <p>
+          Le site est hébergé par :<br /><br />
+          <strong>Cloudflare, Inc.</strong><br />
+          101 Townsend Street<br />
+          94107 San Francisco, États-Unis
+        </p>
+      </Section>
 
-ci-après l'"Editeur".
+      <Section title="ACCÈS AU SITE">
+        <p>
+          Le site est accessible par tout endroit, 7j/7, 24h/24 sauf cas de force majeure, interruption programmée
+          ou non et pouvant découler d'une nécessité de maintenance.
+        </p>
+        <p style={{ marginTop: 12 }}>
+          En cas de modification, interruption ou suspension des services, le site{" "}
+          <span translate="no" className="notranslate">Fowards</span> ne saurait être tenu responsable.
+        </p>
+      </Section>
 
-HEBERGEUR
+      <Section title="COLLECTE DES DONNÉES">
+        <p>
+          Le site assure à l'Utilisateur une collecte et un traitement d'informations personnelles dans le respect
+          de la vie privée conformément à la loi n°78-17 du 6 janvier 1978 relative à l'informatique, aux fichiers
+          et aux libertés.
+        </p>
+        <p style={{ marginTop: 12 }}>
+          En vertu de la loi Informatique et Libertés, en date du 6 janvier 1978, l'Utilisateur dispose d'un droit
+          d'accès, de rectification, de suppression et d'opposition de ses données personnelles. L'Utilisateur exerce
+          ce droit via :<br /><br />
+          — son espace personnel ;<br />
+          — le formulaire de contact à l'adresse{" "}
+          <a href="mailto:neyvo.entreprise@gmail.com" style={{ color: "rgba(255,255,255,0.55)" }}>
+            neyvo.entreprise@gmail.com
+          </a>
+        </p>
+      </Section>
 
-L'hébergeur du Site est la société Cloudflare, dont le siège social est situé au  101 Townsend Street 94107 San Francisco . 
+      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.22)", marginTop: 40 }}>
+        Rédigé sur legalplace.fr
+      </p>
+    </div>
+  );
+}
 
-ACCES AU SITE
-
-Le Site est normalement accessible, à tout moment, à l'Utilisateur. Toutefois, l'Editeur pourra, à tout moment, suspendre, limiter ou interrompre le Site afin de procéder, notamment, à des mises à jour ou des modifications de son contenu. L'Editeur ne pourra en aucun cas être tenu responsable des conséquences éventuelles de cette indisponibilité sur les activités de l'Utilisateur.
-
-COLLECTE DES DONNEES
-
-Le Site assure à l'Utilisateur une collecte et un traitement des données personnelles dans le respect de la vie privée conformément à la loi n°78-17 du 6 janvier 1978 relative à l'informatique, aux fichiers  aux libertés et dans le respect de la règlementation applicable en matière de traitement des données à caractère personnel conformément au règlement (UE) 2016/679 du Parlement européen et du Conseil du 27 avril 2016 (ci-après, ensemble, la "Règlementation applicable en matière de protection des Données à caractère personnel"). 
-
-En vertu de la Règlementation applicable en matière de protection des Données à caractère personnel, l'Utilisateur dispose d'un droit d'accès, de rectification, de suppression et d'opposition de ses données personnelles. L'Utilisateur peut exercer ce droit :
-    • par mail à l'adresse email neyvo.entreprise@gmail.com﻿
- 
-Toute utilisation, reproduction, diffusion, commercialisation, modification de toute ou partie du Site﻿, sans autorisation expresse de l’Editeur est prohibée et pourra entraîner des actions et poursuites judiciaires telles que prévues par la règlementation en vigueur.
-
-
-
-Rédigé sur http://legalplace.fr
-    </main>
+function Section({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      {title && (
+        <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.45)", letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 10px" }}>
+          {title}
+        </h2>
+      )}
+      <div style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(255,255,255,0.65)" }}>
+        {children}
+      </div>
+    </div>
   );
 }
