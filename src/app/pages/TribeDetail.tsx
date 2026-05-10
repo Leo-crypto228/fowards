@@ -490,7 +490,6 @@ export function TribeDetail() {
     return (
       <div style={{ minHeight: "100dvh", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Loader2 style={{ width: 28, height: 28, color: "#6366f1", animation: "spin 1s linear infinite" }} />
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -820,7 +819,6 @@ export function TribeDetail() {
                 postsLoading ? (
                   <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
                     <Loader2 style={{ width: 24, height: 24, color: "#6366f1", animation: "spin 1s linear infinite" }} />
-                    <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
                   </div>
                 ) : dynamicPosts.length === 0 ? (
                   <motion.div

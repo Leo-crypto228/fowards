@@ -155,7 +155,6 @@ export function LoginPage() {
     return (
       <div style={{ minHeight: "100dvh", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Loader2 style={{ width: 28, height: 28, color: "#8b5cf6", animation: "spin 1s linear infinite" }} />
-        <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
       </div>
     );
   }
@@ -333,8 +332,6 @@ En rejoignant <span translate="no" className="notranslate">Fowards</span>, tu ac
           />
         )}
       </AnimatePresence>
-
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

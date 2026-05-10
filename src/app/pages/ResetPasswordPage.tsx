@@ -119,7 +119,6 @@ export function ResetPasswordPage() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "20px 0" }}>
               <Loader2 style={{ width: 20, height: 20, color: "#6366f1", animation: "spin 1s linear infinite" }} />
               <span style={{ fontSize: 14, color: "rgba(255,255,255,0.40)" }}>Verification du lien...</span>
-              <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
             </div>
           ) : (
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -193,7 +192,6 @@ export function ResetPasswordPage() {
                   ? <><Loader2 style={{ width: 17, height: 17, animation: "spin 1s linear infinite" }} /> Mise a jour...</>
                   : "Mettre a jour le mot de passe"}
               </motion.button>
-              <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
             </form>
           )}
         </div>

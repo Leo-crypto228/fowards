@@ -385,7 +385,6 @@ export function OnboardingPage() {
             {loadingProfiles ? (
               <div style={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>
                 <Loader2 style={{ width: 22, height: 22, color: "#6366f1", animation: "spin 0.8s linear infinite" }} />
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               </div>
             ) : suggestedProfiles.length === 0 ? (
               <div style={{ textAlign: "center", padding: "32px 0", color: "rgba(255,255,255,0.30)", fontSize: 14 }}>
@@ -635,7 +634,6 @@ export function OnboardingPage() {
         </div>
       </div>
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
