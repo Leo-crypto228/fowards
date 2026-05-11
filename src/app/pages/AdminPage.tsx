@@ -222,7 +222,7 @@ export function AdminPage() {
 
           {/* ════════════════════════════════════════════ STEP 1 : Configure */}
           {step === "configure" && (
-            <motion.div key="configure" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <motion.div key="configure" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <div className={glass("p-5 mb-4")}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: "#c7d2fe", marginBottom: 4 }}>
                   Utilisateurs à CONSERVER
@@ -349,7 +349,7 @@ export function AdminPage() {
 
           {/* ════════════════════════════════════════════ STEP 2 : Audit */}
           {step === "audit" && inventory && (
-            <motion.div key="audit" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <motion.div key="audit" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               {/* Totaux globaux */}
               <div className={glass("p-5 mb-4")}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: "#c7d2fe", marginBottom: 12 }}>Contenu total dans la base</p>
@@ -470,7 +470,7 @@ export function AdminPage() {
 
           {/* ════════════════════════════════════════════ STEP 3 : Confirm */}
           {step === "confirm" && (
-            <motion.div key="confirm" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <motion.div key="confirm" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <div style={{ background: "rgba(239,68,68,0.06)", border: "0.5px solid rgba(239,68,68,0.25)", borderRadius: 18, padding: "20px", marginBottom: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <AlertTriangle size={15} color="#f87171" />

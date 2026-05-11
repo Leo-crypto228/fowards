@@ -115,7 +115,6 @@ function CommentItem({
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
             style={{ paddingLeft: 46, marginTop: 10, overflow: "hidden" }}
           >
             <div
@@ -161,7 +160,6 @@ function CommentItem({
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
             style={{ marginTop: 10, paddingLeft: 46, overflow: "hidden" }}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

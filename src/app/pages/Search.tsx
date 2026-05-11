@@ -301,7 +301,7 @@ export function Search() {
         <AnimatePresence mode="wait">
           <motion.div
             key={q + loading}
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.18 }}
           >
             {/* ── Error state ── */}

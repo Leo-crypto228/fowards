@@ -180,7 +180,6 @@ export function CreateChannelPostModal({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
             onClick={handleClose}
             style={{
@@ -196,7 +195,6 @@ export function CreateChannelPostModal({
           <motion.div
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
             transition={{ type: "spring", stiffness: 340, damping: 32, mass: 0.9 }}
             style={{
               position: "fixed",
@@ -286,7 +284,6 @@ export function CreateChannelPostModal({
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.2 }}
                       style={{ overflow: "hidden", marginTop: 8 }}
                     >
@@ -386,7 +383,6 @@ export function CreateChannelPostModal({
                   <motion.div
                     initial={{ opacity: 0, scale: 0.96 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.94 }}
                     style={{ position: "relative", borderRadius: 14, overflow: "hidden", height: 160 }}
                   >
                     <img src={imageUrl} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />

@@ -178,7 +178,7 @@ export function CreateCommunityPostModal({
         <>
           {/* Overlay */}
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             transition={{ duration: 0.22 }}
             onClick={handleClose}
             style={{
@@ -193,7 +193,6 @@ export function CreateCommunityPostModal({
           <motion.div
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
             transition={{ type: "spring", stiffness: 340, damping: 32, mass: 0.9 }}
             style={{
               position: "fixed", bottom: 0, left: 0, right: 0,
@@ -257,7 +256,6 @@ export function CreateCommunityPostModal({
                     <motion.div
                       initial={{ opacity: 0, y: -8, height: 0 }}
                       animate={{ opacity: 1, y: 0, height: "auto" }}
-                      exit={{ opacity: 0, y: -8, height: 0 }}
                       transition={{ duration: 0.18 }}
                       style={{
                         position: "absolute", top: 70, left: 20,
@@ -348,8 +346,7 @@ export function CreateCommunityPostModal({
                 <AnimatePresence>
                   {showBadges && (
                     <motion.div
-                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }}
+                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} transition={{ duration: 0.2 }}
                       style={{ overflow: "hidden", marginTop: 8 }}
                     >
                       <div style={{
@@ -426,7 +423,6 @@ export function CreateCommunityPostModal({
                 {imageUrl && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.94 }}
                     style={{ position: "relative", borderRadius: 14, overflow: "hidden", height: 160 }}
                   >
                     <img src={imageUrl} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />

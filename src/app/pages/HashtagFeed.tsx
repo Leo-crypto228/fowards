@@ -147,7 +147,6 @@ export function HashtagFeed() {
                 key="loading"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
                 className="space-y-3 px-3"
               >
                 {[1, 2, 3].map((i) => (

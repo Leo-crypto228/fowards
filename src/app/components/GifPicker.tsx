@@ -153,7 +153,6 @@ export function GifPicker({ isOpen, onClose, onSelect }: GifPickerProps) {
               key="gif-backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={onClose}
               style={{
@@ -169,7 +168,6 @@ export function GifPicker({ isOpen, onClose, onSelect }: GifPickerProps) {
               key="gif-sheet"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
-              exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 380, damping: 38, mass: 0.9 }}
               style={{
                 position: "fixed",

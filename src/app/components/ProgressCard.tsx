@@ -241,7 +241,6 @@ function PostMenu({ postId, authorUsername, authorName, postContent, currentUser
     <motion.div
       initial={{ opacity: 0, scale: 0.88, y: 8 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.90, y: 6 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
       style={{
         position: "absolute",

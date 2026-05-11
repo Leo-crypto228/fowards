@@ -367,19 +367,19 @@ export function EditProfilePage() {
           >
             <AnimatePresence mode="wait">
               {saving ? (
-                <motion.div key="saving" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                <motion.div key="saving" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" />
                   Sauvegarde…
                 </motion.div>
               ) : saved ? (
-                <motion.div key="saved" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                <motion.div key="saved" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
                   style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <Check style={{ width: 13, height: 13 }} />
                   Sauvegardé
                 </motion.div>
               ) : (
-                <motion.div key="save" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                <motion.div key="save" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <Save style={{ width: 13, height: 13 }} />
                   Sauvegarder

@@ -395,7 +395,6 @@ export function VerifyEmailPage() {
                   <motion.div
                     initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                     animate={{ opacity: 1, height: "auto", marginBottom: 16 }}
-                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                     style={{
                       display: "flex", alignItems: "flex-start", gap: 8,
                       padding: "10px 14px", borderRadius: 12,
@@ -416,7 +415,6 @@ export function VerifyEmailPage() {
                   <motion.button
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 4 }}
                     onClick={() => verifyCode(digits.join(""))}
                     whileTap={{ scale: 0.97 }}
                     style={{
@@ -456,7 +454,6 @@ export function VerifyEmailPage() {
                   <motion.div
                     initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                     animate={{ opacity: 1, height: "auto", marginBottom: 14 }}
-                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                     style={{
                       display: "flex", alignItems: "center", gap: 8,
                       padding: "10px 14px", borderRadius: 12,
@@ -509,7 +506,6 @@ export function VerifyEmailPage() {
                     <motion.div
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
                       style={{
                         display: "flex", alignItems: "flex-start", gap: 6,
                         marginTop: 10, padding: "10px 12px", borderRadius: 10,

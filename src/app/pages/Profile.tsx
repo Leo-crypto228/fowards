@@ -410,7 +410,6 @@ function NotifPanel({ onClose }: { onClose: () => void }) {
     <motion.div
       initial={{ opacity: 0, y: -12, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -12, scale: 0.97 }}
       transition={{ duration: 0.22 }}
       style={{
         position: "fixed", top: 104, left: 16, right: 16, zIndex: 200,
@@ -794,7 +793,6 @@ function PostsSection() {
               key={post.id}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: -20, height: 0 }}
               transition={{ delay: i * 0.04, duration: 0.24 }}
               style={{ position: "relative", marginBottom: 10 }}
             >
@@ -873,7 +871,6 @@ function PostsSection() {
                 <motion.div
                   initial={{ opacity: 0, y: -6, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
                   style={{
                     position: "absolute",
@@ -1002,7 +999,7 @@ function PostsSection() {
       {/* Posts list OR Important section */}
       <AnimatePresence mode="wait">
         {mode === "important" ? (
-          <motion.div key="important" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}>
+          <motion.div key="important" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
             {/* Private notice */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 14, marginBottom: 14, background: "rgba(99,102,241,0.08)", border: "0.5px solid rgba(99,102,241,0.20)" }}>
               <Lock style={{ width: 13, height: 13, color: "rgba(165,180,252,0.70)", flexShrink: 0 }} />
@@ -1065,7 +1062,7 @@ function PostsSection() {
             )}
           </motion.div>
         ) : (
-          <motion.div key={mode} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}>
+          <motion.div key={mode} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
             {displayedPosts.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(144,144,168,0.40)", fontSize: 14 }}>
                 Aucun contenu ici pour l'instant.
@@ -1151,7 +1148,6 @@ function SuiviSection({ username }: { username: string }) {
             <motion.div
               key={p.username || p.id}
               initial={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0, overflow: "hidden", marginBottom: 0 }}
               transition={{ duration: 0.28, ease: "easeInOut" }}
             >
               <PersonCard {...p} />
@@ -1407,12 +1403,12 @@ function EvolutionSection({ userId, progressPct, objective, objectiveDesc }: {
         </div>
         <AnimatePresence mode="wait">
           {chartLoading ? (
-            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Loader2 style={{ width: 18, height: 18, color: "rgba(99,102,241,0.50)" }} className="animate-spin" />
             </motion.div>
           ) : displayPoints.length <= 1 ? (
-            <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               style={{ height: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <TrendingUp style={{ width: 24, height: 24, color: "rgba(99,102,241,0.30)" }} strokeWidth={1.5} />
               <p style={{ fontSize: 13, color: "rgba(144,144,168,0.38)", textAlign: "center" }}>
@@ -1420,7 +1416,7 @@ function EvolutionSection({ userId, progressPct, objective, objectiveDesc }: {
               </p>
             </motion.div>
           ) : (
-            <motion.div key={evolutionFilter} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22 }}>
+            <motion.div key={evolutionFilter} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
               <MiniAreaChart data={displayPoints} />
             </motion.div>
           )}
@@ -1490,7 +1486,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
     <>
       {/* Overlay */}
       <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
         onClick={onClose}
         style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.60)", backdropFilter: "blur(4px)" }}
       />
@@ -1498,7 +1494,6 @@ function SearchModal({ onClose }: { onClose: () => void }) {
       <motion.div
         initial={{ opacity: 0, y: -20, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -20, scale: 0.97 }}
         transition={{ type: "spring", stiffness: 420, damping: 38 }}
         style={{
           position: "fixed", top: 64, left: 0, right: 0, zIndex: 401,
@@ -1733,11 +1728,11 @@ export function Profile() {
             >
               <AnimatePresence mode="wait">
                 {linkCopied ? (
-                  <motion.div key="check" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.7, opacity: 0 }}>
+                  <motion.div key="check" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
                     <Check style={{ width: 13, height: 13, color: "#22c55e" }} />
                   </motion.div>
                 ) : (
-                  <motion.div key="link" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.7, opacity: 0 }}>
+                  <motion.div key="link" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
                     <Link2 style={{ width: 13, height: 13, color: "rgba(255,255,255,0.85)" }} />
                   </motion.div>
                 )}
@@ -1775,7 +1770,6 @@ export function Profile() {
               key="profile-card"
               initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
               style={{ position: "relative", overflow: "visible" }}
             >
@@ -1852,7 +1846,6 @@ export function Profile() {
               key={activeTab}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.22 }}
             >
               {activeTab === "evolution" && (
@@ -1873,7 +1866,7 @@ export function Profile() {
       {/* Notif overlay */}
       <AnimatePresence>
         {showNotifs && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             onClick={() => setShowNotifs(false)}
             style={{ position: "fixed", inset: 0, zIndex: 150 }} />
         )}

@@ -200,7 +200,6 @@ export function CreateWays() {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
               style={{ position: "relative", borderRadius: 16, overflow: "hidden" }}
             >
               <img

@@ -245,12 +245,12 @@ function CreateModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
         style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.70)", backdropFilter: "blur(8px)" }}
         onClick={onClose}
       />
       <motion.div
-        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+        initial={{ y: "100%" }} animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 340, damping: 36 }}
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -330,7 +330,6 @@ function CreateModal({
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2 }}
                         style={{ overflow: "hidden" }}
                       >

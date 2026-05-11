@@ -41,7 +41,6 @@ function TypePreview({ label }: { label: string }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.88, y: 4 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.88, y: 4 }}
       transition={{ duration: 0.18 }}
       style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}
     >
@@ -85,7 +84,7 @@ function TypeTooltip() {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            initial={{ opacity: 0, y: 4, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.15 }}
             style={{ position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", zIndex: 200, background: "rgba(14,14,22,0.98)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderRadius: 14, border: "0.5px solid rgba(255,255,255,0.12)", boxShadow: "0 8px 32px rgba(0,0,0,0.55)", padding: "12px 14px", minWidth: 220 }}
           >
@@ -375,7 +374,7 @@ export function CreateProgress() {
             {/* Image preview — 3:4 comme les posts */}
             <AnimatePresence>
               {waysImagePreview && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   style={{ marginTop: 6, marginBottom: 14, position: "relative" }}>
                   <div style={{ width: "72%", aspectRatio: "3/4", borderRadius: 14, overflow: "hidden", border: "0.5px solid rgba(255,255,255,0.10)", position: "relative" }}>
                     <img src={waysImagePreview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -459,7 +458,6 @@ export function CreateProgress() {
                   key="anon-toggle"
                   initial={{ opacity: 0, scale: 0.88 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.88 }}
                   transition={{ duration: 0.16 }}
                   style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", userSelect: "none" }}
                   onClick={() => setIsAnonymous((v) => !v)}
@@ -541,7 +539,7 @@ export function CreateProgress() {
           {/* Aperçu images — carousel horizontal 3:4 */}
           <AnimatePresence>
             {images.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 style={{ marginTop: 14, position: "relative" }}>
                 <div style={{ display: "flex", gap: 10, overflowX: "auto", scrollSnapType: "x mandatory", scrollBehavior: "smooth", WebkitOverflowScrolling: "touch", paddingBottom: 4 }}
                   className="[&::-webkit-scrollbar]:hidden">
@@ -565,7 +563,7 @@ export function CreateProgress() {
           {/* Aperçu GIF */}
           <AnimatePresence>
             {selectedGif && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} style={{ marginTop: 14, position: "relative", display: "inline-block" }}>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 14, position: "relative", display: "inline-block" }}>
                 <GifMessage url={selectedGif} />
                 <motion.button whileTap={{ scale: 0.88 }} onClick={() => setSelectedGif(null)}
                   style={{ position: "absolute", top: 6, right: 6, width: 24, height: 24, borderRadius: "50%", background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -611,7 +609,7 @@ export function CreateProgress() {
               <AnimatePresence>
                 {showAudienceMenu && (
                   <motion.div
-                    initial={{ opacity: 0, y: -6, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                    initial={{ opacity: 0, y: -6, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.16, ease: [0.25, 0, 0.35, 1] }}
                     style={{ position: "absolute", bottom: "calc(100% + 8px)", right: 0, minWidth: 260, background: "rgba(18,18,22,0.96)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14, boxShadow: "0 8px 32px rgba(0,0,0,0.55)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", overflow: "hidden", zIndex: 100 }}
                   >
@@ -640,7 +638,7 @@ export function CreateProgress() {
         {/* ── Erreur (Partage only) ── */}
         {mode === "partage" && <AnimatePresence>
           {error && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               style={{ marginTop: 16, padding: "12px 16px", borderRadius: 14, background: "rgba(239,68,68,0.10)", border: "0.5px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", gap: 10 }}>
               <AlertCircle style={{ width: 16, height: 16, color: "#ef4444", flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: "rgba(239,68,68,0.90)" }}>{error}</span>

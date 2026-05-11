@@ -214,7 +214,7 @@ function MessageThread({ msg, all, depth, replyingToId, onSelect, animDelay = 0 
 
           <AnimatePresence>
             {expanded && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.28, ease: "easeOut" }} style={{ overflow: "hidden" }}>
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} transition={{ duration: 0.28, ease: "easeOut" }} style={{ overflow: "hidden" }}>
                 {shouldDefaultCollapse && (
                   <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => setExpanded(false)} whileTap={{ scale: 0.95 }}
                     style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: avatarSize + 18, marginBottom: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 10px 4px 6px", borderRadius: 999, fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.25)" }}
@@ -510,8 +510,7 @@ export function TribeDiscussion({ isStatic = true, channelKey }: { isStatic?: bo
         <AnimatePresence>
           {replyingTo && (
             <motion.div
-              initial={{ opacity: 0, y: 8, height: 0 }} animate={{ opacity: 1, y: 0, height: "auto" }}
-              exit={{ opacity: 0, y: 6, height: 0 }} transition={{ duration: 0.22, ease: "easeOut" }}
+              initial={{ opacity: 0, y: 8, height: 0 }} animate={{ opacity: 1, y: 0, height: "auto" }} transition={{ duration: 0.22, ease: "easeOut" }}
               style={{ overflow: "hidden", marginBottom: 8 }}
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 14, background: "rgba(99,102,241,0.09)", border: "0.5px solid rgba(99,102,241,0.28)" }}>

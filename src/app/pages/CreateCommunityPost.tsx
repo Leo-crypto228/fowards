@@ -22,7 +22,6 @@ function TypePreview({ label }: { label: string }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.88, y: 4 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.88, y: 4 }}
       transition={{ duration: 0.18 }}
       style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}
     >
@@ -305,7 +304,7 @@ export function CreateCommunityPost() {
           <AnimatePresence>
             {images.length > 0 && (
               <motion.div
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 style={{
                   display: "grid",
                   gridTemplateColumns: images.length === 1 ? "1fr" : "1fr 1fr",
@@ -366,7 +365,7 @@ export function CreateCommunityPost() {
         <AnimatePresence>
           {error && (
             <motion.div
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               style={{
                 marginTop: 16, padding: "12px 16px", borderRadius: 14,
                 background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.25)",
@@ -402,7 +401,6 @@ export function CreateCommunityPost() {
                 key="success"
                 initial={{ opacity: 0, scale: 0.88 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.88 }}
                 style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "14px 36px", borderRadius: 999,

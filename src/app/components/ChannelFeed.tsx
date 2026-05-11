@@ -168,7 +168,6 @@ function ChannelPostCard({
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.97 }}
         transition={{ duration: 0.28, ease: [0.25, 0, 0.35, 1] }}
         style={{
           borderRadius: 22,
@@ -239,7 +238,6 @@ function ChannelPostCard({
                   <motion.div
                     initial={{ opacity: 0, scale: 0.92, y: -4 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.90 }}
                     transition={{ duration: 0.14 }}
                     style={{
                       position: "absolute", top: 36, right: 0,
@@ -525,7 +523,6 @@ export function ChannelFeed({ communityId, channelId, channelName, isAdmin }: Pr
           <motion.button
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
             whileTap={{ scale: 0.90 }}
             whileHover={{ scale: 1.05 }}
             onClick={() => setCreateOpen(true)}

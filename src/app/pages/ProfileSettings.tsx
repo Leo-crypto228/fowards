@@ -90,7 +90,6 @@ function RequestCard({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
       transition={{ duration: 0.22 }}
       style={{
         ...glass, borderRadius: 18, padding: "14px 16px",
@@ -417,7 +416,6 @@ export function ProfileSettings() {
               key={activeTab}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.20 }}
             >
 

@@ -70,7 +70,6 @@ function CommunityCard({
     <motion.div
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
       transition={{ type: "spring", stiffness: 340, damping: 28 }}
       onClick={() => navigate(`/tribes/${community.id}`)}
       style={{
@@ -372,7 +371,6 @@ export function Tribes() {
               <motion.div
                 initial={{ opacity: 0, y: -8, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.96 }}
                 transition={{ duration: 0.15 }}
                 style={{
                   position: "absolute",

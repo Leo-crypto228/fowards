@@ -144,7 +144,7 @@ export function FollowButton({
         {loading ? (
           <motion.span
             key="loading"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
           >
             <Loader2 style={{ width: iconSz, height: iconSz, color: "#818cf8" }} className="animate-spin" />
@@ -152,7 +152,7 @@ export function FollowButton({
         ) : confirmUnfollow ? (
           <motion.span
             key="confirm"
-            initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
             style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
           >
             <UserMinus style={{ width: iconSz, height: iconSz, color: "#f87171" }} strokeWidth={2.5} />
@@ -161,7 +161,7 @@ export function FollowButton({
         ) : hovered ? (
           <motion.span
             key="unfollow-hover"
-            initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
             style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
           >
             <UserMinus style={{ width: iconSz, height: iconSz, color: "#fca5a5" }} strokeWidth={2.5} />
@@ -170,7 +170,7 @@ export function FollowButton({
         ) : (
           <motion.span
             key="following"
-            initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
             style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
           >
             <Check style={{ width: iconSz, height: iconSz, color: "#818cf8" }} strokeWidth={2.5} />

@@ -92,7 +92,6 @@ function StatModal({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
         onClick={onClose}
         style={{
           position: "fixed", inset: 0,
@@ -107,7 +106,6 @@ function StatModal({
       <motion.div
         initial={{ y: "100%", opacity: 0.7 }}
         animate={{ y: 0, opacity: 1 }}
-        exit={{ y: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 420, damping: 40 }}
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0,
@@ -185,7 +183,6 @@ function StatModal({
                 key={preview}
                 initial={{ opacity: 0, x: 10, scale: 0.92 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -10, scale: 0.92 }}
                 transition={{ duration: 0.18 }}
                 style={{ display: "flex", alignItems: "center", gap: 8 }}
               >
@@ -310,7 +307,6 @@ function StatModal({
             <motion.p
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
               style={{ fontSize: 12, color: "rgba(248,113,113,0.55)", margin: "0 0 12px", fontWeight: 500 }}
             >
               · Le total ne peut pas descendre sous 0.
@@ -324,7 +320,6 @@ function StatModal({
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
               style={{
                 padding: "10px 14px", borderRadius: 12, marginBottom: 12,
                 background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.20)",

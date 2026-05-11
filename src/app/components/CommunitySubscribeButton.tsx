@@ -89,7 +89,6 @@ export function CommunitySubscribeButton({
             key="loading"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
             style={{ display: "flex", alignItems: "center", gap: sizeStyles.gap }}
           >
             <motion.div
@@ -109,7 +108,6 @@ export function CommunitySubscribeButton({
             key="joined"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
             style={{ display: "flex", alignItems: "center", gap: sizeStyles.gap }}
           >
             <Check style={{ width: sizeStyles.iconSize, height: sizeStyles.iconSize }} />
@@ -120,7 +118,6 @@ export function CommunitySubscribeButton({
             key="member"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
             style={{ display: "flex", alignItems: "center", gap: sizeStyles.gap }}
           >
             <Check style={{ width: sizeStyles.iconSize, height: sizeStyles.iconSize }} />
@@ -131,7 +128,6 @@ export function CommunitySubscribeButton({
             key="join"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
             style={{ display: "flex", alignItems: "center", gap: sizeStyles.gap }}
           >
             <UserPlus style={{ width: sizeStyles.iconSize, height: sizeStyles.iconSize }} />

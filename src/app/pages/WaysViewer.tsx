@@ -235,7 +235,6 @@ export function WaysViewer() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.92, y: -4 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.92, y: -4 }}
                 transition={{ duration: 0.13 }}
                 style={{
                   position: "absolute", top: "calc(100% + 6px)", right: 0,

@@ -240,7 +240,6 @@ function AutocompleteDropdown({
     <motion.div
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.14 }}
       style={{
         position: "absolute", top: "100%", left: 0, right: 0, zIndex: 60,
@@ -663,7 +662,6 @@ export function Feed() {
                 {query.trim().length > 0 && (
                   <motion.button
                     initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
                     whileTap={{ scale: 0.88 }}
                     onClick={handleSearchSubmit}
                     style={{
@@ -847,8 +845,7 @@ export function Feed() {
             {filteredFollowingPosts.length > 0 && (
               <AnimatePresence>
                 {filteredFollowingPosts.map((post, i) => (
-                  <motion.div key={post.id} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96 }} transition={{ delay: i * 0.04, duration: 0.26 }}>
+                  <motion.div key={post.id} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04, duration: 0.26 }}>
                     <ProgressCard
                       postId={post.id} user={post.user} streak={post.streak}
                       authorUsername={post.username}
@@ -907,7 +904,7 @@ export function Feed() {
             {/* Bandeau hors-ligne discret — le feed reste lisible grâce au fallback */}
             <AnimatePresence>
               {apiError && !loadingApi && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                   style={{ margin: "0 12px 8px", padding: "8px 14px", borderRadius: 10, background: "rgba(239,68,68,0.06)", border: "0.5px solid rgba(239,68,68,0.14)", display: "flex", alignItems: "center", gap: 8 }}>
                   <WifiOff style={{ width: 11, height: 11, color: "#f87171", flexShrink: 0 }} />
                   <span style={{ fontSize: 11, color: "rgba(252,165,165,0.70)" }}>
@@ -919,8 +916,7 @@ export function Feed() {
 
             <AnimatePresence>
               {displayedFeedPosts.map((post, i) => (
-                <motion.div key={post.id ?? `demo-${i}`} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.96 }} transition={{ delay: i * 0.04, duration: 0.26 }}>
+                <motion.div key={post.id ?? `demo-${i}`} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04, duration: 0.26 }}>
                   {i === 0 && post.username === currentUserId && currentUserId !== "" && (
                     <div style={{ padding: "0 18px 5px", display: "flex", alignItems: "center", gap: 6 }}>
                       <Wifi style={{ width: 10, height: 10, color: "#818cf8" }} />

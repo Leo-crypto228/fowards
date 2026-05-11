@@ -135,7 +135,6 @@ export function Layout() {
             }}
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 36 }}
           >
             {/* Inner row — calée sur la largeur des posts (max-w-2xl) */}
@@ -181,7 +180,7 @@ export function Layout() {
                     {unreadCount > 0 && (
                       <motion.div
                         key="badge"
-                        initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                        initial={{ scale: 0 }} animate={{ scale: 1 }}
                         transition={{ type: "spring", stiffness: 500, damping: 28 }}
                         style={{
                           position: "absolute", top: -4, right: -6,

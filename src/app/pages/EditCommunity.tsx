@@ -486,7 +486,6 @@ export function EditCommunity() {
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
               style={{ marginBottom: 22 }}
             >
               <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.40)", marginBottom: 8 }}>
@@ -665,7 +664,6 @@ export function EditCommunity() {
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
               style={{
                 marginBottom: 20, padding: "12px 16px", borderRadius: 12,
                 background: "rgba(239,68,68,0.09)", border: "0.5px solid rgba(239,68,68,0.28)",
@@ -760,7 +758,6 @@ export function EditCommunity() {
             key="delete-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             onClick={() => !deleteLoading && setShowDeleteModal(false)}
             style={{
               position: "fixed", inset: 0, zIndex: 9999,
@@ -775,7 +772,6 @@ export function EditCommunity() {
               key="delete-sheet"
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
               transition={{ type: "spring", stiffness: 380, damping: 36 }}
               onClick={e => e.stopPropagation()}
               style={{

@@ -179,7 +179,6 @@ export function ShareModal({
             onClick={handleClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             style={{
               position: "fixed", inset: 0, zIndex: 9998,
@@ -191,7 +190,6 @@ export function ShareModal({
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
-            exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 340, damping: 36 }}
             style={{
               position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 9999,
@@ -300,7 +298,6 @@ export function ShareModal({
                             <motion.div
                               initial={{ scale: 0, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
-                              exit={{ scale: 0, opacity: 0 }}
                               style={{
                                 width: 20, height: 20, borderRadius: "50%",
                                 background: "#ffffff",
@@ -360,7 +357,6 @@ export function ShareModal({
                   <motion.div
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
                       marginBottom: 10, padding: "8px 12px", borderRadius: 10,

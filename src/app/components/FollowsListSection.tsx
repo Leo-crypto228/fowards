@@ -36,7 +36,6 @@ function ProfileRow({ profile, index }: { profile: EnrichedProfile; index: numbe
     <motion.div
       initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.18, delay: index * 0.04 }}
       onClick={() => navigate(`/profile/${profile.username}`)}
       style={{
@@ -246,7 +245,6 @@ export function FollowsListSection({ currentUserId, followedList = [] }: Follows
           key={activeTab}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
           transition={{ duration: 0.18 }}
         >
           {loading ? (

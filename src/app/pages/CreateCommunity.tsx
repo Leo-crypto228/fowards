@@ -431,7 +431,6 @@ export function CreateCommunity() {
               <motion.div
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
                 style={{ marginTop: 12 }}
               >
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.30)", marginBottom: 7, lineHeight: 1.5 }}>
@@ -486,7 +485,6 @@ export function CreateCommunity() {
                   key={t}
                   initial={{ opacity: 0, scale: 0.85 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.85 }}
                   style={{
                     display: "flex", alignItems: "center", gap: 5,
                     padding: "4px 10px 4px 12px", borderRadius: 999,
@@ -634,7 +632,6 @@ export function CreateCommunity() {
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
               style={{
                 marginBottom: 20, padding: "12px 16px", borderRadius: 12,
                 background: "rgba(239,68,68,0.09)", border: "0.5px solid rgba(239,68,68,0.28)",

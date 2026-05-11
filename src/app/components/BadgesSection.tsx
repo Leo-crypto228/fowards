@@ -149,7 +149,6 @@ function FcoinRow({ entry, index }: { entry: EarnedFcoinEntry; index: number }) 
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.20 }}
             style={{ overflow: "hidden", marginLeft: CIRCLE + 14, marginBottom: 4 }}
           >

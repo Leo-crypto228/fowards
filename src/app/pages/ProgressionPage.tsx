@@ -267,7 +267,6 @@ function GoalCard({ goal, isPrimary = false, canDelete = false, canSetPrimary = 
                   key="confirm"
                   initial={{ opacity: 0, scale: 0.88 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.88 }}
                   style={{ display: "flex", alignItems: "center", gap: 4 }}
                 >
                   <motion.button
@@ -298,7 +297,6 @@ function GoalCard({ goal, isPrimary = false, canDelete = false, canSetPrimary = 
                   key="trash"
                   initial={{ opacity: 0, scale: 0.88 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.88 }}
                   whileTap={{ scale: 0.85 }}
                   onClick={() => setConfirmDelete(true)}
                   style={{
@@ -669,7 +667,7 @@ export function ProgressionPage() {
 
         {/* ── Content ── */}
         <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.20 }} style={{ padding: "0 20px" }}>
+          <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.20 }} style={{ padding: "0 20px" }}>
 
             {/* ── Question du jour ── */}
             {tab === "question" && (
@@ -852,7 +850,6 @@ export function ProgressionPage() {
                         <motion.div
                           initial={{ opacity: 0, y: 10, scale: 0.97 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -6 }}
                           transition={{ duration: 0.28 }}
                           style={{
                             marginTop: 16, padding: "16px 18px", borderRadius: 18,
@@ -904,7 +901,7 @@ export function ProgressionPage() {
 
                 <AnimatePresence>
                   {showNewGoalForm && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }} style={{ overflow: "hidden", marginBottom: 14 }}>
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} transition={{ duration: 0.22 }} style={{ overflow: "hidden", marginBottom: 14 }}>
                       <div style={{ padding: "16px", borderRadius: 18, background: "rgba(99,102,241,0.08)", border: "0.5px solid rgba(99,102,241,0.20)" }}>
                         <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(165,180,252,0.85)", marginBottom: 12 }}>Nouvel objectif</p>
                         <input value={newGoalTitle} onChange={(e) => setNewGoalTitle(e.target.value)} placeholder="Titre de l'objectif…"

@@ -266,7 +266,7 @@ function ApiCommentRow({
         {/* Réponses inline */}
         <AnimatePresence>
           {isShowingReplies && displayReplies.length > 0 && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
               style={{ overflow: "hidden", marginTop: 14, paddingLeft: 14, borderLeft: "2px solid rgba(99,102,241,0.20)" }}
             >
               {displayReplies.map((reply) => (
@@ -521,10 +521,10 @@ function CommentRow({
 /* ── Pertinent list modal ── */
 function PertinentModal({ onClose, count }: { onClose: () => void; count: number }) {
   return (
-    <motion.div className="fixed inset-0 z-50 flex items-end justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <motion.div className="fixed inset-0 z-50 flex items-end justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <motion.div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.60)", backdropFilter: "blur(6px)" }} onClick={onClose} />
       <motion.div className="relative w-full" style={{ maxWidth: 480, background: "rgba(10,10,22,0.97)", backdropFilter: "blur(32px)", WebkitBackdropFilter: "blur(32px)", borderTopLeftRadius: 24, borderTopRightRadius: 24, border: "1px solid rgba(255,255,255,0.08)", borderBottom: "none", maxHeight: "62vh", overflowY: "auto", paddingBottom: 32 }}
-        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 320, damping: 34 }}
+        initial={{ y: "100%" }} animate={{ y: 0 }} transition={{ type: "spring", stiffness: 320, damping: 34 }}
       >
         <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px" }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.18)" }} />
@@ -791,7 +791,7 @@ function StatsPanel({ postId, fallbackViews }: { postId: string; fallbackViews: 
   const growth = firstNonZero > 0 ? Math.round(((lastVal - firstNonZero) / firstNonZero) * 100) : 0;
 
   return (
-    <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }}>
+    <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.09em", textTransform: "uppercase" }}>
@@ -864,7 +864,7 @@ function StatsPanel({ postId, fallbackViews }: { postId: string; fallbackViews: 
       {/* SVG chart */}
       <div style={{ borderRadius: 20, background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)", padding: "12px 8px 0", overflow: "hidden" }}>
         <AnimatePresence mode="wait">
-          <motion.div key={activeMetric} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+          <motion.div key={activeMetric} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
             <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
               <polygon points={areaPts} fill={`${active.color}18`} />
               <polyline points={pts} fill="none" stroke={active.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 6px ${active.color}88)` }} />
@@ -898,7 +898,7 @@ function StatsPanel({ postId, fallbackViews }: { postId: string; fallbackViews: 
 function EmojiPicker({ onSelect, onClose }: { onSelect: (e: string) => void; onClose: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.95 }} transition={{ duration: 0.18 }}
+      initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.18 }}
       style={{ position: "absolute", bottom: "calc(100% + 10px)", left: 0, right: 0, background: "rgba(18,18,32,0.98)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "0.5px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: "12px 16px", zIndex: 60, boxShadow: "0 -4px 32px rgba(0,0,0,0.45)" }}
     >
       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
@@ -975,7 +975,7 @@ function SharePanel({
   };
 
   return (
-    <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }}>
+    <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }}>
       <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.09em", textTransform: "uppercase", marginBottom: 14 }}>Partager dans :</p>
 
       {/* Message input — en haut pour visibilité */}
@@ -1633,7 +1633,6 @@ export function PostDetail() {
                               <motion.div
                                 initial={{ opacity: 0, scale: 0.88, y: -8 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.90, y: -6 }}
                                 transition={{ duration: 0.18 }}
                                 style={{
                                   position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 50,
@@ -1797,7 +1796,7 @@ export function PostDetail() {
           <div ref={sectionsRef} style={{ padding: "0 2px" }}>
             <AnimatePresence mode="wait">
               {view === "comments" && (
-                <motion.div key="comments" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} transition={{ duration: 0.2 }}>
+                <motion.div key="comments" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }}>
                   {/* Conseil legend */}
                   {apiComments.some((c) => c.commentType === "Conseil") && (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, padding: "8px 12px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.07)" }}>
@@ -1829,7 +1828,7 @@ export function PostDetail() {
                   {/* Bannière réponse inline */}
                   <AnimatePresence>
                     {activeReplyTarget && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                         style={{ overflow: "hidden", marginBottom: 14 }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 14, background: "rgba(99,102,241,0.08)", border: "0.5px solid rgba(99,102,241,0.25)" }}>
@@ -1929,7 +1928,7 @@ export function PostDetail() {
       <AnimatePresence>
         {(view === "comments") && (
           <motion.div
-            initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.2 }}
+            initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.2 }}
             style={{ position: "sticky", bottom: 0, zIndex: 40, background: "#000000", borderTop: "0.5px solid rgba(255,255,255,0.07)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
           >
             {/* ── Comment type pills row (toujours visible en mode commentaires : layout stable, pas de croissance au focus) ── */}
@@ -1994,7 +1993,6 @@ export function PostDetail() {
                     <motion.div
                       initial={{ opacity: 0, y: 8, scale: 0.97 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 6, scale: 0.97 }}
                       transition={{ duration: 0.16 }}
                       style={{
                         position: "absolute", bottom: "calc(100% + 8px)", left: 0, right: 0, zIndex: 55,

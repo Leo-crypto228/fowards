@@ -688,7 +688,6 @@ export function TribeDetail() {
                   <motion.span
                     initial={{ opacity: 0, scale: 0.85, x: -4 }}
                     animate={{ opacity: 1, scale: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.85 }}
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 5,
                       marginLeft: 8,
@@ -922,7 +921,6 @@ export function TribeDetail() {
                         layout
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
                         transition={{ delay: i * 0.04, duration: 0.25 }}
                         className="flex items-center gap-4"
                         style={{
@@ -1061,7 +1059,6 @@ export function TribeDetail() {
                       key="stats"
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
                       transition={{ duration: 0.22 }}
                     >
                       <TribeStats
@@ -1078,7 +1075,6 @@ export function TribeDetail() {
                       key="impact"
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
                       transition={{ duration: 0.22 }}
                     >
                       <CommunityImpact

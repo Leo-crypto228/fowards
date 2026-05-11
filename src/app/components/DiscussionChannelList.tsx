@@ -420,7 +420,6 @@ export function DiscussionChannelList({
               key={cat.id}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, height: 0, overflow: "hidden" }}
               transition={{ duration: 0.22, ease: "easeOut" }}
               style={{ marginBottom: 4 }}
             >
@@ -542,7 +541,6 @@ export function DiscussionChannelList({
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.22, ease: "easeOut" }}
                     style={{ overflow: "hidden" }}
                   >
@@ -553,7 +551,6 @@ export function DiscussionChannelList({
                           key={chan.id}
                           initial={{ opacity: 0, x: -6 }}
                           animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -4 }}
                           transition={{ duration: 0.18 }}
                           style={{
                             display: "flex",
@@ -677,7 +674,6 @@ export function DiscussionChannelList({
                         <motion.form
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.20 }}
                           onSubmit={(e) => { e.preventDefault(); addChan(cat.id); }}
                           style={{
@@ -760,7 +756,6 @@ export function DiscussionChannelList({
                   key="add-cat-form"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
                   onSubmit={(e) => { e.preventDefault(); addCat(); }}
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
@@ -794,7 +789,6 @@ export function DiscussionChannelList({
                   key="add-cat-btn"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => { setAddingCat(true); setNewCatName(""); }}
                   style={{

@@ -274,14 +274,12 @@ function PeopleModal({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
         onClick={onClose}
         style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
       />
       <motion.div
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
-        exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 360, damping: 38 }}
         style={{
           position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 9999,
@@ -458,7 +456,7 @@ function EvolutionSection({ profile, username, evolutionData, realProgress, allU
           })}
         </div>
         <AnimatePresence mode="wait">
-          <motion.div key={filter} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+          <motion.div key={filter} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
             <MiniAreaChart data={evolutionData.length > 0 ? evolutionData : CHART_DATA[filter]} />
           </motion.div>
         </AnimatePresence>
@@ -652,7 +650,7 @@ function SuiviSection({ username, mockFollowing, mockFollowers }: {
 
       {/* Liste */}
       <AnimatePresence mode="wait">
-        <motion.div key={subiTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+        <motion.div key={subiTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
           {displayList.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.22)", fontSize: 14 }}>
               {subiTab === "followers" ? "Aucun abonné pour le moment." : "Ne suit personne encore."}
@@ -1124,11 +1122,11 @@ export function UserProfile() {
             >
               <AnimatePresence mode="wait">
                 {linkCopied ? (
-                  <motion.div key="check" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.7, opacity: 0 }} style={{ display: "flex", alignItems: "center" }}>
+                  <motion.div key="check" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ display: "flex", alignItems: "center" }}>
                     <CheckIcon style={{ width: 14, height: 14, color: "#22c55e" }} />
                   </motion.div>
                 ) : (
-                  <motion.div key="link" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.7, opacity: 0 }} style={{ display: "flex", alignItems: "center" }}>
+                  <motion.div key="link" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ display: "flex", alignItems: "center" }}>
                     <Link2 style={{ width: 14, height: 14, color: "rgba(255,255,255,0.80)" }} />
                   </motion.div>
                 )}
@@ -1358,7 +1356,6 @@ export function UserProfile() {
               key={activeTab}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.22 }}
             >
               {activeTab === "evolution" && (

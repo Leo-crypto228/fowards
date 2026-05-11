@@ -357,14 +357,14 @@ export function CommentModal({
           {/* Backdrop */}
           <motion.div
             onClick={handleClose}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             transition={{ duration: 0.22 }}
             style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.70)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
           />
 
           {/* Sheet principale */}
           <motion.div
-            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+            initial={{ y: "100%" }} animate={{ y: 0 }}
             transition={{ type: "spring", stiffness: 360, damping: 38 }}
             style={{
               position: "fixed", left: 0, right: 0, bottom: keyboardOffset, zIndex: 9999,
@@ -447,7 +447,7 @@ export function CommentModal({
             <div style={{ flexShrink: 0, borderTop: "0.5px solid rgba(255,255,255,0.07)", background: "rgba(8,8,12,0.98)", paddingBottom: keyboardOffset > 0 ? 8 : "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}>
               <AnimatePresence>
                 {sendError && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                     style={{ display: "flex", alignItems: "center", gap: 6, margin: "8px 16px 0", padding: "7px 11px", borderRadius: 10, background: "rgba(239,68,68,0.10)", border: "0.5px solid rgba(239,68,68,0.22)" }}>
                     <AlertCircle style={{ width: 13, height: 13, color: "#ef4444", flexShrink: 0 }} />
                     <span style={{ fontSize: 12, color: "rgba(239,68,68,0.88)" }}>{sendError}</span>
@@ -500,7 +500,7 @@ export function CommentModal({
                           <AnimatePresence>
                             {typeOpen && (
                               <motion.div
-                                initial={{ opacity: 0, y: 4, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                                initial={{ opacity: 0, y: 4, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
                                 transition={{ duration: 0.14 }}
                                 style={{ position: "absolute", bottom: "calc(100% + 6px)", left: 0, zIndex: 10000, background: "rgba(14,14,22,0.98)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderRadius: 14, border: "0.5px solid rgba(255,255,255,0.12)", boxShadow: "0 -8px 32px rgba(0,0,0,0.55)", padding: 5, minWidth: 170 }}
                                 onClick={(e) => e.stopPropagation()}
