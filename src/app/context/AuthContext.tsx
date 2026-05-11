@@ -202,14 +202,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Failsafe : si Supabase/réseau ne répond pas dans les 8s,
+    // on force loading=false pour ne pas bloquer l'app indéfiniment.
+    const failsafe = setTimeout(() => setLoading(false), 8000);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, sess) => {
         setSession(sess);
         await applyUser(sess?.user ?? null);
         setLoading(false);
+        clearTimeout(failsafe);
       }
     );
-    return () => subscription.unsubscribe();
+    return () => { subscription.unsubscribe(); clearTimeout(failsafe); };
   }, [applyUser]);
 
   const signIn = useCallback(async (email: string, password: string) => {

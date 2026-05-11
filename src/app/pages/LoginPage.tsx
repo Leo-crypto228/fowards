@@ -141,15 +141,8 @@ export function LoginPage() {
     }
   }, [user, loading, navigate]);
 
-  // ── "Se connecter" click: try auto-login first ─────────────────────────────
-  const handleConnectClick = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      // Already has a session — AuthContext will redirect
-      return;
-    }
-    setScreen("login");
-  };
+  // ── "Se connecter" click ──────────────────────────────────────────────────
+  const handleConnectClick = () => setScreen("login");
 
   if (loading) {
     return (
@@ -603,8 +596,11 @@ function LoginPanel({ onBack, onForgotPassword }: LoginPanelProps) {
       // AuthContext onAuthStateChange handles the redirect automatically
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Une erreur est survenue.";
-      if (msg.toLowerCase().includes("invalid login credentials") || msg.toLowerCase().includes("invalid credentials")) {
+      const low = msg.toLowerCase();
+      if (low.includes("invalid login credentials") || low.includes("invalid credentials") || low.includes("email not confirmed")) {
         setError("Email ou mot de passe incorrect.");
+      } else if (low.includes("load failed") || low.includes("failed to fetch") || low.includes("network") || low.includes("fetch")) {
+        setError("Connexion au serveur impossible. Vérifie ta connexion internet et réessaie.");
       } else {
         setError(msg);
       }
@@ -727,7 +723,13 @@ function ForgotPasswordPanel({ onBack }: ForgotPasswordPanelProps) {
       if (authError) throw new Error(authError.message);
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+      const msg = err instanceof Error ? err.message : "Une erreur est survenue.";
+      const low = msg.toLowerCase();
+      if (low.includes("load failed") || low.includes("failed to fetch") || low.includes("network")) {
+        setError("Connexion au serveur impossible. Vérifie ta connexion et réessaie.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setPending(false);
     }
