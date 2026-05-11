@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   Loader2, AlertCircle, Eye, EyeOff, Check,
   ArrowLeft, Mail,
@@ -189,7 +189,6 @@ export function LoginPage() {
       </motion.div>
 
       {/* ── Screens ──────────────────────────────────────────────────────────── */}
-      <AnimatePresence>
         {screen === "landing" ? (
           <motion.div
             key="landing"
@@ -313,7 +312,6 @@ En rejoignant <span translate="no" className="notranslate">Fowards</span>, tu ac
             onBack={() => setScreen("login")}
           />
         )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -514,12 +512,10 @@ function SignupPanel({ onBack, onNavigate }: SignupPanelProps) {
         </motion.button>
 
         {/* Progression */}
-        <AnimatePresence>
-          {pending && (
+        {pending && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               style={{ display: "flex", flexDirection: "column", gap: 8 }}
             >
               {[
@@ -555,7 +551,6 @@ function SignupPanel({ onBack, onNavigate }: SignupPanelProps) {
               ))}
             </motion.div>
           )}
-        </AnimatePresence>
       </form>
     </PanelWrapper>
   );
@@ -688,35 +683,32 @@ function LoginPanel({ onBack, onForgotPassword }: LoginPanelProps) {
         <ErrorBox error={error} />
 
         {/* Hint affiché quand identifiants rejetés : suggère la réinitialisation */}
-        <AnimatePresence>
-          {showPwdHint && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              style={{
-                padding: "10px 14px", borderRadius: 12,
-                background: "rgba(139,92,246,0.08)",
-                border: "0.5px solid rgba(139,92,246,0.22)",
-              }}
-            >
-              <p style={{ fontSize: 12, color: "rgba(165,180,252,0.80)", margin: 0, lineHeight: 1.5 }}>
-                Compte créé avant le nouveau système ?{" "}
-                <button
-                  type="button"
-                  onClick={onForgotPassword}
-                  style={{
-                    background: "none", border: "none", cursor: "pointer", padding: 0,
-                    fontSize: 12, color: "rgba(165,180,252,1)", fontWeight: 700,
-                    textDecoration: "underline",
-                  }}
-                >
-                  Définis ton mot de passe ici →
-                </button>
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {showPwdHint && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{
+              padding: "10px 14px", borderRadius: 12,
+              background: "rgba(139,92,246,0.08)",
+              border: "0.5px solid rgba(139,92,246,0.22)",
+            }}
+          >
+            <p style={{ fontSize: 12, color: "rgba(165,180,252,0.80)", margin: 0, lineHeight: 1.5 }}>
+              Compte créé avant le nouveau système ?{" "}
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                style={{
+                  background: "none", border: "none", cursor: "pointer", padding: 0,
+                  fontSize: 12, color: "rgba(165,180,252,1)", fontWeight: 700,
+                  textDecoration: "underline",
+                }}
+              >
+                Définis ton mot de passe ici →
+              </button>
+            </p>
+          </motion.div>
+        )}
 
         <motion.button
           type="submit" disabled={pending}
@@ -944,24 +936,20 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // ── Error box ─────────────────────────────────────────────────────────────────
 function ErrorBox({ error }: { error: string | null }) {
+  if (!error) return null;
   return (
-    <AnimatePresence>
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          style={{
-            display: "flex", alignItems: "flex-start", gap: 8,
-            padding: "10px 14px", borderRadius: 12,
-            background: "rgba(239,68,68,0.10)",
-            border: "0.5px solid rgba(239,68,68,0.25)",
-          }}
-        >
-          <AlertCircle style={{ width: 14, height: 14, color: "#ef4444", flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontSize: 13, color: "rgba(239,68,68,0.90)", lineHeight: 1.45 }}>{error}</span>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      style={{
+        display: "flex", alignItems: "flex-start", gap: 8,
+        padding: "10px 14px", borderRadius: 12,
+        background: "rgba(239,68,68,0.10)",
+        border: "0.5px solid rgba(239,68,68,0.25)",
+      }}
+    >
+      <AlertCircle style={{ width: 14, height: 14, color: "#ef4444", flexShrink: 0, marginTop: 2 }} />
+      <span style={{ fontSize: 13, color: "rgba(239,68,68,0.90)", lineHeight: 1.45 }}>{error}</span>
+    </motion.div>
   );
 }
