@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   Check, Loader2, X, ImagePlus, Info,
 } from "lucide-react";
@@ -77,12 +77,10 @@ function SuggestionsTooltip() {
       >
         <Info style={{ width: 11, height: 11, color: open ? "#a5b4fc" : "rgba(255,255,255,0.40)", strokeWidth: 2.2 }} />
       </motion.button>
-      <AnimatePresence>
-        {open && (
+      {open && (
           <motion.div
             initial={{ opacity: 0, y: 4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.95 }}
             transition={{ duration: 0.15 }}
             style={{
               position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
@@ -102,7 +100,6 @@ function SuggestionsTooltip() {
             ))}
           </motion.div>
         )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -226,7 +223,6 @@ export function FirstPostPage() {
 
       <div style={{ position: "relative", zIndex: 1, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
 
-        <AnimatePresence mode="wait">
 
           {/* ── STEP 1 : Landing ── */}
           {step === "landing" && (
@@ -234,7 +230,6 @@ export function FirstPostPage() {
               key="landing"
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.4, ease: [0.25, 0, 0.35, 1] }}
               style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px", textAlign: "center", maxWidth: 420, margin: "0 auto", width: "100%" }}
             >
@@ -320,7 +315,6 @@ export function FirstPostPage() {
               key="create"
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.4, ease: [0.25, 0, 0.35, 1] }}
               style={{ flex: 1, paddingBottom: 120 }}
             >
@@ -374,16 +368,14 @@ export function FirstPostPage() {
                     })}
                   </div>
                   {/* Badge preview */}
-                  <AnimatePresence>
                     {selectedType && (
-                      <motion.div initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+                      <motion.div initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
                         <span style={{ fontSize: 12, color: "rgba(144,144,168,0.55)", fontWeight: 500 }}>Apparaîtra comme :</span>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 12px", borderRadius: 999, background: "rgba(255,255,255,0.90)", color: "#111", fontWeight: 600, fontSize: 12 }}>
                           {selectedType}
                         </span>
                       </motion.div>
                     )}
-                  </AnimatePresence>
                 </div>
 
                 {/* Zone texte */}
@@ -414,9 +406,8 @@ export function FirstPostPage() {
                 </div>
 
                 {/* Aperçu images */}
-                <AnimatePresence>
                   {images.length > 0 && (
-                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                       style={{ display: "grid", gridTemplateColumns: images.length === 1 ? "1fr" : "1fr 1fr", gap: 8, marginBottom: 14 }}>
                       {images.map((img, i) => (
                         <div key={i} style={{ position: "relative", aspectRatio: images.length === 1 ? "16/9" : "1/1" }}>
@@ -428,19 +419,16 @@ export function FirstPostPage() {
                       ))}
                     </motion.div>
                   )}
-                </AnimatePresence>
 
                 {/* Aperçu GIF */}
-                <AnimatePresence>
                   {selectedGif && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ marginBottom: 14, position: "relative", display: "inline-block" }}>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ marginBottom: 14, position: "relative", display: "inline-block" }}>
                       <GifMessage url={selectedGif} />
                       <button onClick={() => setSelectedGif(null)} style={{ position: "absolute", top: 6, right: 6, width: 24, height: 24, borderRadius: "50%", background: "rgba(0,0,0,0.65)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <X style={{ width: 12, height: 12, color: "#fff" }} />
                       </button>
                     </motion.div>
                   )}
-                </AnimatePresence>
 
                 {/* Barre d'actions */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, borderTop: "0.5px solid rgba(255,255,255,0.07)", paddingTop: 12 }}>
@@ -459,19 +447,16 @@ export function FirstPostPage() {
                 </div>
 
                 {/* Erreur */}
-                <AnimatePresence>
                   {error && (
-                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                       style={{ marginTop: 14, padding: "11px 14px", borderRadius: 12, background: "rgba(239,68,68,0.10)", border: "0.5px solid rgba(239,68,68,0.25)", fontSize: 13, color: "rgba(239,68,68,0.90)" }}>
                       {error}
                     </motion.div>
                   )}
-                </AnimatePresence>
 
                 {/* Succès */}
-                <AnimatePresence>
                   {success && (
-                    <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                    <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                       style={{ marginTop: 14, padding: "14px 18px", borderRadius: 16, background: "rgba(34,197,94,0.12)", border: "0.5px solid rgba(34,197,94,0.30)", display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(34,197,94,0.20)", border: "1px solid rgba(34,197,94,0.40)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <Check style={{ width: 13, height: 13, color: "#4ade80" }} />
@@ -479,22 +464,18 @@ export function FirstPostPage() {
                       <span style={{ fontSize: 14, fontWeight: 600, color: "#4ade80" }}>Premier post publié ! Bienvenue 🎉</span>
                     </motion.div>
                   )}
-                </AnimatePresence>
               </div>
 
               {/* GIF Picker */}
               <GifPicker isOpen={gifOpen} onClose={() => setGifOpen(false)} onSelect={(url) => { setSelectedGif(url); setGifOpen(false); }} />
             </motion.div>
           )}
-        </AnimatePresence>
 
         {/* ── Bouton publier sticky — visible uniquement en mode create ── */}
-        <AnimatePresence>
           {step === "create" && (
             <motion.div
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
               transition={{ type: "spring", stiffness: 360, damping: 36 }}
               style={{
                 position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 90,
@@ -537,7 +518,6 @@ export function FirstPostPage() {
               </div>
             </motion.div>
           )}
-        </AnimatePresence>
       </div>
 
     </div>

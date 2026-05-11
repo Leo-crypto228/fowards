@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import {
   ArrowRight, Check, Loader2, Target, Users, Building2,
@@ -547,13 +547,10 @@ export function OnboardingPage() {
           <StepDots current={stepIdx} />
 
           {/* Animated step content */}
-          <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={currentStep}
-              custom={direction}
               initial={{ opacity: 0, x: direction * 32 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: direction * -32 }}
               transition={{ duration: 0.28, ease: [0.25, 0, 0.35, 1] }}
             >
               {/* Step header */}
@@ -573,12 +570,10 @@ export function OnboardingPage() {
               {renderStep()}
 
               {/* Error */}
-              <AnimatePresence>
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
                     style={{
                       display: "flex", alignItems: "flex-start", gap: 8,
                       padding: "10px 14px", borderRadius: 12, marginTop: 14,
@@ -589,7 +584,6 @@ export function OnboardingPage() {
                     <span style={{ fontSize: 13, color: "rgba(239,68,68,0.90)" }}>{error}</span>
                   </motion.div>
                 )}
-              </AnimatePresence>
 
               {/* Actions */}
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 28 }}>
@@ -630,7 +624,6 @@ export function OnboardingPage() {
                 )}
               </div>
             </motion.div>
-          </AnimatePresence>
         </div>
       </div>
 
