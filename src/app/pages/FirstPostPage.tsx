@@ -267,7 +267,7 @@ export function FirstPostPage() {
                 transition={{ delay: 0.24, duration: 0.4 }}
                 style={{ fontSize: 15, color: "rgba(200,200,220,0.60)", lineHeight: 1.55, margin: "0 0 28px", maxWidth: 320 }}
               >
-                FuturFeed c'est une communauté d'action. Pose ta première pierre.
+                Fowards c'est une communauté d'action. Pose ta première pierre.
               </motion.p>
 
               {/* Suggestions */}
@@ -336,7 +336,7 @@ export function FirstPostPage() {
                       <div style={{ fontSize: 17, fontWeight: 800, color: "#f0f0f5", letterSpacing: "-0.3px" }}>
                         {MY_USER_NAME.split(" ")[0]}, c'est parti 🔥
                       </div>
-                      <div style={{ fontSize: 13, color: "rgba(144,144,168,0.65)" }}>Ton premier post sur FuturFeed</div>
+                      <div style={{ fontSize: 13, color: "rgba(144,144,168,0.65)" }}>Ton premier post sur Fowards</div>
                     </div>
                   </div>
                 </div>

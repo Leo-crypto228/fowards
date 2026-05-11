@@ -92,14 +92,30 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
     };
   } catch {
     clearTimeout(timer);
-    // KV injoignable (timeout ou réseau) — retourner un utilisateur minimal
-    // onboardingDone: false → redirige vers onboarding si c'est un nouvel utilisateur
-    // Pour un utilisateur existant avec cache, ce code n'est jamais atteint
+    // KV injoignable — lire les flags critiques depuis le localStorage
+    // pour ne pas envoyer un utilisateur existant vers l'onboarding.
+    let onboardingDone   = false;
+    let firstPostCreated = false;
+    let cachedAvatar = ""; let cachedObjective = ""; let cachedStreak = 0; let cachedName = nameDefault;
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const c = JSON.parse(raw) as Partial<StoredAuthUser>;
+        if (c.supabaseId === supabaseUser.id) {
+          onboardingDone   = c.onboardingDone   || false;
+          firstPostCreated = c.firstPostCreated || false;
+          cachedAvatar     = c.avatar     || "";
+          cachedObjective  = c.objective  || "";
+          cachedStreak     = c.streak     || 0;
+          cachedName       = c.name       || nameDefault;
+        }
+      }
+    } catch { /* cache corrompu, valeurs par défaut */ }
     return {
       supabaseId: supabaseUser.id, username: authUsername,
-      name: nameDefault, email: supabaseUser.email || "",
-      avatar: "", objective: "", streak: 0,
-      onboardingDone: false, firstPostCreated: false,
+      name: cachedName, email: supabaseUser.email || "",
+      avatar: cachedAvatar, objective: cachedObjective, streak: cachedStreak,
+      onboardingDone, firstPostCreated,
     };
   }
 }
@@ -152,22 +168,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setAuthUser(cached);
           setUser(cached);
           setLoading(false);
-          // Rafraîchissement silencieux en arrière-plan
+          // Rafraîchissement silencieux en arrière-plan.
+          // On fusionne avec le cache : jamais downgrader onboardingDone/firstPostCreated
+          // (protège contre un KV lent qui retournerait false pour un user existant).
           buildStoredUser(supabaseUser).then((refreshed) => {
-            setAuthUser(refreshed);
-            setUser(refreshed);
-            localStorage.setItem(LS_KEY, JSON.stringify(refreshed));
-          }).catch(() => {});
+            const merged: StoredAuthUser = {
+              ...refreshed,
+              onboardingDone:   cached.onboardingDone   || refreshed.onboardingDone,
+              firstPostCreated: cached.firstPostCreated || refreshed.firstPostCreated,
+            };
+            setAuthUser(merged);
+            setUser(merged);
+            localStorage.setItem(LS_KEY, JSON.stringify(merged));
+          }).catch(() => { /* échec réseau → on garde le cache intact */ });
           return;
         }
       }
     } catch { /* cache corrompu, on ignore */ }
 
-    // ── Première connexion (pas de cache) : fetch bloquant ───────────────────
+    // ── Rafraîchissement silencieux en arrière-plan ───────────────────────────
+    // (Ce bloc est aussi le chemin "pas de cache → fetch bloquant",
+    //  mais sans cache on doit await pour avoir loading=false.)
+    // Attention : ne jamais downgrader onboardingDone/firstPostCreated de true→false
     const stored = await buildStoredUser(supabaseUser);
-    setAuthUser(stored);
-    setUser(stored);
-    localStorage.setItem(LS_KEY, JSON.stringify(stored));
+    const safeStored: StoredAuthUser = {
+      ...stored,
+      onboardingDone:   stored.onboardingDone   || false,
+      firstPostCreated: stored.firstPostCreated || false,
+    };
+    setAuthUser(safeStored);
+    setUser(safeStored);
+    localStorage.setItem(LS_KEY, JSON.stringify(safeStored));
   }, []);
 
   useEffect(() => {
@@ -206,6 +237,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const updated = { ...current, ...updates };
     setAuthUser(updated);
     setUser(updated);
+    // Persister dans le localStorage pour que le prochain chargement
+    // voit les bonnes valeurs (onboardingDone, firstPostCreated, etc.)
+    localStorage.setItem(LS_KEY, JSON.stringify(updated));
   }, []);
 
   const devLogin = useCallback(async () => {

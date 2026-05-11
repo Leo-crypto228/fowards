@@ -36,7 +36,7 @@ const STEP_META: Record<Step, { icon: React.ComponentType<{ style?: React.CSSPro
   bio:         { icon: Target,     title: "Parle-nous de toi 👋",          subtitle: "Ta bio apparaîtra sur ton profil public." },
   follow:      { icon: Users,     title: "Avance avec eux 🚀",            subtitle: "Suis des profils qui t'inspirent et te motivent." },
   communities: { icon: Building2, title: "Rejoins des communautés 🤝",    subtitle: "Avance entouré de personnes qui partagent tes intérêts." },
-  goal:        { icon: Target,    title: "Quel est ton objectif ? 🎯",    subtitle: "Ton premier objectif sur FuturFeed." },
+  goal:        { icon: Target,    title: "Quel est ton objectif ? 🎯",    subtitle: "Ton premier objectif sur Fowards." },
   progress:    { icon: Target,    title: "Où en es-tu aujourd'hui ? 📍",  subtitle: "Décris ta situation actuelle par rapport à ton objectif." },
 };
 
@@ -283,7 +283,7 @@ export function OnboardingPage() {
 
     try {
       if (currentStep === "bio") {
-        // Save bio
+        if (!bio.trim()) { setError("Écris quelques mots sur toi pour continuer."); setSaving(false); return; }
         await apiPut(`/profiles/${encodeURIComponent(username)}`, { bio: bio.trim() });
 
       } else if (currentStep === "follow") {
@@ -510,7 +510,7 @@ export function OnboardingPage() {
     }
   };
 
-  const canSkip = currentStep === "bio" || currentStep === "follow" || currentStep === "communities";
+  const canSkip = currentStep === "communities";
   const isLast  = currentStep === "progress";
 
   return (
@@ -538,8 +538,8 @@ export function OnboardingPage() {
         <div style={{ width: "100%", maxWidth: 480 }}>
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 28 }}>
-            <span style={{ fontSize: 17, fontWeight: 800, color: "#f0f0f5", letterSpacing: "-0.3px" }}>
-              FuturFeed
+            <span style={{ fontSize: 17, fontWeight: 800, color: "#f0f0f5", letterSpacing: "-0.3px" }} translate="no" className="notranslate">
+              Fowards
             </span>
           </div>
 
