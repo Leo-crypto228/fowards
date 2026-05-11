@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { ArrowLeft, Bell, CheckCheck, Heart, MessageCircle, UserPlus, Lock, Check, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
@@ -352,7 +352,7 @@ export function NotificationsPage() {
             </p>
           </motion.div>
         ) : (
-          <AnimatePresence initial={false}>
+          <>
             {notifications.map((n) => (
               <NotifRow
                 key={n.id}
@@ -362,7 +362,7 @@ export function NotificationsPage() {
                 onAccessAction={n.type === "access_request" ? handleAccessAction : undefined}
               />
             ))}
-          </AnimatePresence>
+          </>
         )}
       </div>
     </div>

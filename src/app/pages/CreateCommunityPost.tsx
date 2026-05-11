@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Check, ArrowLeft, Loader2, AlertCircle, X, ImagePlus } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { extractHashtags, LABEL_TO_TYPE, type PostType } from "../api/postsApi";
@@ -257,9 +257,9 @@ export function CreateCommunityPost() {
               );
             })}
           </div>
-          <AnimatePresence>
+          
             {selectedType && <TypePreview label={selectedType} />}
-          </AnimatePresence>
+          
         </motion.div>
 
         {/* Zone de texte */}
@@ -301,7 +301,7 @@ export function CreateCommunityPost() {
           )}
 
           {/* Aperçu images */}
-          <AnimatePresence>
+          
             {images.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -331,7 +331,7 @@ export function CreateCommunityPost() {
                 ))}
               </motion.div>
             )}
-          </AnimatePresence>
+          
 
           {/* Actions barre */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14 }}>
@@ -362,7 +362,7 @@ export function CreateCommunityPost() {
         </motion.div>
 
         {/* Erreur */}
-        <AnimatePresence>
+        
           {error && (
             <motion.div
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -379,7 +379,7 @@ export function CreateCommunityPost() {
               </button>
             </motion.div>
           )}
-        </AnimatePresence>
+        
 
         {/* Aide */}
         {text.trim().length > 0 && !selectedType && (
@@ -395,7 +395,7 @@ export function CreateCommunityPost() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.34, duration: 0.5 }}
         >
-          <AnimatePresence mode="wait">
+          
             {showSuccess ? (
               <motion.div
                 key="success"
@@ -441,7 +441,7 @@ export function CreateCommunityPost() {
                 }
               </motion.button>
             )}
-          </AnimatePresence>
+          
         </motion.div>
       </div>
     </div>

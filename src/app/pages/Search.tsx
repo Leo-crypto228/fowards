@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { ArrowLeft, Search as SearchIcon, Hash, FileText, Loader2, X, Users } from "lucide-react";
 import { search, SearchPost, SearchUser, SearchHashtag } from "../api/searchApi";
 import { FollowButton } from "../components/FollowButton";
@@ -298,7 +298,7 @@ export function Search() {
 
       {/* ── Results ── */}
       <div style={{ padding: "24px 16px 120px", maxWidth: 640, margin: "0 auto" }}>
-        <AnimatePresence mode="wait">
+        
           <motion.div
             key={q + loading}
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -400,7 +400,7 @@ export function Search() {
             )}
 
           </motion.div>
-        </AnimatePresence>
+        
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   ArrowLeft, Lock, Unlock, UserCheck, UserX, Users,
   Bell, Edit3, TrendingUp, LogOut, Shield, Clock,
@@ -411,7 +411,7 @@ export function ProfileSettings() {
 
         {/* ── Content ── */}
         <div style={{ padding: "0 20px" }}>
-          <AnimatePresence mode="wait">
+          
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, y: 10 }}
@@ -535,11 +535,11 @@ export function ProfileSettings() {
                           <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(165,180,252,0.60)", textTransform: "uppercase", letterSpacing: "0.10em", marginBottom: 10 }}>
                             En attente · {requests.filter((r) => r.status === "pending").length}
                           </div>
-                          <AnimatePresence>
+                          
                             {requests.filter((r) => r.status === "pending").map((req) => (
                               <RequestCard key={req.id} req={req} ownerId={myUsername} onResponded={handleRequestResponded} />
                             ))}
-                          </AnimatePresence>
+                          
                         </div>
                       )}
                       {/* Others */}
@@ -663,7 +663,7 @@ export function ProfileSettings() {
               )}
 
             </motion.div>
-          </AnimatePresence>
+          
         </div>
       </div>
     </div>

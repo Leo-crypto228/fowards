@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   ArrowLeft, Send, Loader2, Check, TrendingUp,
   Trophy, Target, RefreshCw, ChevronRight, Lock, Clock, Sparkles,
@@ -261,7 +261,7 @@ function GoalCard({ goal, isPrimary = false, canDelete = false, canSetPrimary = 
 
           {/* Bouton supprimer — uniquement si canDelete */}
           {canDelete && (
-            <AnimatePresence mode="wait">
+            <>
               {confirmDelete ? (
                 <motion.div
                   key="confirm"
@@ -308,7 +308,7 @@ function GoalCard({ goal, isPrimary = false, canDelete = false, canSetPrimary = 
                   <Trash2 style={{ width: 12, height: 12, color: "rgba(255,255,255,0.28)" }} />
                 </motion.button>
               )}
-            </AnimatePresence>
+            </>
           )}
         </div>
       </div>
@@ -666,7 +666,7 @@ export function ProgressionPage() {
         </div>
 
         {/* ── Content ── */}
-        <AnimatePresence mode="wait">
+        
           <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.20 }} style={{ padding: "0 20px" }}>
 
             {/* ── Question du jour ── */}
@@ -845,7 +845,7 @@ export function ProgressionPage() {
                       )}
                     </motion.button>
 
-                    <AnimatePresence>
+                    
                       {lastResult && (
                         <motion.div
                           initial={{ opacity: 0, y: 10, scale: 0.97 }}
@@ -880,7 +880,7 @@ export function ProgressionPage() {
                           )}
                         </motion.div>
                       )}
-                    </AnimatePresence>
+                    
                   </>
                 )}
               </div>
@@ -899,7 +899,7 @@ export function ProgressionPage() {
                   </motion.button>
                 </div>
 
-                <AnimatePresence>
+                
                   {showNewGoalForm && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} transition={{ duration: 0.22 }} style={{ overflow: "hidden", marginBottom: 14 }}>
                       <div style={{ padding: "16px", borderRadius: 18, background: "rgba(99,102,241,0.08)", border: "0.5px solid rgba(99,102,241,0.20)" }}>
@@ -967,7 +967,7 @@ export function ProgressionPage() {
                       </div>
                     </motion.div>
                   )}
-                </AnimatePresence>
+                
 
                 {goals.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "48px 20px" }}>
@@ -1043,7 +1043,7 @@ export function ProgressionPage() {
             )}
 
           </motion.div>
-        </AnimatePresence>
+        
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Search, ChevronDown } from "lucide-react";
 
 import { CommunitySubscribeButton } from "../components/CommunitySubscribeButton";
@@ -366,7 +366,7 @@ export function Tribes() {
             />
           </motion.button>
 
-          <AnimatePresence>
+          
             {sortOpen && (
               <motion.div
                 initial={{ opacity: 0, y: -8, scale: 0.96 }}
@@ -421,7 +421,7 @@ export function Tribes() {
                 )}
               </motion.div>
             )}
-          </AnimatePresence>
+          
         </div>
       </div>
 
@@ -510,7 +510,7 @@ export function Tribes() {
         </motion.div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <AnimatePresence mode="popLayout">
+          
             {filtered.map((community) => (
               <CommunityCard
                 key={community.id}
@@ -518,7 +518,7 @@ export function Tribes() {
                 currentUserSupabaseId={currentUserSupabaseId}
               />
             ))}
-          </AnimatePresence>
+          
         </div>
       )}
     </div>

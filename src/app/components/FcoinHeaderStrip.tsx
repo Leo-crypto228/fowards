@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { getEarnedFcoins, type EarnedFcoinEntry } from "../api/progressionApi";
 import { FCOIN_IMAGES } from "./BadgesSection";
 
@@ -94,7 +94,7 @@ export function FcoinHeaderStrip({ userId, onScrollToBadges, pollInterval = 30_0
 
       {/* Cercles superposés — max 3 */}
       <div style={{ display: "flex", alignItems: "center" }}>
-        <AnimatePresence>
+        
           {visible.map((coin, i) => {
             const img = FCOIN_IMAGES[coin.id];
             return (
@@ -127,7 +127,7 @@ export function FcoinHeaderStrip({ userId, onScrollToBadges, pollInterval = 30_0
               </motion.div>
             );
           })}
-        </AnimatePresence>
+        
 
         {/* 3 points si plus de 3 fcoins */}
         {hasMore && (

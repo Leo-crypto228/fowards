@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { X, Image as ImageIcon, Loader2, Hash, ChevronDown } from "lucide-react";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { useAuth } from "../context/AuthContext";
@@ -173,7 +173,7 @@ export function CreateChannelPostModal({
   const activeBadge = BADGES.find((b) => b.key === badge) || BADGES[0];
 
   return createPortal(
-    <AnimatePresence>
+    
       {isOpen && (
         <>
           {/* Overlay */}
@@ -279,7 +279,7 @@ export function CreateChannelPostModal({
                   }} />
                 </motion.button>
 
-                <AnimatePresence>
+                
                   {showBadges && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
@@ -316,7 +316,7 @@ export function CreateChannelPostModal({
                       </div>
                     </motion.div>
                   )}
-                </AnimatePresence>
+                
               </div>
 
               {/* Author row */}
@@ -378,7 +378,7 @@ export function CreateChannelPostModal({
               />
 
               {/* Image preview */}
-              <AnimatePresence>
+              
                 {imageUrl && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.96 }}
@@ -400,7 +400,7 @@ export function CreateChannelPostModal({
                     </motion.button>
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
 
               {/* Hashtags */}
               <div>
@@ -523,7 +523,7 @@ export function CreateChannelPostModal({
           </motion.div>
         </>
       )}
-    </AnimatePresence>,
+    ,
     document.body
   );
 }

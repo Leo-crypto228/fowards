@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useLocation } from "react-router";
 import { ArrowLeft, Lock, Loader2, Search, Bell, BellOff, PenLine, Hash } from "lucide-react";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { useAuth } from "../context/AuthContext";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 
 import { FollowButton } from "../components/FollowButton";
 import { ProgressCard } from "../components/ProgressCard";
@@ -683,7 +683,7 @@ export function TribeDetail() {
               </span>
 
               {/* Badge "Abonné" si membre */}
-              <AnimatePresence>
+              
                 {isUserMember && (
                   <motion.span
                     initial={{ opacity: 0, scale: 0.85, x: -4 }}
@@ -701,7 +701,7 @@ export function TribeDetail() {
                     ✓ Membre
                   </motion.span>
                 )}
-              </AnimatePresence>
+              
             </div>
 
             {/* Description / Objectif */}
@@ -797,7 +797,7 @@ export function TribeDetail() {
             <>
               {/* ── Posts Actus ── */}
               {isStaticCommunity ? (
-                <AnimatePresence mode="popLayout">
+                
                   <div className="space-y-3">
                     {actus.map((post) => (
                       <TribeCommunityPost
@@ -812,7 +812,7 @@ export function TribeDetail() {
                       />
                     ))}
                   </div>
-                </AnimatePresence>
+                
               ) : (
                 /* Communauté dynamique — posts chargés dynamiquement */
                 postsLoading ? (
@@ -849,7 +849,7 @@ export function TribeDetail() {
                     </div>
                   </motion.div>
                 ) : (
-                  <AnimatePresence mode="popLayout">
+                  
                     <div className="space-y-3">
                       {dynamicPosts.map((post) => (
                         <ProgressCard
@@ -871,7 +871,7 @@ export function TribeDetail() {
                         />
                       ))}
                     </div>
-                  </AnimatePresence>
+                  
                 )
               )}
 
@@ -914,7 +914,7 @@ export function TribeDetail() {
                     </motion.div>
                   ) : (
                   <>
-                  <AnimatePresence mode="popLayout">
+                  
                     {displayedMembers.map((m, i) => (
                       <motion.div
                         key={m.id}
@@ -953,7 +953,7 @@ export function TribeDetail() {
                         <FollowButton username={m.handle} size="md" />
                       </motion.div>
                     ))}
-                  </AnimatePresence>
+                  
 
                   {displayedMembers.length === 0 && (
                     <div style={{ padding: "24px 0", textAlign: "center", fontSize: 13, color: "rgba(255,255,255,0.22)" }}>
@@ -1053,7 +1053,7 @@ export function TribeDetail() {
                   />
                 </div>
 
-                <AnimatePresence mode="wait">
+                
                   {statsTab === "stats" && (
                     <motion.div
                       key="stats"
@@ -1084,7 +1084,7 @@ export function TribeDetail() {
                       />
                     </motion.div>
                   )}
-                </AnimatePresence>
+                
               </>
             ) : (
               <MembershipGate

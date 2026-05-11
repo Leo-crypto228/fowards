@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   ArrowLeft, Camera, ImagePlus,
   Check, Loader2, Tag, Globe, Lock, X, Trash2, AlertTriangle,
@@ -481,7 +481,7 @@ export function EditCommunity() {
         </div>
 
         {/* Mot mentalité */}
-        <AnimatePresence>
+        
           {mentality && (
             <motion.div
               initial={{ opacity: 0, y: -6 }}
@@ -522,7 +522,7 @@ export function EditCommunity() {
               />
             </motion.div>
           )}
-        </AnimatePresence>
+        
 
         {/* Tags */}
         <div style={{ marginBottom: 8 }}>
@@ -659,7 +659,7 @@ export function EditCommunity() {
         </div>
 
         {/* Erreur */}
-        <AnimatePresence>
+        
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -6 }}
@@ -673,7 +673,7 @@ export function EditCommunity() {
               {error}
             </motion.div>
           )}
-        </AnimatePresence>
+        
 
         {/* Bouton sauvegarder */}
         <motion.button
@@ -753,7 +753,7 @@ export function EditCommunity() {
 
       {/* ── Modal de confirmation de suppression ── */}
       {showDeleteModal && createPortal(
-        <AnimatePresence>
+        
           <motion.div
             key="delete-overlay"
             initial={{ opacity: 0 }}
@@ -876,7 +876,7 @@ export function EditCommunity() {
               </div>
             </motion.div>
           </motion.div>
-        </AnimatePresence>,
+        ,
         document.body
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   Loader2, AlertCircle, CheckCircle2, Mail, RefreshCw, ArrowLeft,
 } from "lucide-react";
@@ -390,7 +390,7 @@ export function VerifyEmailPage() {
               </div>
 
               {/* Erreur vérification code */}
-              <AnimatePresence>
+              
                 {verifyError && (
                   <motion.div
                     initial={{ opacity: 0, height: 0, marginBottom: 0 }}
@@ -407,10 +407,10 @@ export function VerifyEmailPage() {
                     <span style={{ fontSize: 13, color: "rgba(239,68,68,0.90)", lineHeight: 1.45 }}>{verifyError}</span>
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
 
               {/* Bouton vérifier (si rempli mais pas auto-soumis) */}
-              <AnimatePresence>
+              
                 {codeComplete && !verifying && (
                   <motion.button
                     initial={{ opacity: 0, y: 8 }}
@@ -435,7 +435,7 @@ export function VerifyEmailPage() {
                     Vérifier le code
                   </motion.button>
                 )}
-              </AnimatePresence>
+              
 
               {/* Loader vérification */}
               {verifying && (
@@ -449,7 +449,7 @@ export function VerifyEmailPage() {
               )}
 
               {/* Succès renvoi */}
-              <AnimatePresence>
+              
                 {resendSuccess && (
                   <motion.div
                     initial={{ opacity: 0, height: 0, marginBottom: 0 }}
@@ -467,7 +467,7 @@ export function VerifyEmailPage() {
                     </span>
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
 
               {/* Renvoyer */}
               <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 18, marginTop: 4 }}>
@@ -501,7 +501,7 @@ export function VerifyEmailPage() {
                 </motion.button>
 
                 {/* Erreur renvoi (séparée, sous le bouton) */}
-                <AnimatePresence>
+                
                   {resendError && (
                     <motion.div
                       initial={{ opacity: 0, y: -4 }}
@@ -529,7 +529,7 @@ export function VerifyEmailPage() {
                       </div>
                     </motion.div>
                   )}
-                </AnimatePresence>
+                
               </div>
             </>
           )}

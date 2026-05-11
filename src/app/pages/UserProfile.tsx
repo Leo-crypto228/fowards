@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft, MoreHorizontal, Repeat2, X,
@@ -270,7 +270,7 @@ function PeopleModal({
   const navigate = useNavigate();
 
   const content = (
-    <AnimatePresence>
+    <>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -340,7 +340,7 @@ function PeopleModal({
           )}
         </div>
       </motion.div>
-    </AnimatePresence>
+    </>
   );
 
   return createPortal(content, document.body);
@@ -455,11 +455,11 @@ function EvolutionSection({ profile, username, evolutionData, realProgress, allU
             );
           })}
         </div>
-        <AnimatePresence mode="wait">
+        
           <motion.div key={filter} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
             <MiniAreaChart data={evolutionData.length > 0 ? evolutionData : CHART_DATA[filter]} />
           </motion.div>
-        </AnimatePresence>
+        
       </div>
 
       {/* Badges */}
@@ -529,7 +529,7 @@ function PostsSection({ username, profileUser }: { username: string; profileUser
 
   return (
     <div>
-      <AnimatePresence>
+      
         {posts.map((post, i) => (
           <motion.div key={post.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04, duration: 0.22 }} style={{ marginBottom: 10 }}>
             <ProgressCard
@@ -552,7 +552,7 @@ function PostsSection({ username, profileUser }: { username: string; profileUser
             />
           </motion.div>
         ))}
-      </AnimatePresence>
+      
     </div>
   );
 }
@@ -649,7 +649,7 @@ function SuiviSection({ username, mockFollowing, mockFollowers }: {
       </div>
 
       {/* Liste */}
-      <AnimatePresence mode="wait">
+      
         <motion.div key={subiTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
           {displayList.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.22)", fontSize: 14 }}>
@@ -661,7 +661,7 @@ function SuiviSection({ username, mockFollowing, mockFollowers }: {
             ))
           )}
         </motion.div>
-      </AnimatePresence>
+      
     </div>
   );
 }
@@ -776,7 +776,7 @@ function PrivateProfileGate({
       </p>
 
       {/* CTA */}
-      <AnimatePresence mode="wait">
+      
         {reqStatus === "pending" ? (
           <motion.div
             key="pending"
@@ -838,7 +838,7 @@ function PrivateProfileGate({
             </span>
           </motion.button>
         )}
-      </AnimatePresence>
+      
     </motion.div>
   );
 }
@@ -1120,7 +1120,7 @@ export function UserProfile() {
                 transition: "all 0.22s ease",
               }}
             >
-              <AnimatePresence mode="wait">
+              
                 {linkCopied ? (
                   <motion.div key="check" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ display: "flex", alignItems: "center" }}>
                     <CheckIcon style={{ width: 14, height: 14, color: "#22c55e" }} />
@@ -1130,7 +1130,7 @@ export function UserProfile() {
                     <Link2 style={{ width: 14, height: 14, color: "rgba(255,255,255,0.80)" }} />
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
             </motion.button>
 
             {/* Badge profil privé */}
@@ -1351,7 +1351,7 @@ export function UserProfile() {
 
         {/* ── Contenu ── */}
         <div style={{ padding: "16px 16px 0" }}>
-          <AnimatePresence mode="wait">
+          
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, y: 10 }}
@@ -1385,7 +1385,7 @@ export function UserProfile() {
                 />
               )}
             </motion.div>
-          </AnimatePresence>
+          
         </div>
         </>)} {/* end !showPrivateGate */}
       </div>

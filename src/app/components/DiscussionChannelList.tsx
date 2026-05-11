@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   ChevronRight, Hash, Plus, Pencil, Trash2, X, Check, GripVertical,
   Settings, ChevronDown, Loader2,
@@ -414,7 +414,7 @@ export function DiscussionChannelList({
 
       {/* ── Category list ── */}
       <div>
-        <AnimatePresence>
+        
           {categories.map((cat, catIdx) => (
             <motion.div
               key={cat.id}
@@ -536,7 +536,7 @@ export function DiscussionChannelList({
               </div>
 
               {/* ── Channels list ── */}
-              <AnimatePresence>
+              
                 {!cat.collapsed && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
@@ -669,7 +669,7 @@ export function DiscussionChannelList({
                     })}
 
                     {/* Add channel form */}
-                    <AnimatePresence>
+                    
                       {addingCatId === cat.id && (
                         <motion.form
                           initial={{ opacity: 0, height: 0 }}
@@ -717,7 +717,7 @@ export function DiscussionChannelList({
                           </button>
                         </motion.form>
                       )}
-                    </AnimatePresence>
+                    
 
                     {/* Empty state */}
                     {cat.channels.length === 0 && addingCatId !== cat.id && (
@@ -742,15 +742,15 @@ export function DiscussionChannelList({
                     )}
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
             </motion.div>
           ))}
-        </AnimatePresence>
+        
 
         {/* ── Add category ── */}
         {editMode && (
           <div style={{ padding: "8px 16px 0" }}>
-            <AnimatePresence mode="wait">
+            
               {addingCat ? (
                 <motion.form
                   key="add-cat-form"
@@ -804,7 +804,7 @@ export function DiscussionChannelList({
                   Ajouter une catégorie
                 </motion.button>
               )}
-            </AnimatePresence>
+            
           </div>
         )}
       </div>

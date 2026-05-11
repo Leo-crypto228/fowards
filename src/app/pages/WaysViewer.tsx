@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { ArrowLeft, MessageCircle, MoreHorizontal, Send, Trash2 } from "lucide-react";
 
 function SparkleIcon({ active, size = 22 }: { active: boolean; size?: number }) {
@@ -230,7 +230,7 @@ export function WaysViewer() {
           >
             <MoreHorizontal style={{ width: 18, height: 18, color: "rgba(255,255,255,0.60)" }} />
           </motion.button>
-          <AnimatePresence>
+          
             {showMenu && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.92, y: -4 }}
@@ -290,7 +290,7 @@ export function WaysViewer() {
                 )}
               </motion.div>
             )}
-          </AnimatePresence>
+          
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Send, Loader2, RefreshCw } from "lucide-react";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { useAuth } from "../context/AuthContext";
@@ -397,7 +397,7 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
             </div>
           </motion.div>
         ) : (
-          <AnimatePresence mode="popLayout">
+          <>
             {messages.map((msg, idx) => {
               const prev = messages[idx - 1];
               const isGrouped =
@@ -424,7 +424,7 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
                 </div>
               );
             })}
-          </AnimatePresence>
+          </>
         )}
         <div ref={bottomRef} />
       </div>

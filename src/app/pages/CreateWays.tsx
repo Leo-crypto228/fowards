@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { ArrowLeft, ImagePlus, X, Send } from "lucide-react";
 import { useNavigate } from "react-router";
 import { createWays } from "../api/waysApi";
@@ -195,7 +195,7 @@ export function CreateWays() {
         </div>
 
         {/* Image preview */}
-        <AnimatePresence>
+        
           {imagePreview && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -234,7 +234,7 @@ export function CreateWays() {
               )}
             </motion.div>
           )}
-        </AnimatePresence>
+        
 
         {/* Image picker button */}
         {!imagePreview && (

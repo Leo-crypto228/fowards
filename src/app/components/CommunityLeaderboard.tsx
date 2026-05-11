@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Loader2, Trophy, Star, Zap, MessageSquare } from "lucide-react";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { useAuth } from "../context/AuthContext";

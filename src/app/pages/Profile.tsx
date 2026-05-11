@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 
 import {
   Bell, MoreHorizontal, X, Check, Zap, Users,
@@ -787,7 +787,7 @@ function PostsSection() {
           </motion.div>
         )}
 
-        <AnimatePresence>
+        
           {apiPosts.map((post, i) => (
             <motion.div
               key={post.id}
@@ -816,7 +816,7 @@ function PostsSection() {
               />
             </motion.div>
           ))}
-        </AnimatePresence>
+        
 
         {/* Séparateur */}
         {apiPosts.length > 0 && (
@@ -866,7 +866,7 @@ function PostsSection() {
             </motion.button>
 
             {/* Dropdown */}
-            <AnimatePresence>
+            
               {trierOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -6, scale: 0.95 }}
@@ -913,7 +913,7 @@ function PostsSection() {
                   ))}
                 </motion.div>
               )}
-            </AnimatePresence>
+            
           </div>
 
           {/* Impactant capsule */}
@@ -997,7 +997,7 @@ function PostsSection() {
       {trierOpen && <div style={{ position: "fixed", inset: 0, zIndex: 150 }} onClick={() => setTrierOpen(false)} />}
 
       {/* Posts list OR Important section */}
-      <AnimatePresence mode="wait">
+      
         {mode === "important" ? (
           <motion.div key="important" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
             {/* Private notice */}
@@ -1072,7 +1072,7 @@ function PostsSection() {
             )}
           </motion.div>
         )}
-      </AnimatePresence>
+      
     </div>
   );
 }
@@ -1143,7 +1143,7 @@ function SuiviSection({ username }: { username: string }) {
         <p style={{ fontSize: 12, color: "rgba(144,144,168,0.45)", marginBottom: 4 }}>
           Vous suivez {followingProfiles.length} personne{followingProfiles.length !== 1 ? "s" : ""}
         </p>
-        <AnimatePresence>
+        
           {followingProfiles.map((p) => (
             <motion.div
               key={p.username || p.id}
@@ -1153,7 +1153,7 @@ function SuiviSection({ username }: { username: string }) {
               <PersonCard {...p} />
             </motion.div>
           ))}
-        </AnimatePresence>
+        
         {followingProfiles.length === 0 && (
           <motion.p
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -1401,7 +1401,7 @@ function EvolutionSection({ userId, progressPct, objective, objectiveDesc }: {
             );
           })}
         </div>
-        <AnimatePresence mode="wait">
+        
           {chartLoading ? (
             <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1420,7 +1420,7 @@ function EvolutionSection({ userId, progressPct, objective, objectiveDesc }: {
               <MiniAreaChart data={displayPoints} />
             </motion.div>
           )}
-        </AnimatePresence>
+        
         {!chartLoading && stats?.constanceScore !== undefined && (
           <p style={{ fontSize: 11, color: "rgba(144,144,168,0.35)", marginTop: 8, textAlign: "right" }}>
             Régularité sur 30 jours : {constanceScore}%
@@ -1726,7 +1726,7 @@ export function Profile() {
                 transition: "all 0.22s ease",
               }}
             >
-              <AnimatePresence mode="wait">
+              
                 {linkCopied ? (
                   <motion.div key="check" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
                     <Check style={{ width: 13, height: 13, color: "#22c55e" }} />
@@ -1736,7 +1736,7 @@ export function Profile() {
                     <Link2 style={{ width: 13, height: 13, color: "rgba(255,255,255,0.85)" }} />
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
             </motion.button>
 
             {/* Bouton Progression */}
@@ -1764,7 +1764,7 @@ export function Profile() {
         </motion.div>
 
         {/* ── Profile card — avatar + streak + info — visible only on Evolution ── */}
-        <AnimatePresence initial={false}>
+        
           {showInfo && (
             <motion.div
               key="profile-card"
@@ -1829,7 +1829,7 @@ export function Profile() {
               </div>
             </motion.div>
           )}
-        </AnimatePresence>
+        
 
         {/* ── Nav + content ── */}
         <div style={{ padding: "0 16px" }}>
@@ -1841,7 +1841,7 @@ export function Profile() {
             <ProfileNavBar active={activeTab} onChange={setActiveTab} />
           </motion.div>
 
-          <AnimatePresence mode="wait">
+          
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, y: 10 }}
@@ -1854,23 +1854,23 @@ export function Profile() {
               {activeTab === "posts" && <PostsSection />}
               {activeTab === "suivi" && <SuiviSection username={MY_EFFECTIVE_USERNAME} />}
             </motion.div>
-          </AnimatePresence>
+          
         </div>
       </div>
 
       {/* Notif panel */}
-      <AnimatePresence>
+      
         {showNotifs && <NotifPanel onClose={() => setShowNotifs(false)} />}
-      </AnimatePresence>
+      
 
       {/* Notif overlay */}
-      <AnimatePresence>
+      
         {showNotifs && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             onClick={() => setShowNotifs(false)}
             style={{ position: "fixed", inset: 0, zIndex: 150 }} />
         )}
-      </AnimatePresence>
+      
 
 
     </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Check, UserPlus } from "lucide-react";
 import { useCommunityMember } from "../context/CommunityMemberContext";
 import { toast } from "sonner";
@@ -83,7 +83,7 @@ export function CommunitySubscribeButton({
         touchAction: "manipulation",
       }}
     >
-      <AnimatePresence mode="wait">
+      
         {loading ? (
           <motion.span
             key="loading"
@@ -134,7 +134,7 @@ export function CommunitySubscribeButton({
             S'abonner
           </motion.span>
         )}
-      </AnimatePresence>
+      
     </motion.button>
   );
 }

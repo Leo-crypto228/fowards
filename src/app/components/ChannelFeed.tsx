@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   Plus, RefreshCw, Loader2, MessageCircle, Share2, MoreHorizontal, Trash2,
 } from "lucide-react";
@@ -233,7 +233,7 @@ function ChannelPostCard({
                 <MoreHorizontal style={{ width: 15, height: 15, color: "rgba(255,255,255,0.40)" }} />
               </motion.button>
 
-              <AnimatePresence>
+              
                 {menuOpen && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.92, y: -4 }}
@@ -269,7 +269,7 @@ function ChannelPostCard({
                     </motion.button>
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
             </div>
           )}
         </div>
@@ -464,7 +464,7 @@ export function ChannelFeed({ communityId, channelId, channelName, isAdmin }: Pr
 
       {/* Posts list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "0 12px 100px" }}>
-        <AnimatePresence mode="popLayout">
+        
           {posts.map((post) => (
             <ChannelPostCard
               key={post.id}
@@ -476,7 +476,7 @@ export function ChannelFeed({ communityId, channelId, channelName, isAdmin }: Pr
               channelId={channelId}
             />
           ))}
-        </AnimatePresence>
+        
 
         {/* Empty state */}
         {posts.length === 0 && (
@@ -518,7 +518,7 @@ export function ChannelFeed({ communityId, channelId, channelName, isAdmin }: Pr
       </div>
 
       {/* FAB */}
-      <AnimatePresence>
+      
         {posts.length > 0 && (
           <motion.button
             initial={{ opacity: 0, scale: 0.8 }}
@@ -540,7 +540,7 @@ export function ChannelFeed({ communityId, channelId, channelName, isAdmin }: Pr
             <Plus style={{ width: 22, height: 22, color: "#fff", strokeWidth: 2.5 }} />
           </motion.button>
         )}
-      </AnimatePresence>
+      
 
       {/* Create post modal */}
       <CreateChannelPostModal

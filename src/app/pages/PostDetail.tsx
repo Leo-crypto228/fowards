@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { MY_USER_ID as _authUserId, MY_USER_NAME as _authUserName, MY_USER_AVATAR as _authUserAvatar } from "../api/authStore";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   ArrowLeft, MessageCircle, Share2, Bookmark,
   Send, Hash, Bold, Smile, X, Check, MoreHorizontal, Reply,
@@ -264,7 +264,7 @@ function ApiCommentRow({
           )}
         </div>
         {/* Réponses inline */}
-        <AnimatePresence>
+        
           {isShowingReplies && displayReplies.length > 0 && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
               style={{ overflow: "hidden", marginTop: 14, paddingLeft: 14, borderLeft: "2px solid rgba(99,102,241,0.20)" }}
@@ -287,7 +287,7 @@ function ApiCommentRow({
               ))}
             </motion.div>
           )}
-        </AnimatePresence>
+        
       </div>
     </motion.div>
   );
@@ -863,7 +863,7 @@ function StatsPanel({ postId, fallbackViews }: { postId: string; fallbackViews: 
 
       {/* SVG chart */}
       <div style={{ borderRadius: 20, background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)", padding: "12px 8px 0", overflow: "hidden" }}>
-        <AnimatePresence mode="wait">
+        
           <motion.div key={activeMetric} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
             <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
               <polygon points={areaPts} fill={`${active.color}18`} />
@@ -876,7 +876,7 @@ function StatsPanel({ postId, fallbackViews }: { postId: string; fallbackViews: 
               ))}
             </svg>
           </motion.div>
-        </AnimatePresence>
+        
       </div>
 
       {/* Per-day values */}
@@ -1032,7 +1032,7 @@ function SharePanel({
                 <p style={{ fontSize: 14, fontWeight: 600, color: isDone ? "#86efac" : isSelected ? "#c7d2fe" : "rgba(255,255,255,0.88)", margin: 0 }}>{c.name}</p>
                 <p style={{ fontSize: 11, color: "rgba(255,255,255,0.30)", margin: "2px 0 0" }}>{c.members} membres</p>
               </div>
-              <AnimatePresence>
+              
                 {isDone ? (
                   <motion.div key="done" initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ width: 22, height: 22, borderRadius: "50%", background: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <Check style={{ width: 11, height: 11, color: "#fff", strokeWidth: 3 }} />
@@ -1042,7 +1042,7 @@ function SharePanel({
                     <Check style={{ width: 10, height: 10, color: "#a5b4fc", strokeWidth: 3 }} />
                   </motion.div>
                 ) : null}
-              </AnimatePresence>
+              
             </motion.button>
           );
         })}
@@ -1626,7 +1626,7 @@ export function PostDetail() {
                         >
                           <MoreHorizontal style={{ width: 18, height: 18, color: "rgba(255,255,255,0.35)" }} />
                         </motion.button>
-                        <AnimatePresence>
+                        
                           {showPostMenu && (
                             <>
                               <div className="fixed inset-0 z-40" onClick={() => setShowPostMenu(false)} />
@@ -1699,7 +1699,7 @@ export function PostDetail() {
                               </motion.div>
                             </>
                           )}
-                        </AnimatePresence>
+                        
                       </div>
                     </div>
                   </div>
@@ -1794,7 +1794,7 @@ export function PostDetail() {
 
           {/* ── Content area: Comments / Share / Stats ── */}
           <div ref={sectionsRef} style={{ padding: "0 2px" }}>
-            <AnimatePresence mode="wait">
+            
               {view === "comments" && (
                 <motion.div key="comments" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }}>
                   {/* Conseil legend */}
@@ -1826,7 +1826,7 @@ export function PostDetail() {
                   )}
 
                   {/* Bannière réponse inline */}
-                  <AnimatePresence>
+                  
                     {activeReplyTarget && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                         style={{ overflow: "hidden", marginBottom: 14 }}
@@ -1874,12 +1874,12 @@ export function PostDetail() {
                         </div>
                       </motion.div>
                     )}
-                  </AnimatePresence>
+                  
 
                   {/* ── Commentaires API (live) — Conseil toujours en premier ── */}
                   {sortedApiComments.length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 24 }}>
-                      <AnimatePresence initial={false}>
+                      
                         {sortedApiComments.map((c) => (
                           <ApiCommentRow
                             key={c.id}
@@ -1889,7 +1889,7 @@ export function PostDetail() {
                             pendingReply={c.optimisticReply ?? null}
                           />
                         ))}
-                      </AnimatePresence>
+                      
                     </div>
                   )}
 
@@ -1919,13 +1919,13 @@ export function PostDetail() {
                   <StatsPanel key="stats" postId={postId} fallbackViews={post?.viewsCount ?? 1200} />
                 </>
               )}
-            </AnimatePresence>
+            
           </div>
         </div>
       </div>
 
       {/* ── Sticky bottom comment bar (only in comments view) ── */}
-      <AnimatePresence>
+      
         {(view === "comments") && (
           <motion.div
             initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.2 }}
@@ -1969,9 +1969,9 @@ export function PostDetail() {
 
             {/* ── Input row ── */}
             <div style={{ padding: "10px 14px 0", display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
-              <AnimatePresence>
+              
                 {showEmojiPicker && <EmojiPicker onSelect={(e) => setCommentInput((v) => v + e)} onClose={() => setShowEmojiPicker(false)} />}
-              </AnimatePresence>
+              
 
               {/* Autocomplete overlay dismiss */}
               {hasCommentAutocomplete && (
@@ -1988,7 +1988,7 @@ export function PostDetail() {
 
               <div style={{ flex: 1, position: "relative" }}>
                 {/* Autocomplete dropdown */}
-                <AnimatePresence>
+                
                   {hasCommentAutocomplete && (
                     <motion.div
                       initial={{ opacity: 0, y: 8, scale: 0.97 }}
@@ -2033,7 +2033,7 @@ export function PostDetail() {
                       ))}
                     </motion.div>
                   )}
-                </AnimatePresence>
+                
 
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 10, minHeight: 46, borderRadius: 22, padding: "8px 14px", background: boldMode ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.07)", border: boldMode ? "0.5px solid rgba(99,102,241,0.45)" : "0.5px solid rgba(99,102,241,0.28)", transition: "all 0.2s" }}>
                   <HighlightInput
@@ -2094,12 +2094,12 @@ export function PostDetail() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      
 
       {/* ── Modals ── */}
-      <AnimatePresence>
+      
         {showPertinentList && <PertinentModal count={relevantCount} onClose={() => setShowPertinentList(false)} />}
-      </AnimatePresence>
+      
 
       {/* GIF Picker */}
       <GifPicker isOpen={gifOpen} onClose={() => setGifOpen(false)} onSelect={handleGifComment} anchor="bottom" />

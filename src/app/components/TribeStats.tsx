@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   Plus, Trash2, CheckCircle2,
   X, ChevronDown, TrendingUp,
@@ -325,7 +325,7 @@ function CreateModal({
                       <ChevronDown style={{ width: 14, height: 14, color: "rgba(255,255,255,0.28)" }} />
                     </motion.span>
                   </motion.button>
-                  <AnimatePresence>
+                  
                     {openCat === cat.cat && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
@@ -362,7 +362,7 @@ function CreateModal({
                         </div>
                       </motion.div>
                     )}
-                  </AnimatePresence>
+                  
                 </div>
               ))}
             </div>
@@ -829,11 +829,11 @@ export function TribeStats({ tribeName, communityId, currentMembers, isCreator =
       </motion.div>
 
       {/* ── Modal création ── */}
-      <AnimatePresence>
+      
         {showCreate && (
           <CreateModal onClose={() => setShowCreate(false)} onSave={handleCreate} />
         )}
-      </AnimatePresence>
+      
     </div>
   );
 }

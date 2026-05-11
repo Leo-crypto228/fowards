@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import {
   Share2, MoreHorizontal,
@@ -998,7 +998,7 @@ export function ProgressCard({
         </motion.div>
 
         {/* Post menu dropdown */}
-        <AnimatePresence>
+        
           {showPostMenu && (
             <PostMenu
               postId={postId}
@@ -1011,7 +1011,7 @@ export function ProgressCard({
               onPostDeleted={onPostDeleted}
             />
           )}
-        </AnimatePresence>
+        
       </div>
 
       {/* ── SEPARATOR BETWEEN POSTS ────────────────────────────────────────── */}

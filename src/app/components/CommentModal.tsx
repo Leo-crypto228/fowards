@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Send, ChevronDown, AlertCircle, MessageCircle, X } from "lucide-react";
 import {
   createComment,
@@ -348,7 +348,7 @@ export function CommentModal({
   const handleClose = () => { if (sending) return; onClose(); };
 
   const modalContent = (
-    <AnimatePresence>
+    <>
       {isOpen && (
         <>
           {/* GIF Picker */}
@@ -434,18 +434,18 @@ export function CommentModal({
                 </motion.div>
               ) : (
                 <div style={{ paddingBottom: 8 }}>
-                  <AnimatePresence initial={false}>
+                  
                     {comments.map((c, i) => (
                       <CommentItem key={c.id} comment={c} isLast={i === comments.length - 1} />
                     ))}
-                  </AnimatePresence>
+                  
                 </div>
               )}
             </div>
 
             {/* Zone de composition */}
             <div style={{ flexShrink: 0, borderTop: "0.5px solid rgba(255,255,255,0.07)", background: "rgba(8,8,12,0.98)", paddingBottom: keyboardOffset > 0 ? 8 : "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}>
-              <AnimatePresence>
+              
                 {sendError && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                     style={{ display: "flex", alignItems: "center", gap: 6, margin: "8px 16px 0", padding: "7px 11px", borderRadius: 10, background: "rgba(239,68,68,0.10)", border: "0.5px solid rgba(239,68,68,0.22)" }}>
@@ -453,7 +453,7 @@ export function CommentModal({
                     <span style={{ fontSize: 12, color: "rgba(239,68,68,0.88)" }}>{sendError}</span>
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
 
               <div style={{ display: "flex", gap: 10, alignItems: "flex-end", padding: "10px 16px 6px" }}>
                 <img src={getMyAvatar()} alt={getMyName()} style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "1.5px solid rgba(99,102,241,0.25)", alignSelf: "flex-end", marginBottom: 6 }} />
@@ -497,7 +497,7 @@ export function CommentModal({
                             <ChevronDown style={{ width: 11, height: 11, transform: typeOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }} />
                           </motion.button>
 
-                          <AnimatePresence>
+                          
                             {typeOpen && (
                               <motion.div
                                 initial={{ opacity: 0, y: 4, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -517,7 +517,7 @@ export function CommentModal({
                                 })}
                               </motion.div>
                             )}
-                          </AnimatePresence>
+                          
                         </div>
                       )}
 
@@ -553,7 +553,7 @@ export function CommentModal({
                         flexShrink: 0, WebkitTapHighlightColor: "transparent", touchAction: "manipulation",
                       }}
                     >
-                      <AnimatePresence mode="wait">
+                      <>
                         {posted ? (
                           <motion.span key="ok" initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ fontSize: 14, color: "#4ade80" }}>✓</motion.span>
                         ) : sending ? (
@@ -563,7 +563,7 @@ export function CommentModal({
                             <Send style={{ width: 14, height: 14, color: input.trim() ? "#fff" : "rgba(255,255,255,0.40)" }} />
                           </motion.div>
                         )}
-                      </AnimatePresence>
+                      </>
                     </motion.button>
                   </div>
                 </div>
@@ -572,7 +572,7 @@ export function CommentModal({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </>
   );
 
   return createPortal(modalContent, document.body);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Search, X, Loader2, TrendingUp } from "lucide-react";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 
@@ -145,7 +145,7 @@ export function GifPicker({ isOpen, onClose, onSelect }: GifPickerProps) {
         }
       `}</style>
 
-      <AnimatePresence>
+      
         {isOpen && (
           <>
             {/* ── Backdrop ── */}
@@ -331,7 +331,7 @@ export function GifPicker({ isOpen, onClose, onSelect }: GifPickerProps) {
             </motion.div>
           </>
         )}
-      </AnimatePresence>
+      
     </>
   );
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Send } from "lucide-react";
 
 interface Comment {
@@ -72,7 +72,7 @@ export function CommentSection({ postAuthor, initialCount }: CommentSectionProps
         }}
       >
         {/* Existing comments */}
-        <AnimatePresence initial={false}>
+        
           {comments.map((c) => (
             <motion.div
               key={c.id}
@@ -96,7 +96,7 @@ export function CommentSection({ postAuthor, initialCount }: CommentSectionProps
               </div>
             </motion.div>
           ))}
-        </AnimatePresence>
+        
 
         {/* Input */}
         <div

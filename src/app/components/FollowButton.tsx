@@ -6,7 +6,7 @@
  */
 import { useState } from "react";
 import type { CSSProperties } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { UserPlus, Check, UserMinus, Loader2 } from "lucide-react";
 import { useFollow } from "../context/FollowContext";
 
@@ -140,7 +140,7 @@ export function FollowButton({
         ...style,
       }}
     >
-      <AnimatePresence mode="wait">
+      
         {loading ? (
           <motion.span
             key="loading"
@@ -177,7 +177,7 @@ export function FollowButton({
             <span style={{ fontSize, fontWeight: 700, color: "#818cf8" }}>Suivi</span>
           </motion.span>
         )}
-      </AnimatePresence>
+      
     </motion.button>
   );
 }

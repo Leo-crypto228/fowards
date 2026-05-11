@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router";
 import { ArrowLeft, Hash } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { TribeCommunityPost } from "../components/TribeCommunityPost";
 import { useState, useEffect } from "react";
 import { getCommunityPostsByHashtag, CommunityPostData } from "../api/communityPostsApi";
@@ -140,7 +140,7 @@ export function HashtagFeed() {
 
         {/* ── Contenu ── */}
         <div className="mt-5">
-          <AnimatePresence mode="wait">
+          
             {loading ? (
               // ── Skeleton loading ──
               <motion.div
@@ -305,7 +305,7 @@ export function HashtagFeed() {
                 <div style={{ height: 12 }} />
               </motion.div>
             )}
-          </AnimatePresence>
+          
         </div>
       </div>
     </div>

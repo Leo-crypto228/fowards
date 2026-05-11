@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   ArrowLeft, Camera, ImagePlus,
   Check, Loader2, Tag, Globe, Lock, X,
@@ -426,7 +426,7 @@ export function CreateCommunity() {
           </div>
 
           {/* Mot personnalisé affiché dans le boudin à côté de la mentalité */}
-          <AnimatePresence>
+          
             {mentality && (
               <motion.div
                 initial={{ opacity: 0, y: -6 }}
@@ -469,7 +469,7 @@ export function CreateCommunity() {
                 />
               </motion.div>
             )}
-          </AnimatePresence>
+          
         </div>
 
         {/* Tags */}
@@ -627,7 +627,7 @@ export function CreateCommunity() {
         </div>
 
         {/* ── Erreur ── */}
-        <AnimatePresence>
+        
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -6 }}
@@ -641,7 +641,7 @@ export function CreateCommunity() {
               {error}
             </motion.div>
           )}
-        </AnimatePresence>
+        
 
         {/* ── Bouton créer ── */}
         <motion.button

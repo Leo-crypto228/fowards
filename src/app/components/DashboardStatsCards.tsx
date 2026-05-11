@@ -1,6 +1,6 @@
 import { type CSSProperties, useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Loader2, Euro, Clock, X, Check, Plus, Minus, ArrowRight } from "lucide-react";
 import { ActivityRings } from "./ActivityRings";
 import { getCash, updateCash, getHours, updateHours } from "../api/userStatsApi";
@@ -177,7 +177,7 @@ function StatModal({
           </div>
 
           {/* Flèche + preview */}
-          <AnimatePresence mode="wait">
+          
             {preview !== null && (
               <motion.div
                 key={preview}
@@ -204,7 +204,7 @@ function StatModal({
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
+          
         </div>
 
         {/* Toggle + / − */}
@@ -302,7 +302,7 @@ function StatModal({
         </div>
 
         {/* Note soustraction plancher 0 */}
-        <AnimatePresence>
+        
           {mode === "sub" && currentTotal > 0 && (
             <motion.p
               initial={{ opacity: 0, height: 0 }}
@@ -312,10 +312,10 @@ function StatModal({
               · Le total ne peut pas descendre sous 0.
             </motion.p>
           )}
-        </AnimatePresence>
+        
 
         {/* Erreur */}
-        <AnimatePresence>
+        
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -6 }}
@@ -329,10 +329,10 @@ function StatModal({
               {error}
             </motion.div>
           )}
-        </AnimatePresence>
+        
 
         {/* Bouton Modifier */}
-        <AnimatePresence mode="wait">
+        
           {success ? (
             <motion.div
               key="ok"
@@ -385,7 +385,7 @@ function StatModal({
               )}
             </motion.button>
           )}
-        </AnimatePresence>
+        
       </motion.div>
     </>,
     document.body
@@ -570,7 +570,7 @@ export function DashboardStatsCards({ userId, isOwner = false, style }: Props) {
       </div>
 
       {/* Modals */}
-      <AnimatePresence>
+      
         {showCashModal && (
           <StatModal
             key="cash-modal"
@@ -593,7 +593,7 @@ export function DashboardStatsCards({ userId, isOwner = false, style }: Props) {
             onClose={() => setShowHoursModal(false)}
           />
         )}
-      </AnimatePresence>
+      
     </>
   );
 }

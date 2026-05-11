@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Send, X, CornerDownRight, ChevronDown, Share2, RefreshCw, Loader2 } from "lucide-react";
 import {
   getCommunityMessages, sendCommunityMessage, getCommunityShares,
@@ -212,7 +212,7 @@ function MessageThread({ msg, all, depth, replyingToId, onSelect, animDelay = 0 
             </motion.button>
           )}
 
-          <AnimatePresence>
+          
             {expanded && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} transition={{ duration: 0.28, ease: "easeOut" }} style={{ overflow: "hidden" }}>
                 {shouldDefaultCollapse && (
@@ -247,7 +247,7 @@ function MessageThread({ msg, all, depth, replyingToId, onSelect, animDelay = 0 
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
+          
         </div>
       )}
       {depth === 0 && <div style={{ height: 4 }} />}
@@ -491,7 +491,7 @@ export function TribeDiscussion({ isStatic = true, channelKey }: { isStatic?: bo
             </div>
           </motion.div>
         )}
-        <AnimatePresence mode="popLayout">
+        
           {roots.map((root, i) => (
             <div key={root.id}>
               <MessageThread msg={root} all={messages} depth={0} replyingToId={replyingTo?.id ?? null} onSelect={handleSelect} animDelay={i * 0.04} />
@@ -500,14 +500,14 @@ export function TribeDiscussion({ isStatic = true, channelKey }: { isStatic?: bo
               )}
             </div>
           ))}
-        </AnimatePresence>
+        
       </div>
 
       {/* ── Sticky input bar ── */}
       <div style={{ position: "sticky", bottom: 0, padding: "0 16px 20px", background: "linear-gradient(to top, #000000 60%, rgba(0,0,0,0) 100%)" }}>
 
         {/* Reply-to chip */}
-        <AnimatePresence>
+        
           {replyingTo && (
             <motion.div
               initial={{ opacity: 0, y: 8, height: 0 }} animate={{ opacity: 1, y: 0, height: "auto" }} transition={{ duration: 0.22, ease: "easeOut" }}
@@ -527,7 +527,7 @@ export function TribeDiscussion({ isStatic = true, channelKey }: { isStatic?: bo
               </div>
             </motion.div>
           )}
-        </AnimatePresence>
+        
 
         {/* Input */}
         <form onSubmit={handleSend}>

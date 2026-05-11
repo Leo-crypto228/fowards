@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { ArrowLeft, Camera, Save, Loader2, Check, Image as ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getProfile, upsertProfile, uploadProfileImage, type UserProfile } from "../api/profileApi";
@@ -365,7 +365,7 @@ export function EditProfilePage() {
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <AnimatePresence mode="wait">
+            
               {saving ? (
                 <motion.div key="saving" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -385,7 +385,7 @@ export function EditProfilePage() {
                   Sauvegarder
                 </motion.div>
               )}
-            </AnimatePresence>
+            
           </motion.button>
         </div>
 

@@ -7,7 +7,7 @@
  * Avatar avec fallback initiales robuste.
  */
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { Users, UserCheck } from "lucide-react";
 import { FollowButton } from "./FollowButton";
@@ -240,7 +240,7 @@ export function FollowsListSection({ currentUserId, followedList = [] }: Follows
       </div>
 
       {/* ── Liste horizontale ── */}
-      <AnimatePresence mode="wait">
+      
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 6 }}
@@ -269,7 +269,7 @@ export function FollowsListSection({ currentUserId, followedList = [] }: Follows
             </div>
           )}
         </motion.div>
-      </AnimatePresence>
+      
     </div>
   );
 }

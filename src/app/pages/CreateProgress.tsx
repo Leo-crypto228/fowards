@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Check, ArrowLeft, AlertCircle, X, ImagePlus, ChevronDown, Globe, Users, Info, Send } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { createPost, extractHashtags, LABEL_TO_TYPE, PostType } from "../api/postsApi";
@@ -81,7 +81,7 @@ function TypeTooltip() {
         <Info style={{ width: 11, height: 11, color: open ? "#a5b4fc" : "rgba(255,255,255,0.40)", strokeWidth: 2.2 }} />
       </motion.button>
 
-      <AnimatePresence>
+      
         {open && (
           <motion.div
             initial={{ opacity: 0, y: 4, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -97,7 +97,7 @@ function TypeTooltip() {
             ))}
           </motion.div>
         )}
-      </AnimatePresence>
+      
     </div>
   );
 }
@@ -372,7 +372,7 @@ export function CreateProgress() {
             </div>
 
             {/* Image preview — 3:4 comme les posts */}
-            <AnimatePresence>
+            
               {waysImagePreview && (
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   style={{ marginTop: 6, marginBottom: 14, position: "relative" }}>
@@ -385,7 +385,7 @@ export function CreateProgress() {
                   </div>
                 </motion.div>
               )}
-            </AnimatePresence>
+            
 
             {/* Barre d'actions — Photo uniquement */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, paddingBottom: 4 }}>
@@ -452,7 +452,7 @@ export function CreateProgress() {
               );
             })}
             {/* Toggle anonyme — visible uniquement quand Blocage est sélectionné */}
-            <AnimatePresence>
+            
               {selectedType === "Blocage" && (
                 <motion.div
                   key="anon-toggle"
@@ -477,12 +477,12 @@ export function CreateProgress() {
                   </span>
                 </motion.div>
               )}
-            </AnimatePresence>
+            
           </div>
 
-          <AnimatePresence>
+          
             {selectedType && <TypePreview label={selectedType} />}
-          </AnimatePresence>
+          
         </motion.div>
 
         {/* ── Post quoté ── */}
@@ -537,7 +537,7 @@ export function CreateProgress() {
           )}
 
           {/* Aperçu images — carousel horizontal 3:4 */}
-          <AnimatePresence>
+          
             {images.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 style={{ marginTop: 14, position: "relative" }}>
@@ -558,10 +558,10 @@ export function CreateProgress() {
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
+          
 
           {/* Aperçu GIF */}
-          <AnimatePresence>
+          
             {selectedGif && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 14, position: "relative", display: "inline-block" }}>
                 <GifMessage url={selectedGif} />
@@ -571,7 +571,7 @@ export function CreateProgress() {
                 </motion.button>
               </motion.div>
             )}
-          </AnimatePresence>
+          
 
           {/* ── Barre d'actions ── */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, paddingBottom: 4 }}>
@@ -606,7 +606,7 @@ export function CreateProgress() {
                 </motion.div>
               </motion.button>
 
-              <AnimatePresence>
+              
                 {showAudienceMenu && (
                   <motion.div
                     initial={{ opacity: 0, y: -6, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -630,21 +630,19 @@ export function CreateProgress() {
                     })}
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
             </div>
           </div>
         </motion.div>
 
         {/* ── Erreur (Partage only) ── */}
-        {mode === "partage" && <AnimatePresence>
-          {error && (
+        {mode === "partage" && error && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               style={{ marginTop: 16, padding: "12px 16px", borderRadius: 14, background: "rgba(239,68,68,0.10)", border: "0.5px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", gap: 10 }}>
               <AlertCircle style={{ width: 16, height: 16, color: "#ef4444", flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: "rgba(239,68,68,0.90)" }}>{error}</span>
             </motion.div>
-          )}
-        </AnimatePresence>}
+        )}
 
         {/* ── Bouton Publier Partage — masqué en mode Ways ── */}
         <motion.div

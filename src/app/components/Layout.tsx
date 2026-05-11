@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { Home, Users, Target, Loader2, Plus, Bell } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Toaster } from "sonner";
 import { useEffect, useState, Suspense } from "react";
 import { useProgression } from "../context/ProgressionContext";
@@ -123,7 +123,7 @@ export function Layout() {
       </main>
 
       {/* ── BOTTOM NAV ─────────────────────────────────────────────── */}
-      <AnimatePresence>
+      
         {!hideNav && (
           <motion.nav
             style={{
@@ -176,7 +176,7 @@ export function Layout() {
               <Link to="/notifications" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", height: 60, textDecoration: "none" }}>
                 <motion.div whileTap={{ scale: 0.82 }} style={{ position: "relative" }}>
                   <Bell style={{ width: 25, height: 25, color: isActive("/notifications") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/notifications") ? 2.2 : 1.7, transition: "color 0.18s" }} />
-                  <AnimatePresence>
+                  
                     {unreadCount > 0 && (
                       <motion.div
                         key="badge"
@@ -195,7 +195,7 @@ export function Layout() {
                         {unreadCount > 99 ? "99+" : unreadCount}
                       </motion.div>
                     )}
-                  </AnimatePresence>
+                  
                 </motion.div>
               </Link>
 
@@ -209,7 +209,7 @@ export function Layout() {
             </div>{/* end inner row */}
           </motion.nav>
         )}
-      </AnimatePresence>
+      
     </div>
   );
 }

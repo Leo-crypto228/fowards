@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { X, Image as ImageIcon, Loader2, Hash, ChevronDown, Check } from "lucide-react";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { useAuth } from "../context/AuthContext";
@@ -173,7 +173,7 @@ export function CreateCommunityPostModal({
   const activeBadge = BADGES.find(b => b.key === badge) || BADGES[0];
 
   return createPortal(
-    <AnimatePresence>
+    
       {isOpen && (
         <>
           {/* Overlay */}
@@ -251,7 +251,7 @@ export function CreateCommunityPostModal({
                 </div>
 
                 {/* Channel picker dropdown */}
-                <AnimatePresence>
+                
                   {showChannelPicker && channels.length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, y: -8, height: 0 }}
@@ -298,7 +298,7 @@ export function CreateCommunityPostModal({
                       ))}
                     </motion.div>
                   )}
-                </AnimatePresence>
+                
               </div>
 
               <motion.button
@@ -343,7 +343,7 @@ export function CreateCommunityPostModal({
                   }} />
                 </motion.button>
 
-                <AnimatePresence>
+                
                   {showBadges && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} transition={{ duration: 0.2 }}
@@ -374,7 +374,7 @@ export function CreateCommunityPostModal({
                       </div>
                     </motion.div>
                   )}
-                </AnimatePresence>
+                
               </div>
 
               {/* Author row */}
@@ -419,7 +419,7 @@ export function CreateCommunityPostModal({
               />
 
               {/* Image preview */}
-              <AnimatePresence>
+              
                 {imageUrl && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
@@ -439,7 +439,7 @@ export function CreateCommunityPostModal({
                     </motion.button>
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
 
               {/* Hashtags */}
               <div>
@@ -538,7 +538,7 @@ export function CreateCommunityPostModal({
           </motion.div>
         </>
       )}
-    </AnimatePresence>,
+    ,
     document.body
   );
 }

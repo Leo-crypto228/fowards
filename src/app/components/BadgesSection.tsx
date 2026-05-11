@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Loader2 } from "lucide-react";
 import { getEarnedFcoins, type EarnedFcoinEntry } from "../api/progressionApi";
 import { useFollow } from "../context/FollowContext";
@@ -144,7 +144,7 @@ function FcoinRow({ entry, index }: { entry: EarnedFcoinEntry; index: number }) 
       </motion.div>
 
       {/* Detail tooltip on tap */}
-      <AnimatePresence>
+      
         {showDetail && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -173,7 +173,7 @@ function FcoinRow({ entry, index }: { entry: EarnedFcoinEntry; index: number }) 
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      
     </motion.div>
   );
 }

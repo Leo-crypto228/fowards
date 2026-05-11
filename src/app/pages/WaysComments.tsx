@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { ArrowLeft, Send, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { getWaysComments, replyToWaysComment, type WaysComment } from "../api/waysApi";
@@ -110,7 +110,7 @@ function CommentItem({
       </div>
 
       {/* Reply input */}
-      <AnimatePresence>
+      
         {showReplyInput && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -152,10 +152,10 @@ function CommentItem({
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      
 
       {/* Replies */}
-      <AnimatePresence>
+      
         {showReplies && comment.replies?.length > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -178,7 +178,7 @@ function CommentItem({
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      
     </motion.div>
   );
 }
@@ -268,7 +268,7 @@ export function WaysComments() {
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <AnimatePresence>
+          
             {comments.map((comment) => (
               <CommentItem
                 key={comment.id}
@@ -278,7 +278,7 @@ export function WaysComments() {
                 onReply={handleReply}
               />
             ))}
-          </AnimatePresence>
+          
         </div>
       </div>
     </div>

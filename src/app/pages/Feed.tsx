@@ -1,7 +1,7 @@
 import { ProgressCard } from "../components/ProgressCard";
 import { Search, WifiOff, Wifi, RefreshCw } from "lucide-react";
 import logoImage from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router";
 
@@ -658,7 +658,7 @@ export function Feed() {
                 onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter") handleSearchSubmit(); }}
               />
               {/* Bouton Rechercher → page complète */}
-              <AnimatePresence>
+              
                 {query.trim().length > 0 && (
                   <motion.button
                     initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
@@ -674,9 +674,9 @@ export function Feed() {
                     Chercher
                   </motion.button>
                 )}
-              </AnimatePresence>
+              
             </motion.div>
-            <AnimatePresence>
+            
               {hasAutocomplete && (
                 <AutocompleteDropdown
                   hashSuggestions={hashSuggestions}
@@ -685,7 +685,7 @@ export function Feed() {
                   onSelectUser={handleSelectUser}
                 />
               )}
-            </AnimatePresence>
+            
           </div>
 
           {/* Row 3: Tabs */}
@@ -843,7 +843,7 @@ export function Feed() {
             </div>
 
             {filteredFollowingPosts.length > 0 && (
-              <AnimatePresence>
+              <>
                 {filteredFollowingPosts.map((post, i) => (
                   <motion.div key={post.id} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04, duration: 0.26 }}>
                     <ProgressCard
@@ -860,7 +860,7 @@ export function Feed() {
                     />
                   </motion.div>
                 ))}
-              </AnimatePresence>
+              </>
             )}
             {filteredFollowingPosts.length === 0 && !loadingFollowing && !followingError && (
               <div style={{ padding: "32px 20px", textAlign: "center" }}>
@@ -902,7 +902,7 @@ export function Feed() {
             </div>
 
             {/* Bandeau hors-ligne discret — le feed reste lisible grâce au fallback */}
-            <AnimatePresence>
+            
               {apiError && !loadingApi && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                   style={{ margin: "0 12px 8px", padding: "8px 14px", borderRadius: 10, background: "rgba(239,68,68,0.06)", border: "0.5px solid rgba(239,68,68,0.14)", display: "flex", alignItems: "center", gap: 8 }}>
@@ -912,9 +912,9 @@ export function Feed() {
                   </span>
                 </motion.div>
               )}
-            </AnimatePresence>
+            
 
-            <AnimatePresence>
+            
               {displayedFeedPosts.map((post, i) => (
                 <motion.div key={post.id ?? `demo-${i}`} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04, duration: 0.26 }}>
                   {i === 0 && post.username === currentUserId && currentUserId !== "" && (
@@ -943,7 +943,7 @@ export function Feed() {
                   />
                 </motion.div>
               ))}
-            </AnimatePresence>
+            
 
             {displayedFeedPosts.length === 0 && !loadingApi && (
               <div style={{ padding: "40px 20px", textAlign: "center" }}>

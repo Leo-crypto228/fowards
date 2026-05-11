@@ -3,7 +3,7 @@
  * Wizard 4 étapes : Configure → Audit → Confirmation → Résultats
  */
 import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   ChevronLeft, ChevronRight, ShieldAlert, Users, FileText,
   MessageSquare, HardDrive, Key, Trash2, CheckCircle2,
@@ -218,7 +218,7 @@ export function AdminPage() {
           </motion.div>
         )}
 
-        <AnimatePresence mode="wait">
+        
 
           {/* ════════════════════════════════════════════ STEP 1 : Configure */}
           {step === "configure" && (
@@ -561,7 +561,7 @@ export function AdminPage() {
             </motion.div>
           )}
 
-        </AnimatePresence>
+        
 
         {/* SQL Script */}
         <div style={{ marginTop: 24, padding: "14px", background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.06)", borderRadius: 14 }}>

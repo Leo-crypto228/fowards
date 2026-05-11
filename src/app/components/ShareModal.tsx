@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Share2, Check, X, AlertCircle } from "lucide-react";
 import { sendCommunityMessage } from "../api/sharesApi";
 import { useAuth } from "../context/AuthContext";
@@ -172,7 +172,7 @@ export function ShareModal({
   };
 
   const modalContent = (
-    <AnimatePresence>
+    <>
       {isOpen && (
         <>
           <motion.div
@@ -293,7 +293,7 @@ export function ShareModal({
                         }}>
                           {c.name}
                         </span>
-                        <AnimatePresence>
+                        
                           {isSelected && (
                             <motion.div
                               initial={{ scale: 0, opacity: 0 }}
@@ -307,7 +307,7 @@ export function ShareModal({
                               <Check style={{ width: 11, height: 11, color: "#000" }} />
                             </motion.div>
                           )}
-                        </AnimatePresence>
+                        
                       </motion.button>
                     );
                   })}
@@ -352,7 +352,7 @@ export function ShareModal({
               paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
               borderTop: "0.5px solid rgba(255,255,255,0.07)",
             }}>
-              <AnimatePresence>
+              
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, y: -4 }}
@@ -368,7 +368,7 @@ export function ShareModal({
                     <span style={{ fontSize: 12, color: "rgba(239,68,68,0.90)" }}>{error}</span>
                   </motion.div>
                 )}
-              </AnimatePresence>
+              
 
               <motion.button
                 onClick={handleShare}
@@ -386,7 +386,7 @@ export function ShareModal({
                   WebkitTapHighlightColor: "transparent", touchAction: "manipulation",
                 }}
               >
-                <AnimatePresence mode="wait">
+                <>
                   {shared ? (
                     <motion.span key="done" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <Check style={{ width: 16, height: 16 }} />
@@ -402,13 +402,13 @@ export function ShareModal({
                       Partager dans le canal général
                     </motion.span>
                   )}
-                </AnimatePresence>
+                </>
               </motion.button>
             </div>
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </>
   );
 
   return createPortal(modalContent, document.body);
