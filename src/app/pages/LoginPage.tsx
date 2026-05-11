@@ -570,16 +570,18 @@ interface LoginPanelProps {
 }
 
 function LoginPanel({ onBack, onForgotPassword }: LoginPanelProps) {
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [showPwd,  setShowPwd]  = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
-  const [pending,  setPending]  = useState(false);
+  const [email,       setEmail]       = useState("");
+  const [password,    setPassword]    = useState("");
+  const [showPwd,     setShowPwd]     = useState(false);
+  const [error,       setError]       = useState<string | null>(null);
+  const [pending,     setPending]     = useState(false);
+  const [showPwdHint, setShowPwdHint] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
     setError(null);
+    setShowPwdHint(false);
 
     const trimmed = email.trim();
     if (!trimmed)               { setError("L'email est requis."); return; }
@@ -597,12 +599,28 @@ function LoginPanel({ onBack, onForgotPassword }: LoginPanelProps) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Une erreur est survenue.";
       const low = msg.toLowerCase();
-      if (low.includes("invalid login credentials") || low.includes("invalid credentials") || low.includes("email not confirmed")) {
+      if (
+        low.includes("invalid login credentials") ||
+        low.includes("invalid credentials") ||
+        low.includes("email not confirmed") ||
+        low.includes("not confirmed")
+      ) {
         setError("Email ou mot de passe incorrect.");
-      } else if (low.includes("load failed") || low.includes("failed to fetch") || low.includes("network") || low.includes("fetch")) {
+        setShowPwdHint(true);
+      } else if (
+        low.includes("load failed") ||
+        low.includes("failed to fetch") ||
+        low.includes("network") ||
+        low.includes("fetch") ||
+        low.includes("connexion")
+      ) {
         setError("Connexion au serveur impossible. Vérifie ta connexion internet et réessaie.");
+      } else if (low.includes("rate limit") || low.includes("too many")) {
+        setError("Trop de tentatives. Attends quelques secondes et réessaie.");
       } else {
-        setError(msg);
+        // Fallback : masque les messages techniques bruts
+        setError("Une erreur est survenue. Réessaie ou utilise « Mot de passe oublié ».");
+        setShowPwdHint(true);
       }
     } finally {
       setPending(false);
@@ -616,7 +634,7 @@ function LoginPanel({ onBack, onForgotPassword }: LoginPanelProps) {
           <div style={{ position: "relative" }}>
             <input
               type="email" value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(null); }}
+              onChange={(e) => { setEmail(e.target.value); setError(null); setShowPwdHint(false); }}
               placeholder="ton@email.com"
               autoComplete="email"
               style={{ ...INPUT_STYLE, paddingLeft: 44 }}
@@ -633,7 +651,7 @@ function LoginPanel({ onBack, onForgotPassword }: LoginPanelProps) {
           <div style={{ position: "relative" }}>
             <input
               type={showPwd ? "text" : "password"} value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(null); }}
+              onChange={(e) => { setPassword(e.target.value); setError(null); setShowPwdHint(false); }}
               placeholder="Ton mot de passe"
               autoComplete="current-password"
               style={{ ...INPUT_STYLE, paddingRight: 46 }}
@@ -668,6 +686,37 @@ function LoginPanel({ onBack, onForgotPassword }: LoginPanelProps) {
         </div>
 
         <ErrorBox error={error} />
+
+        {/* Hint affiché quand identifiants rejetés : suggère la réinitialisation */}
+        <AnimatePresence>
+          {showPwdHint && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{
+                padding: "10px 14px", borderRadius: 12,
+                background: "rgba(139,92,246,0.08)",
+                border: "0.5px solid rgba(139,92,246,0.22)",
+              }}
+            >
+              <p style={{ fontSize: 12, color: "rgba(165,180,252,0.80)", margin: 0, lineHeight: 1.5 }}>
+                Compte créé avant le nouveau système ?{" "}
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", padding: 0,
+                    fontSize: 12, color: "rgba(165,180,252,1)", fontWeight: 700,
+                    textDecoration: "underline",
+                  }}
+                >
+                  Définis ton mot de passe ici →
+                </button>
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <motion.button
           type="submit" disabled={pending}
@@ -774,7 +823,7 @@ function ForgotPasswordPanel({ onBack }: ForgotPasswordPanelProps) {
   }
 
   return (
-    <PanelWrapper onBack={onBack} title="Mot de passe oublié" subtitle="Saisis ton email pour recevoir un lien de réinitialisation.">
+    <PanelWrapper onBack={onBack} title="Mot de passe oublié" subtitle="Saisis ton email pour recevoir un lien de définition ou réinitialisation.">
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <Field label="Email">
           <div style={{ position: "relative" }}>
