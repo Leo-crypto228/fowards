@@ -208,6 +208,11 @@ export function LoginPage() {
               <StarMascot />
             </div>
 
+            {/* Maintenance banner */}
+            <p style={{ color: "#ef4444", fontSize: 13, fontWeight: 600, margin: "0 0 20px", textAlign: "center", lineHeight: 1.5 }}>
+              Une maintenance est en cours, l'accès à Fowards sera disponible dans moins de 24h.
+            </p>
+
             {/* Tagline */}
             <h1 style={{
               fontSize: "clamp(30px, 6.5vw, 46px)",
@@ -281,13 +286,13 @@ export function LoginPage() {
             </motion.button>
 
             {/* Fine print */}
-            <p style={{
+            <p translate="no" className="notranslate" style={{
               fontSize: 11, color: "rgba(255,255,255,0.18)",
               margin: "32px 0 0",
               lineHeight: 1.6,
               maxWidth: 300,
             }}>
-En rejoignant <span translate="no" className="notranslate">Fowards</span>, tu acceptes nos{" "}
+              En rejoignant <span>Fowards</span>, tu acceptes nos{" "}
               <Link to="/mentions-legales" style={{ color: "rgba(255,255,255,0.35)" }}>mentions légales</Link>,{" "}
               <Link to="/conditions" style={{ color: "rgba(255,255,255,0.35)" }}>conditions</Link>{" "}
               et notre{" "}
