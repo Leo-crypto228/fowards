@@ -208,11 +208,6 @@ export function LoginPage() {
               <StarMascot />
             </div>
 
-            {/* Maintenance banner */}
-            <p style={{ color: "#ef4444", fontSize: 13, fontWeight: 600, margin: "0 0 20px", textAlign: "center", lineHeight: 1.5 }}>
-              Une maintenance est en cours, l'accès à Fowards sera disponible dans moins de 24h.
-            </p>
-
             {/* Tagline */}
             <h1 style={{
               fontSize: "clamp(30px, 6.5vw, 46px)",
