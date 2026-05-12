@@ -210,16 +210,27 @@ export function LoginPage() {
 
             {/* Tagline */}
             <h1 style={{
-              fontSize: "clamp(30px, 6.5vw, 46px)",
+              fontSize: "clamp(28px, 6vw, 44px)",
               fontWeight: 800,
               color: "#ffffff",
               lineHeight: 1.18,
               letterSpacing: "-0.8px",
-              margin: "0 0 44px",
+              margin: "0 0 16px",
               textAlign: "center",
             }}>
-              Plonge dans la manière<br />dont avance vraiment les entrepreneurs
+              Atteindre ses rêves ensemble.<br />Sans la douleur d'être seul.
             </h1>
+            <p style={{
+              fontSize: "clamp(14px, 3vw, 17px)",
+              fontWeight: 400,
+              color: "rgba(255,255,255,0.55)",
+              lineHeight: 1.5,
+              margin: "0 0 36px",
+              textAlign: "center",
+              maxWidth: 420,
+            }}>
+              Pose ton vrai blocage. Reçois des retours actionnables d'autres entrepreneurs.
+            </p>
 
             {/* CTA — Rejoins FF */}
             <motion.button
