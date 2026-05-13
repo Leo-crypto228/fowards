@@ -16,7 +16,7 @@ export type CommentType =
   | "Encouragement"
   | "Réaction";
 
-export type ReactionType = "Pertinent" | "Motivant" | "J'adore" | "Je soutiens";
+export type ReactionType = "Actionnable" | "Motivant";
 
 export interface ApiComment {
   id: string;
@@ -180,4 +180,4 @@ export const COMMENT_TYPE_LABELS: CommentType[] = [
   "Réaction",
 ];
 
-export const REACTION_TYPES: ReactionType[] = ["Pertinent", "Motivant", "J'adore", "Je soutiens"];
+export const REACTION_TYPES: ReactionType[] = ["Actionnable", "Motivant"];

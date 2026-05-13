@@ -220,28 +220,34 @@ function ApiCommentRow({
           }
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          {/* Arrow reaction */}
-          <motion.button
-            onClick={() => handleToggleReaction("Pertinent")}
-            whileTap={reactionPending ? {} : { scale: 1.08 }}
-            transition={{ type: "spring", stiffness: 600, damping: 18 }}
-            disabled={reactionPending}
-            style={{
-              display: "flex", alignItems: "center", gap: 5,
-              padding: isActive ? "7px 11px" : "5px 9px",
-              borderRadius: 999, background: "transparent", border: "none",
-              cursor: reactionPending ? "default" : "pointer",
-              userSelect: "none", transition: "padding 0.18s ease",
-            }}
-          >
-            {reactionPending
-              ? <Loader2 style={{ width: isActive ? 18 : 13, height: isActive ? 18 : 13, color: "rgba(255,255,255,0.40)" }} className="animate-spin" />
-              : <TrendArrowIcon active={isActive} size={isActive ? 18 : 13} />
-            }
-            {totalReactions > 0 && (
-              <span style={{ fontSize: isActive ? 12 : 11, color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>{totalReactions}</span>
-            )}
-          </motion.button>
+          {/* Actionnable / Motivant reactions */}
+          {(["Actionnable", "Motivant"] as ReactionType[]).map((rt) => {
+            const isRtActive = activeReaction === rt;
+            const count = reactionCounts[rt] || 0;
+            const symbol = rt === "Actionnable" ? "⚡" : "🔥";
+            return (
+              <motion.button
+                key={rt}
+                onClick={() => handleToggleReaction(rt)}
+                whileTap={reactionPending ? {} : { scale: 0.90 }}
+                disabled={reactionPending}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  padding: "4px 11px", borderRadius: 999,
+                  background: isRtActive ? "rgba(99,102,241,0.14)" : "rgba(255,255,255,0.04)",
+                  border: isRtActive ? "1px solid rgba(99,102,241,0.50)" : "0.5px solid rgba(255,255,255,0.10)",
+                  cursor: reactionPending ? "default" : "pointer",
+                  fontSize: 12, fontWeight: isRtActive ? 600 : 400,
+                  color: isRtActive ? "#a5b4fc" : "rgba(255,255,255,0.40)",
+                  transition: "all 0.16s", userSelect: "none",
+                }}
+              >
+                <span style={{ fontSize: 11 }}>{symbol}</span>
+                <span>{rt}</span>
+                {count > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: isRtActive ? "#a5b4fc" : "rgba(255,255,255,0.28)" }}>{count}</span>}
+              </motion.button>
+            );
+          })}
           {/* Répondre */}
           <motion.button whileTap={{ scale: 0.88 }} onClick={() => onReplyClick(comment.id, comment.author)}
             style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, background: "transparent", border: "none", cursor: "pointer" }}
@@ -1942,28 +1948,6 @@ export function PostDetail() {
                     <X style={{ width: 11, height: 11, color: "rgba(165,180,252,0.60)" }} />
                   </motion.button>
                 </div>
-              )}
-              {/* Elo comment type — visible reader-side only (not on your own posts) */}
-              {!isSelfPost && (
-                <>
-                  {(["actionnable", "motivant"] as EloCommentType[]).filter(Boolean).map((t) => (
-                    <motion.button
-                      key={t}
-                      whileTap={{ scale: 0.90 }}
-                      onClick={() => setEloType(eloType === t ? null : t)}
-                      style={{
-                        padding: "4px 14px", borderRadius: 999, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
-                        background: eloType === t ? "rgba(99,102,241,0.14)" : "transparent",
-                        border: eloType === t ? "1.5px solid rgba(99,102,241,0.55)" : "1.5px solid rgba(255,255,255,0.18)",
-                        color: eloType === t ? "#a5b4fc" : "rgba(255,255,255,0.55)",
-                        fontSize: 13, fontWeight: eloType === t ? 600 : 400,
-                        transition: "all 0.16s",
-                      }}
-                    >
-                      {t === "actionnable" ? "Actionnable" : "Motivant"}
-                    </motion.button>
-                  ))}
-                </>
               )}
             </div>
 

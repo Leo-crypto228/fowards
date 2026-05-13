@@ -27,10 +27,8 @@ const TYPE_CONFIG: Record<string, { bg: string; color: string; border: string; l
 };
 
 const REACTION_CONFIG: Record<ReactionType, { symbol: string; activeColor: string }> = {
-  Pertinent:    { symbol: "✦",  activeColor: "#818cf8" },
-  Motivant:     { symbol: "⚡", activeColor: "#fb923c" },
-  "J'adore":    { symbol: "♥",  activeColor: "#f43f5e" },
-  "Je soutiens":{ symbol: "✊", activeColor: "#4ade80" },
+  Actionnable: { symbol: "⚡", activeColor: "#818cf8" },
+  Motivant:    { symbol: "🔥", activeColor: "#fb923c" },
 };
 
 const REACTIONS = Object.keys(REACTION_CONFIG) as ReactionType[];

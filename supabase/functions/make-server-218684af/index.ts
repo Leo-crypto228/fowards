@@ -973,7 +973,7 @@ app.post("/make-server-218684af/comments", async (c) => {
       avatar: avatar || "",
       content: content.trim(),
       commentType: commentType || null, // "Conseil" | "Encouragement" | "Réaction" | "Motivant" | "Je soutiens" | "J'adore" | "Pertinent"
-      reactionCounts: { "Pertinent": 0, "Motivant": 0, "J'adore": 0, "Je soutiens": 0 },
+      reactionCounts: { "Actionnable": 0, "Motivant": 0 },
       repliesCount: 0,
       createdAt,
     };
@@ -1089,11 +1089,12 @@ app.get("/make-server-218684af/comments/post/:postId", async (c) => {
       comments.push(comment);
     }
 
-    // Tri: Conseil en premier (par reactions.Pertinent desc), puis reste
+    // Tri: Conseil en premier (par total réactions desc), puis reste
+    const totalR = (c: any) => (c.reactionCounts?.Actionnable || 0) + (c.reactionCounts?.Motivant || 0);
     const conseil = comments.filter((c) => c.commentType === "Conseil")
-      .sort((a, b) => (b.reactionCounts?.Pertinent || 0) - (a.reactionCounts?.Pertinent || 0));
+      .sort((a, b) => totalR(b) - totalR(a));
     const others = comments.filter((c) => c.commentType !== "Conseil")
-      .sort((a, b) => (b.reactionCounts?.Pertinent || 0) - (a.reactionCounts?.Pertinent || 0));
+      .sort((a, b) => totalR(b) - totalR(a));
 
     console.log(`GET comments/post/${postId} — ${comments.length} commentaires`);
     return c.json({ comments: [...conseil, ...others], total: commentIds.length });
@@ -1211,7 +1212,7 @@ app.post("/make-server-218684af/comments/:commentId/reactions", async (c) => {
     if (!userId)       return c.json({ error: "userId requis." }, 400);
     if (!reactionType) return c.json({ error: "reactionType requis." }, 400);
 
-    const VALID_REACTIONS = ["Pertinent", "Motivant", "J'adore", "Je soutiens"];
+    const VALID_REACTIONS = ["Actionnable", "Motivant"];
     if (!VALID_REACTIONS.includes(reactionType)) {
       return c.json({ error: `reactionType invalide. Valeurs: ${VALID_REACTIONS.join(", ")}` }, 400);
     }
@@ -1220,7 +1221,7 @@ app.post("/make-server-218684af/comments/:commentId/reactions", async (c) => {
     if (!commentRaw) return c.json({ error: "Commentaire introuvable." }, 404);
     const comment = JSON.parse(commentRaw);
     if (!comment.reactionCounts) {
-      comment.reactionCounts = { "Pertinent": 0, "Motivant": 0, "J'adore": 0, "Je soutiens": 0 };
+      comment.reactionCounts = { "Actionnable": 0, "Motivant": 0 };
     }
 
     const reactionKey = `ff:reaction:${commentId}:${userId}`;
@@ -1341,7 +1342,7 @@ app.post("/make-server-218684af/posts/:postId/reactions", async (c) => {
     if (!userId)       return c.json({ error: "userId requis." }, 400);
     if (!reactionType) return c.json({ error: "reactionType requis." }, 400);
 
-    const VALID = ["Pertinent", "Motivant", "Je soutiens", "J'adore"];
+    const VALID = ["Actionnable", "Motivant"];
     if (!VALID.includes(reactionType)) {
       return c.json({ error: `reactionType invalide. Valeurs: ${VALID.join(", ")}` }, 400);
     }
