@@ -20,7 +20,7 @@ const RESEND_COOLDOWN = 60;
 type Screen = "landing" | "signup" | "login" | "forgot-password";
 
 // ── Star mascot SVG ───────────────────────────────────────────────────────────
-function StarMascot() {
+function StarMascot({ size = 225 }: { size?: number }) {
   return (
     <>
       {/* Filtre SVG : rend les pixels noirs transparents */}
@@ -39,8 +39,8 @@ function StarMascot() {
         src={exampleImage}
         alt="Fowards mascot"
         style={{
-          width: 225,
-          height: 225,
+          width: size,
+          height: size,
           objectFit: "contain",
           display: "block",
           filter: "url(#remove-black)",
@@ -221,15 +221,15 @@ export function LoginPage() {
           >
             {/* ── Colonne gauche : branding ─────────────────────────────── */}
             <div style={{
-              flex: "1 1 260px",
-              maxWidth: 420,
+              flex: "0 1 300px",
+              maxWidth: 300,
               display: "flex",
               flexDirection: "column",
               alignItems: "flex-start",
               textAlign: "left",
             }}>
               <div style={{ marginBottom: 16 }}>
-                <StarMascot />
+                <StarMascot size={300} />
               </div>
               <h1 style={{
                 fontSize: "clamp(24px, 4vw, 38px)",
@@ -242,7 +242,7 @@ export function LoginPage() {
                 Atteindre ses rêves ensemble.<br />Sans la douleur d'être seul.
               </h1>
               <p style={{
-                fontSize: "clamp(14px, 2.2vw, 16px)",
+                fontSize: "clamp(15px, 2.5vw, 18px)",
                 fontWeight: 400,
                 color: "rgba(255,255,255,0.55)",
                 lineHeight: 1.55,
@@ -254,15 +254,15 @@ export function LoginPage() {
 
             {/* ── Colonne droite : mini-formulaire ──────────────────────── */}
             <div style={{
-              flex: "1 1 280px",
-              maxWidth: 380,
+              flex: "1 1 320px",
+              maxWidth: 475,
               display: "flex",
               flexDirection: "column",
-              gap: 12,
+              gap: 14,
             }}>
               {/* Label au-dessus */}
               <p style={{
-                fontSize: 15, fontWeight: 700,
+                fontSize: 18, fontWeight: 700,
                 color: "rgba(255,255,255,0.88)",
                 margin: 0,
               }}>
@@ -279,8 +279,8 @@ export function LoginPage() {
                 style={{
                   width: "100%", background: "rgba(255,255,255,0.06)",
                   border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 100, padding: "14px 20px",
-                  fontSize: 15, color: "rgba(235,235,245,0.92)",
+                  borderRadius: 100, padding: "17px 24px",
+                  fontSize: 16, color: "rgba(235,235,245,0.92)",
                   outline: "none", caretColor: "#8b5cf6",
                   WebkitAppearance: "none", boxSizing: "border-box",
                 }}
@@ -298,8 +298,8 @@ export function LoginPage() {
                   style={{
                     width: "100%", background: "rgba(255,255,255,0.06)",
                     border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: 100, padding: "14px 46px 14px 20px",
-                    fontSize: 15, color: "rgba(235,235,245,0.92)",
+                    borderRadius: 100, padding: "17px 52px 17px 24px",
+                    fontSize: 16, color: "rgba(235,235,245,0.92)",
                     outline: "none", caretColor: "#8b5cf6",
                     WebkitAppearance: "none", boxSizing: "border-box",
                   }}
@@ -309,18 +309,18 @@ export function LoginPage() {
                   type="button"
                   onClick={() => setLandingShowPwd((v) => !v)}
                   style={{
-                    position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)",
+                    position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)",
                     background: "none", border: "none", cursor: "pointer", padding: 0,
                     color: "rgba(255,255,255,0.30)",
                   }}
                 >
-                  {landingShowPwd ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
+                  {landingShowPwd ? <EyeOff style={{ width: 17, height: 17 }} /> : <Eye style={{ width: 17, height: 17 }} />}
                 </button>
               </div>
 
               {/* Erreur inline */}
               {landingError && (
-                <p style={{ fontSize: 12, color: "#f87171", margin: 0, paddingLeft: 4 }}>
+                <p style={{ fontSize: 13, color: "#f87171", margin: 0, paddingLeft: 4 }}>
                   {landingError}
                 </p>
               )}
@@ -331,21 +331,21 @@ export function LoginPage() {
                 whileHover={{ scale: 1.02 }}
                 onClick={handleLandingSignup}
                 style={{
-                  width: "100%", padding: "14px 32px", borderRadius: 100,
+                  width: "100%", padding: "17px 40px", borderRadius: 100,
                   background: "#ffffff", border: "none", color: "#0a0a12",
-                  fontSize: 16, fontWeight: 700, cursor: "pointer",
+                  fontSize: 17, fontWeight: 700, cursor: "pointer",
                   letterSpacing: "-0.1px",
                   boxShadow: "0 4px 32px rgba(255,255,255,0.12), 0 1px 0 rgba(255,255,255,0.9) inset",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   transition: "box-shadow 0.2s",
                 }}
               >
-                N'avance plus seul <Check style={{ width: 15, height: 15, strokeWidth: 3 }} />
+                N'avance plus seul <Check style={{ width: 16, height: 16, strokeWidth: 3 }} />
               </motion.button>
 
               {/* Reassurance */}
               <p style={{
-                fontSize: 11, color: "rgba(255,255,255,0.32)",
+                fontSize: 13, color: "rgba(255,255,255,0.32)",
                 margin: "0 0 2px", textAlign: "center", letterSpacing: "0.1px",
               }}>
                 Inscription en 90 secondes, sans carte bancaire
@@ -353,7 +353,7 @@ export function LoginPage() {
 
               {/* Séparateur */}
               <p style={{
-                fontSize: 13, fontStyle: "italic",
+                fontSize: 14, fontStyle: "italic",
                 color: "rgba(255,255,255,0.38)",
                 margin: 0, textAlign: "center",
               }}>
@@ -366,10 +366,10 @@ export function LoginPage() {
                 whileHover={{ scale: 1.02 }}
                 onClick={handleConnectClick}
                 style={{
-                  width: "100%", padding: "14px 32px", borderRadius: 100,
+                  width: "100%", padding: "17px 40px", borderRadius: 100,
                   background: "rgba(255,255,255,0.08)",
                   border: "1px solid rgba(255,255,255,0.18)",
-                  color: "#ffffff", fontSize: 16, fontWeight: 700,
+                  color: "#ffffff", fontSize: 17, fontWeight: 700,
                   cursor: "pointer",
                   backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
                   letterSpacing: "-0.1px",
@@ -382,7 +382,7 @@ export function LoginPage() {
 
               {/* Mentions légales */}
               <p translate="no" className="notranslate" style={{
-                fontSize: 10, color: "rgba(255,255,255,0.16)",
+                fontSize: 11, color: "rgba(255,255,255,0.16)",
                 margin: "4px 0 0", lineHeight: 1.6, textAlign: "center",
               }}>
                 En rejoignant <span>Fowards</span>, tu acceptes nos{" "}
