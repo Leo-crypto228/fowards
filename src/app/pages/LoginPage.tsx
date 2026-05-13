@@ -211,9 +211,13 @@ export function LoginPage() {
               .ll-outer { align-items: flex-start !important; gap: 18px !important; }
               .ll-logo-wrap { justify-content: flex-start !important; margin-bottom: 6px !important; }
               .ll-logo { width: 68px !important; height: 68px !important; }
-              .ll-h1 { font-size: 28px !important; white-space: normal !important; line-height: 1.25 !important; }
-              .ll-sub { font-size: 15px !important; }
+              .ll-h1 { font-size: 42px !important; white-space: normal !important; line-height: 1.2 !important; }
+              .ll-sub { font-size: 22px !important; }
               .ll-sep { display: block !important; }
+              .ll-input-email { padding: 11px 16px !important; font-size: 14px !important; }
+              .ll-input-pwd  { padding: 11px 42px 11px 16px !important; font-size: 14px !important; }
+              .ll-btn-cta    { padding: 12px 24px !important; font-size: 15px !important; }
+              .ll-btn-login  { padding: 12px 24px !important; font-size: 15px !important; }
             }
           `}</style>
           <motion.div
@@ -242,7 +246,7 @@ export function LoginPage() {
               alignItems: "flex-start",
               textAlign: "left",
             }}>
-              <div className="ll-logo-wrap" style={{ width: "100%", display: "flex", justifyContent: "center", marginBottom: 20 }}>
+              <div className="ll-logo-wrap" style={{ width: "100%", display: "flex", justifyContent: "center", marginBottom: 4 }}>
                 <StarMascot size={400} className="ll-logo" />
               </div>
               <h1 className="ll-h1" style={{
@@ -254,7 +258,13 @@ export function LoginPage() {
                 margin: "0 0 14px",
                 whiteSpace: "nowrap",
               }}>
-                Atteindre ses rêves ensemble.<br />Sans la douleur d'être seul.
+                Atteindre{" "}
+                <span style={{
+                  background: "linear-gradient(180deg, #0d0d28 0%, #4a8fe8 50%, #8b5cf6 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}>ses rêves ensemble</span>.<br />Sans la douleur d'être seul.
               </h1>
               <p className="ll-sub" style={{
                 fontSize: "clamp(14px, 1.3vw, 17px)",
@@ -308,7 +318,7 @@ export function LoginPage() {
                   outline: "none", caretColor: "#8b5cf6",
                   WebkitAppearance: "none", boxSizing: "border-box",
                 }}
-                className="focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
+                className="ll-input-email focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
               />
 
               {/* Password pill */}
@@ -327,7 +337,7 @@ export function LoginPage() {
                     outline: "none", caretColor: "#8b5cf6",
                     WebkitAppearance: "none", boxSizing: "border-box",
                   }}
-                  className="focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
+                  className="ll-input-pwd focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
                 />
                 <button
                   type="button"
@@ -354,6 +364,7 @@ export function LoginPage() {
                 whileTap={{ scale: 0.96 }}
                 whileHover={{ scale: 1.02 }}
                 onClick={handleLandingSignup}
+                className="ll-btn-cta"
                 style={{
                   width: "100%", padding: "17px 40px", borderRadius: 100,
                   background: "#ffffff", border: "none", color: "#0a0a12",
@@ -389,6 +400,7 @@ export function LoginPage() {
                 whileTap={{ scale: 0.96 }}
                 whileHover={{ scale: 1.02 }}
                 onClick={handleConnectClick}
+                className="ll-btn-login"
                 style={{
                   width: "100%", padding: "17px 40px", borderRadius: 100,
                   background: "rgba(255,255,255,0.08)",
