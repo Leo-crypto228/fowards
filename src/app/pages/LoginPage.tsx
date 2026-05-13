@@ -141,6 +141,19 @@ export function LoginPage() {
     }
   }, [user, loading, navigate]);
 
+  const [landingEmail,    setLandingEmail]    = useState("");
+  const [landingPassword, setLandingPassword] = useState("");
+  const [landingError,    setLandingError]    = useState<string | null>(null);
+  const [landingShowPwd,  setLandingShowPwd]  = useState(false);
+
+  const handleLandingSignup = () => {
+    const trimEmail = landingEmail.trim();
+    if (!trimEmail || !trimEmail.includes("@")) { setLandingError("Entre un email valide."); return; }
+    if (landingPassword.length < 6) { setLandingError("Le mot de passe doit faire au moins 6 caractères."); return; }
+    setLandingError(null);
+    setScreen("signup");
+  };
+
   // ── "Se connecter" click ──────────────────────────────────────────────────
   const handleConnectClick = () => setScreen("login");
 
@@ -160,10 +173,9 @@ export function LoginPage() {
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      padding: "clamp(36px, 6vh, 64px) 20px 24px",
+      padding: "32px 20px",
       position: "relative",
       overflow: "hidden",
-      justifyContent: "flex-start",
     }}>
       {/* Starfield */}
       <StarField />
@@ -198,129 +210,196 @@ export function LoginPage() {
             transition={{ duration: 0.45, ease: [0.25, 0, 0.35, 1] }}
             style={{
               position: "relative", zIndex: 1,
-              display: "flex", flexDirection: "column",
-              alignItems: "center", textAlign: "center",
-              width: "100%", maxWidth: 640,
-              gap: 0,
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "clamp(32px, 6vw, 72px)",
+              width: "100%",
+              maxWidth: 920,
             }}
           >
-            {/* Mascot */}
-            <div style={{ marginBottom: 8 }}>
-              <StarMascot />
+            {/* ── Colonne gauche : branding ─────────────────────────────── */}
+            <div style={{
+              flex: "1 1 260px",
+              maxWidth: 420,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              textAlign: "left",
+            }}>
+              <div style={{ marginBottom: 16 }}>
+                <StarMascot />
+              </div>
+              <h1 style={{
+                fontSize: "clamp(24px, 4vw, 38px)",
+                fontWeight: 800,
+                color: "#ffffff",
+                lineHeight: 1.18,
+                letterSpacing: "-0.8px",
+                margin: "0 0 14px",
+              }}>
+                Atteindre ses rêves ensemble.<br />Sans la douleur d'être seul.
+              </h1>
+              <p style={{
+                fontSize: "clamp(14px, 2.2vw, 16px)",
+                fontWeight: 400,
+                color: "rgba(255,255,255,0.55)",
+                lineHeight: 1.55,
+                margin: 0,
+              }}>
+                Pose ton vrai blocage. Reçois des retours actionnables d'autres entrepreneurs.
+              </p>
             </div>
 
-            {/* Tagline */}
-            <h1 style={{
-              fontSize: "clamp(28px, 6vw, 44px)",
-              fontWeight: 800,
-              color: "#ffffff",
-              lineHeight: 1.18,
-              letterSpacing: "-0.8px",
-              margin: "0 0 10px",
-              textAlign: "center",
+            {/* ── Colonne droite : mini-formulaire ──────────────────────── */}
+            <div style={{
+              flex: "1 1 280px",
+              maxWidth: 380,
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
             }}>
-              Atteindre ses rêves ensemble.<br />Sans la douleur d'être seul.
-            </h1>
-            <p style={{
-              fontSize: "clamp(14px, 3vw, 17px)",
-              fontWeight: 400,
-              color: "rgba(255,255,255,0.55)",
-              lineHeight: 1.5,
-              margin: "0 0 20px",
-              textAlign: "center",
-              maxWidth: 420,
-            }}>
-              Pose ton vrai blocage. Reçois des retours actionnables d'autres entrepreneurs.
-            </p>
+              {/* Label au-dessus */}
+              <p style={{
+                fontSize: 15, fontWeight: 700,
+                color: "rgba(255,255,255,0.88)",
+                margin: 0,
+              }}>
+                Créer mon compte (gratuit)
+              </p>
 
-            {/* CTA — Rejoins FF */}
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={() => setScreen("signup")}
-              style={{
-                width: "100%", maxWidth: 380,
-                padding: "14px 32px",
-                borderRadius: 100,
-                background: "#ffffff",
-                border: "none",
-                color: "#0a0a12",
-                fontSize: 17,
-                fontWeight: 700,
-                cursor: "pointer",
-                letterSpacing: "-0.1px",
-                boxShadow: "0 4px 32px rgba(255,255,255,0.12), 0 1px 0 rgba(255,255,255,0.9) inset",
-                transition: "box-shadow 0.2s",
-                marginBottom: 10,
-              }}
-            >
-              Créer mon compte (gratuit)
-            </motion.button>
+              {/* Email pill */}
+              <input
+                type="email"
+                value={landingEmail}
+                onChange={(e) => { setLandingEmail(e.target.value); setLandingError(null); }}
+                placeholder="Ton email"
+                autoComplete="email"
+                style={{
+                  width: "100%", background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 100, padding: "14px 20px",
+                  fontSize: 15, color: "rgba(235,235,245,0.92)",
+                  outline: "none", caretColor: "#8b5cf6",
+                  WebkitAppearance: "none", boxSizing: "border-box",
+                }}
+                className="focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
+              />
 
-            {/* Reassurance line */}
-            <p style={{
-              fontSize: 12,
-              color: "rgba(255,255,255,0.36)",
-              margin: "0 0 18px",
-              letterSpacing: "0.1px",
-            }}>
-              Inscription en 90 secondes, sans carte bancaire
-            </p>
+              {/* Password pill */}
+              <div style={{ position: "relative" }}>
+                <input
+                  type={landingShowPwd ? "text" : "password"}
+                  value={landingPassword}
+                  onChange={(e) => { setLandingPassword(e.target.value); setLandingError(null); }}
+                  placeholder="Mot de passe (min. 6 caractères)"
+                  autoComplete="new-password"
+                  style={{
+                    width: "100%", background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 100, padding: "14px 46px 14px 20px",
+                    fontSize: 15, color: "rgba(235,235,245,0.92)",
+                    outline: "none", caretColor: "#8b5cf6",
+                    WebkitAppearance: "none", boxSizing: "border-box",
+                  }}
+                  className="focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setLandingShowPwd((v) => !v)}
+                  style={{
+                    position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer", padding: 0,
+                    color: "rgba(255,255,255,0.30)",
+                  }}
+                >
+                  {landingShowPwd ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
+                </button>
+              </div>
 
-            {/* Separator */}
-            <p style={{
-              fontSize: 14,
-              fontStyle: "italic",
-              color: "rgba(255,255,255,0.40)",
-              margin: "0 0 12px",
-            }}>
-              Déjà un compte ?
-            </p>
+              {/* Erreur inline */}
+              {landingError && (
+                <p style={{ fontSize: 12, color: "#f87171", margin: 0, paddingLeft: 4 }}>
+                  {landingError}
+                </p>
+              )}
 
-            {/* CTA — Se connecter */}
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={handleConnectClick}
-              style={{
-                width: "100%", maxWidth: 380,
-                padding: "14px 32px",
-                borderRadius: 100,
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.18)",
-                color: "#ffffff",
-                fontSize: 17,
-                fontWeight: 700,
-                cursor: "pointer",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                letterSpacing: "-0.1px",
-                boxShadow: "0 2px 20px rgba(0,0,0,0.30)",
-                transition: "background 0.2s, border-color 0.2s",
-              }}
-            >
-              Se connecter
-            </motion.button>
+              {/* CTA principal */}
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                whileHover={{ scale: 1.02 }}
+                onClick={handleLandingSignup}
+                style={{
+                  width: "100%", padding: "14px 32px", borderRadius: 100,
+                  background: "#ffffff", border: "none", color: "#0a0a12",
+                  fontSize: 16, fontWeight: 700, cursor: "pointer",
+                  letterSpacing: "-0.1px",
+                  boxShadow: "0 4px 32px rgba(255,255,255,0.12), 0 1px 0 rgba(255,255,255,0.9) inset",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  transition: "box-shadow 0.2s",
+                }}
+              >
+                N'avance plus seul <Check style={{ width: 15, height: 15, strokeWidth: 3 }} />
+              </motion.button>
 
-            {/* Fine print */}
-            <p translate="no" className="notranslate" style={{
-              fontSize: 11, color: "rgba(255,255,255,0.18)",
-              margin: "20px 0 0",
-              lineHeight: 1.6,
-              maxWidth: 300,
-            }}>
-              En rejoignant <span>Fowards</span>, tu acceptes nos{" "}
-              <Link to="/mentions-legales" style={{ color: "rgba(255,255,255,0.35)" }}>mentions légales</Link>,{" "}
-              <Link to="/conditions" style={{ color: "rgba(255,255,255,0.35)" }}>conditions</Link>{" "}
-              et notre{" "}
-              <Link to="/politique-confidentialite" style={{ color: "rgba(255,255,255,0.35)" }}>politique de confidentialité</Link>.
-            </p>
+              {/* Reassurance */}
+              <p style={{
+                fontSize: 11, color: "rgba(255,255,255,0.32)",
+                margin: "0 0 2px", textAlign: "center", letterSpacing: "0.1px",
+              }}>
+                Inscription en 90 secondes, sans carte bancaire
+              </p>
+
+              {/* Séparateur */}
+              <p style={{
+                fontSize: 13, fontStyle: "italic",
+                color: "rgba(255,255,255,0.38)",
+                margin: 0, textAlign: "center",
+              }}>
+                Déjà un compte ?
+              </p>
+
+              {/* Se connecter */}
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                whileHover={{ scale: 1.02 }}
+                onClick={handleConnectClick}
+                style={{
+                  width: "100%", padding: "14px 32px", borderRadius: 100,
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  color: "#ffffff", fontSize: 16, fontWeight: 700,
+                  cursor: "pointer",
+                  backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+                  letterSpacing: "-0.1px",
+                  boxShadow: "0 2px 20px rgba(0,0,0,0.30)",
+                  transition: "background 0.2s, border-color 0.2s",
+                }}
+              >
+                Se connecter
+              </motion.button>
+
+              {/* Mentions légales */}
+              <p translate="no" className="notranslate" style={{
+                fontSize: 10, color: "rgba(255,255,255,0.16)",
+                margin: "4px 0 0", lineHeight: 1.6, textAlign: "center",
+              }}>
+                En rejoignant <span>Fowards</span>, tu acceptes nos{" "}
+                <Link to="/mentions-legales" style={{ color: "rgba(255,255,255,0.32)" }}>mentions légales</Link>,{" "}
+                <Link to="/conditions" style={{ color: "rgba(255,255,255,0.32)" }}>conditions</Link>{" "}
+                et notre{" "}
+                <Link to="/politique-confidentialite" style={{ color: "rgba(255,255,255,0.32)" }}>politique de confidentialité</Link>.
+              </p>
+            </div>
           </motion.div>
         ) : screen === "signup" ? (
           <SignupPanel
             key="signup"
             onBack={() => setScreen("landing")}
             onNavigate={(path, state) => navigate(path, { state })}
+            initialEmail={landingEmail}
+            initialPassword={landingPassword}
           />
         ) : screen === "login" ? (
           <LoginPanel
@@ -344,14 +423,13 @@ export function LoginPage() {
 interface SignupPanelProps {
   onBack: () => void;
   onNavigate: (path: string, state?: object) => void;
+  initialEmail: string;
+  initialPassword: string;
 }
 
-function SignupPanel({ onBack, onNavigate }: SignupPanelProps) {
+function SignupPanel({ onBack, onNavigate, initialEmail, initialPassword }: SignupPanelProps) {
   const [name,     setName]     = useState("");
   const [username, setUsername] = useState("");
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [showPwd,  setShowPwd]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
   const [pending,  setPending]  = useState(false);
   const [step,     setStep]     = useState<"creating" | "sending" | null>(null);
@@ -364,13 +442,10 @@ function SignupPanel({ onBack, onNavigate }: SignupPanelProps) {
   };
 
   const validate = () => {
-    if (!name.trim())            return "Le nom complet est requis.";
-    if (!username.trim())        return "Le nom d'utilisateur est requis.";
+    if (!name.trim())     return "Le nom complet est requis.";
+    if (!username.trim()) return "Le nom d'utilisateur est requis.";
     const norm = normalizeUsername(username);
-    if (norm.length < 3)         return "Le nom d'utilisateur doit faire au moins 3 caractères.";
-    if (!email.trim())           return "L'email est requis.";
-    if (!email.includes("@"))    return "L'email n'est pas valide.";
-    if (password.length < 6)     return "Le mot de passe doit contenir au moins 6 caractères.";
+    if (norm.length < 3)  return "Le nom d'utilisateur doit faire au moins 3 caractères.";
     return null;
   };
 
@@ -390,8 +465,8 @@ function SignupPanel({ onBack, onNavigate }: SignupPanelProps) {
         method: "POST",
         headers: HEADERS,
         body: JSON.stringify({
-          email:      email.trim(),
-          password,
+          email:      initialEmail.trim(),
+          password:   initialPassword,
           username:   normalizeUsername(username),
           name:       name.trim(),
           redirectTo: `https://fowards.net/auth/callback`,
@@ -409,7 +484,7 @@ function SignupPanel({ onBack, onNavigate }: SignupPanelProps) {
       setStep("sending");
       await new Promise((r) => setTimeout(r, 400));
 
-      onNavigate("/verify-email", { email: email.trim(), mode: "signup" });
+      onNavigate("/verify-email", { email: initialEmail.trim(), mode: "signup" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erreur inconnue";
       setError(msg);
@@ -462,42 +537,6 @@ function SignupPanel({ onBack, onNavigate }: SignupPanelProps) {
               @{normalizeUsername(username)}
             </p>
           )}
-        </Field>
-
-        {/* Email */}
-        <Field label="Email">
-          <input
-            type="email" value={email}
-            onChange={(e) => { setEmail(e.target.value); setError(null); }}
-            placeholder="ton@email.com"
-            autoComplete="email"
-            style={INPUT_STYLE}
-            className="focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
-          />
-        </Field>
-
-        {/* Mot de passe */}
-        <Field label="Mot de passe">
-          <div style={{ position: "relative" }}>
-            <input
-              type={showPwd ? "text" : "password"} value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(null); }}
-              placeholder="Au moins 6 caractères"
-              autoComplete="new-password"
-              style={{ ...INPUT_STYLE, paddingRight: 46 }}
-              className="focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
-            />
-            <button
-              type="button" onClick={() => setShowPwd((v) => !v)}
-              style={{
-                position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
-                background: "none", border: "none", cursor: "pointer", padding: 0,
-                color: "rgba(255,255,255,0.30)",
-              }}
-            >
-              {showPwd ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
-            </button>
-          </div>
         </Field>
 
         {/* Info */}
