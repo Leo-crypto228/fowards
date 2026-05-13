@@ -216,6 +216,7 @@ export function LoginPage() {
               justifyContent: "space-between",
               gap: "clamp(32px, 4vw, 60px)",
               width: "100%",
+              maxWidth: 1100,
             }}
           >
             {/* ── Colonne gauche : branding ─────────────────────────────── */}
