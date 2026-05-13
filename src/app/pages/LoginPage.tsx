@@ -212,7 +212,7 @@ export function LoginPage() {
               position: "relative", zIndex: 1,
               display: "flex",
               flexWrap: "wrap",
-              alignItems: "center",
+              alignItems: "flex-end",
               justifyContent: "space-between",
               gap: "clamp(32px, 4vw, 60px)",
               width: "100%",
@@ -228,8 +228,8 @@ export function LoginPage() {
               alignItems: "flex-start",
               textAlign: "left",
             }}>
-              <div style={{ marginBottom: 16 }}>
-                <StarMascot size={360} />
+              <div style={{ width: "100%", display: "flex", justifyContent: "center", marginBottom: 20 }}>
+                <StarMascot size={400} />
               </div>
               <h1 style={{
                 fontSize: "clamp(22px, 2.4vw, 36px)",
