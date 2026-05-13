@@ -160,9 +160,10 @@ export function LoginPage() {
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      padding: "24px 20px",
+      padding: "clamp(36px, 6vh, 64px) 20px 24px",
       position: "relative",
       overflow: "hidden",
+      justifyContent: "flex-start",
     }}>
       {/* Starfield */}
       <StarField />
@@ -204,7 +205,7 @@ export function LoginPage() {
             }}
           >
             {/* Mascot */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 8 }}>
               <StarMascot />
             </div>
 
@@ -215,7 +216,7 @@ export function LoginPage() {
               color: "#ffffff",
               lineHeight: 1.18,
               letterSpacing: "-0.8px",
-              margin: "0 0 16px",
+              margin: "0 0 10px",
               textAlign: "center",
             }}>
               Atteindre ses rêves ensemble.<br />Sans la douleur d'être seul.
@@ -225,7 +226,7 @@ export function LoginPage() {
               fontWeight: 400,
               color: "rgba(255,255,255,0.55)",
               lineHeight: 1.5,
-              margin: "0 0 36px",
+              margin: "0 0 20px",
               textAlign: "center",
               maxWidth: 420,
             }}>
@@ -238,8 +239,8 @@ export function LoginPage() {
               whileHover={{ scale: 1.02 }}
               onClick={() => setScreen("signup")}
               style={{
-                width: "100%", maxWidth: 320,
-                padding: "17px 28px",
+                width: "100%", maxWidth: 380,
+                padding: "14px 32px",
                 borderRadius: 100,
                 background: "#ffffff",
                 border: "none",
@@ -250,18 +251,28 @@ export function LoginPage() {
                 letterSpacing: "-0.1px",
                 boxShadow: "0 4px 32px rgba(255,255,255,0.12), 0 1px 0 rgba(255,255,255,0.9) inset",
                 transition: "box-shadow 0.2s",
-                marginBottom: 20,
+                marginBottom: 10,
               }}
             >
-              Plonge à ton tour
+              Créer mon compte (gratuit)
             </motion.button>
+
+            {/* Reassurance line */}
+            <p style={{
+              fontSize: 12,
+              color: "rgba(255,255,255,0.36)",
+              margin: "0 0 18px",
+              letterSpacing: "0.1px",
+            }}>
+              Inscription en 90 secondes, sans carte bancaire
+            </p>
 
             {/* Separator */}
             <p style={{
               fontSize: 14,
               fontStyle: "italic",
               color: "rgba(255,255,255,0.40)",
-              margin: "0 0 18px",
+              margin: "0 0 12px",
             }}>
               Déjà un compte ?
             </p>
@@ -272,8 +283,8 @@ export function LoginPage() {
               whileHover={{ scale: 1.02 }}
               onClick={handleConnectClick}
               style={{
-                width: "100%", maxWidth: 320,
-                padding: "16px 28px",
+                width: "100%", maxWidth: 380,
+                padding: "14px 32px",
                 borderRadius: 100,
                 background: "rgba(255,255,255,0.08)",
                 border: "1px solid rgba(255,255,255,0.18)",
@@ -294,7 +305,7 @@ export function LoginPage() {
             {/* Fine print */}
             <p translate="no" className="notranslate" style={{
               fontSize: 11, color: "rgba(255,255,255,0.18)",
-              margin: "32px 0 0",
+              margin: "20px 0 0",
               lineHeight: 1.6,
               maxWidth: 300,
             }}>
