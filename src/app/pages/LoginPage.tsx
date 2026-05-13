@@ -256,15 +256,17 @@ export function LoginPage() {
                 lineHeight: 1.2,
                 letterSpacing: "-0.8px",
                 margin: "0 0 14px",
-                whiteSpace: "nowrap",
               }}>
-                Atteindre{" "}
-                <span style={{
-                  background: "linear-gradient(180deg, #0d0d28 0%, #4a8fe8 50%, #8b5cf6 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}>ses rêves ensemble</span>.<br />Sans la douleur d'être seul.
+                <span style={{ display: "block" }}>
+                  Atteindre{" "}
+                  <span style={{
+                    background: "linear-gradient(180deg, #0d0d28 0%, #4a8fe8 50%, #8b5cf6 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}>ses rêves ensemble</span>.
+                </span>
+                <span style={{ display: "block" }}>Sans la douleur d'être seul.</span>
               </h1>
               <p className="ll-sub" style={{
                 fontSize: "clamp(14px, 1.3vw, 17px)",
