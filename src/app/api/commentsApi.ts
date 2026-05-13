@@ -1,4 +1,5 @@
 import { projectId, publicAnonKey } from "/utils/supabase/info";
+import { supabase } from "./supabaseClient";
 import type { EloCommentType } from "../lib/eloAlgorithm";
 export type { EloCommentType };
 
@@ -134,42 +135,87 @@ export interface CommentReactionResult {
   reactionCounts: Record<ReactionType, number>;
 }
 
-/**
- * Ajouter, changer ou retirer (toggle) une réaction à un commentaire.
- * Un seul appel POST : le backend gère le toggle automatiquement.
- */
+/** Toggle une réaction sur un commentaire — direct Supabase, optimistic-ready */
 export async function reactToComment(
   commentId: string,
   userId: string,
   reactionType: ReactionType
 ): Promise<CommentReactionResult> {
-  const res = await fetch(`${BASE}/comments/${encodeURIComponent(commentId)}/reactions`, {
-    method: "POST",
-    headers: HEADERS,
-    body: JSON.stringify({ userId, reactionType }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Erreur serveur ${res.status}`);
-  return data as CommentReactionResult;
+  const { data: existing } = await supabase
+    .from("comment_reactions")
+    .select("reaction_type")
+    .eq("comment_id", commentId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const isToggleOff = existing?.reaction_type === reactionType;
+
+  if (isToggleOff) {
+    await supabase.from("comment_reactions").delete()
+      .eq("comment_id", commentId).eq("user_id", userId);
+  } else {
+    await supabase.from("comment_reactions").upsert({
+      comment_id: commentId,
+      user_id: userId,
+      reaction_type: reactionType,
+    });
+  }
+
+  const { data: all } = await supabase
+    .from("comment_reactions")
+    .select("reaction_type")
+    .eq("comment_id", commentId);
+
+  const counts: Record<ReactionType, number> = { Actionnable: 0, Motivant: 0 };
+  for (const r of all ?? []) {
+    if (r.reaction_type === "Actionnable") counts.Actionnable++;
+    else if (r.reaction_type === "Motivant") counts.Motivant++;
+  }
+
+  return {
+    success: true,
+    removed: isToggleOff,
+    myReaction: isToggleOff ? null : reactionType,
+    reactionCounts: counts,
+  };
 }
 
-/** Retirer sa réaction d'un commentaire (DELETE explicite — fallback) */
+/** Charger counts + myReaction pour une liste de commentaires depuis Supabase */
+export async function loadReactionCounts(
+  commentIds: string[],
+  userId?: string
+): Promise<Record<string, { counts: Record<ReactionType, number>; myReaction: ReactionType | null }>> {
+  if (!commentIds.length) return {};
+  const { data } = await supabase
+    .from("comment_reactions")
+    .select("comment_id, user_id, reaction_type")
+    .in("comment_id", commentIds);
+
+  const result: Record<string, { counts: Record<ReactionType, number>; myReaction: ReactionType | null }> = {};
+  for (const id of commentIds) {
+    result[id] = { counts: { Actionnable: 0, Motivant: 0 }, myReaction: null };
+  }
+  for (const r of data ?? []) {
+    const entry = result[r.comment_id];
+    if (!entry) continue;
+    if (r.reaction_type === "Actionnable") entry.counts.Actionnable++;
+    else if (r.reaction_type === "Motivant") entry.counts.Motivant++;
+    if (userId && r.user_id === userId) entry.myReaction = r.reaction_type as ReactionType;
+  }
+  return result;
+}
+
+/** @deprecated use reactToComment */
 export async function removeReaction(commentId: string, userId: string): Promise<{ success: boolean }> {
-  const res = await fetch(
-    `${BASE}/comments/${encodeURIComponent(commentId)}/reactions/${encodeURIComponent(userId)}`,
-    { method: "DELETE", headers: HEADERS }
-  );
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Erreur serveur ${res.status}`);
-  return data;
+  await supabase.from("comment_reactions").delete()
+    .eq("comment_id", commentId).eq("user_id", userId);
+  return { success: true };
 }
 
-/** Récupérer les réactions d'un commentaire */
+/** @deprecated use loadReactionCounts */
 export async function getCommentReactions(commentId: string): Promise<{ reactionCounts: Record<ReactionType, number> }> {
-  const res = await fetch(`${BASE}/comments/${encodeURIComponent(commentId)}/reactions`, { headers: HEADERS });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Erreur serveur ${res.status}`);
-  return data;
+  const res = await loadReactionCounts([commentId]);
+  return { reactionCounts: res[commentId]?.counts ?? { Actionnable: 0, Motivant: 0 } };
 }
 
 // ── Labels ───────────────────────────────────────────────────────────────────

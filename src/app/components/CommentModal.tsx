@@ -6,6 +6,7 @@ import {
   createComment,
   getPostComments,
   reactToComment,
+  loadReactionCounts,
   COMMENT_TYPE_LABELS,
   CommentType,
   ApiComment,
@@ -218,7 +219,13 @@ export function CommentModal({
     setFetchError(null);
     try {
       const { comments: fetched, total } = await getPostComments(postId, { userId: currentUserId });
-      setComments(fetched);
+      const ids = fetched.map((c) => c.id);
+      const rxMap = await loadReactionCounts(ids, currentUserId).catch(() => ({}));
+      setComments(fetched.map((c) => ({
+        ...c,
+        reactionCounts: rxMap[c.id]?.counts ?? c.reactionCounts,
+        myReaction: rxMap[c.id]?.myReaction ?? c.myReaction,
+      })));
       setTotalComments(total);
     } catch (err) {
       console.error("Erreur chargement commentaires:", err);

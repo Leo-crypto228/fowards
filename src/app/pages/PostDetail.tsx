@@ -14,7 +14,7 @@ import { searchHashtags, searchUsers } from "../data/suggestions";
 import { HighlightInput } from "../components/HighlightInput";
 import {
   createComment, getPostComments, createReply, getCommentReplies,
-  reactToComment, removeReaction,
+  reactToComment, removeReaction, loadReactionCounts,
   type ApiComment, type ApiReply, type CommentType, type ReactionType, type EloCommentType,
   REACTION_TYPES,
 } from "../api/commentsApi";
@@ -1213,7 +1213,15 @@ export function PostDetail() {
     setLoadingComments(true);
     setCommentsError(null);
     getPostComments(postId, { userId: myUserId })
-      .then(({ comments: c }) => setApiComments(c))
+      .then(async ({ comments: c }) => {
+        const ids = c.map((cm) => cm.id);
+        const rxMap = await loadReactionCounts(ids, myUserId).catch(() => ({}));
+        setApiComments(c.map((cm) => ({
+          ...cm,
+          reactionCounts: rxMap[cm.id]?.counts ?? cm.reactionCounts,
+          myReaction: rxMap[cm.id]?.myReaction ?? cm.myReaction,
+        })));
+      })
       .catch((err) => {
         console.error("Erreur chargement commentaires:", err);
         setCommentsError("Impossible de charger les commentaires.");
