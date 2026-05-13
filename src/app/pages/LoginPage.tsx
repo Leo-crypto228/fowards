@@ -20,7 +20,7 @@ const RESEND_COOLDOWN = 60;
 type Screen = "landing" | "signup" | "login" | "forgot-password";
 
 // ── Star mascot SVG ───────────────────────────────────────────────────────────
-function StarMascot({ size = 225 }: { size?: number }) {
+function StarMascot({ size = 225, className }: { size?: number; className?: string }) {
   return (
     <>
       {/* Filtre SVG : rend les pixels noirs transparents */}
@@ -38,6 +38,7 @@ function StarMascot({ size = 225 }: { size?: number }) {
       <img
         src={exampleImage}
         alt="Fowards mascot"
+        className={className}
         style={{
           width: size,
           height: size,
@@ -176,7 +177,7 @@ export function LoginPage() {
       padding: "32px 20px",
       position: "relative",
       overflow: "hidden",
-    }}>
+    }} className="ll-page">
       {/* Starfield */}
       <StarField />
 
@@ -203,11 +204,24 @@ export function LoginPage() {
 
       {/* ── Screens ──────────────────────────────────────────────────────────── */}
         {screen === "landing" ? (
+          <>
+          <style>{`
+            @media (max-width: 767px) {
+              .ll-page { padding-top: 68px !important; justify-content: flex-start !important; }
+              .ll-outer { align-items: flex-start !important; gap: 18px !important; }
+              .ll-logo-wrap { justify-content: flex-start !important; margin-bottom: 6px !important; }
+              .ll-logo { width: 68px !important; height: 68px !important; }
+              .ll-h1 { font-size: 28px !important; white-space: normal !important; line-height: 1.25 !important; }
+              .ll-sub { font-size: 15px !important; }
+              .ll-sep { display: block !important; }
+            }
+          `}</style>
           <motion.div
             key="landing"
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.25, 0, 0.35, 1] }}
+            className="ll-outer"
             style={{
               position: "relative", zIndex: 1,
               display: "flex",
@@ -228,10 +242,10 @@ export function LoginPage() {
               alignItems: "flex-start",
               textAlign: "left",
             }}>
-              <div style={{ width: "100%", display: "flex", justifyContent: "center", marginBottom: 20 }}>
-                <StarMascot size={400} />
+              <div className="ll-logo-wrap" style={{ width: "100%", display: "flex", justifyContent: "center", marginBottom: 20 }}>
+                <StarMascot size={400} className="ll-logo" />
               </div>
-              <h1 style={{
+              <h1 className="ll-h1" style={{
                 fontSize: "clamp(22px, 2.4vw, 36px)",
                 fontWeight: 800,
                 color: "#ffffff",
@@ -242,7 +256,7 @@ export function LoginPage() {
               }}>
                 Atteindre ses rêves ensemble.<br />Sans la douleur d'être seul.
               </h1>
-              <p style={{
+              <p className="ll-sub" style={{
                 fontSize: "clamp(14px, 1.3vw, 17px)",
                 fontWeight: 400,
                 color: "rgba(255,255,255,0.55)",
@@ -252,6 +266,15 @@ export function LoginPage() {
                 Pose ton vrai blocage. Reçois des retours actionnables d'autres entrepreneurs.
               </p>
             </div>
+
+            {/* Séparateur visible uniquement sur mobile */}
+            <div className="ll-sep" style={{
+              display: "none",
+              width: "100%",
+              height: 1,
+              background: "rgba(255,255,255,0.10)",
+              flexShrink: 0,
+            }} />
 
             {/* ── Colonne droite : mini-formulaire ──────────────────────── */}
             <div style={{
@@ -394,6 +417,7 @@ export function LoginPage() {
               </p>
             </div>
           </motion.div>
+          </>
         ) : screen === "signup" ? (
           <SignupPanel
             key="signup"
