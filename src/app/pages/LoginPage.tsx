@@ -213,36 +213,36 @@ export function LoginPage() {
               display: "flex",
               flexWrap: "wrap",
               alignItems: "center",
-              justifyContent: "center",
-              gap: "clamp(32px, 6vw, 72px)",
+              justifyContent: "space-between",
+              gap: "clamp(32px, 4vw, 60px)",
               width: "100%",
-              maxWidth: 920,
             }}
           >
             {/* ── Colonne gauche : branding ─────────────────────────────── */}
             <div style={{
-              flex: "0 1 300px",
-              maxWidth: 300,
+              flex: "1 1 460px",
+              maxWidth: 600,
               display: "flex",
               flexDirection: "column",
               alignItems: "flex-start",
               textAlign: "left",
             }}>
               <div style={{ marginBottom: 16 }}>
-                <StarMascot size={300} />
+                <StarMascot size={360} />
               </div>
               <h1 style={{
-                fontSize: "clamp(24px, 4vw, 38px)",
+                fontSize: "clamp(22px, 2.4vw, 36px)",
                 fontWeight: 800,
                 color: "#ffffff",
-                lineHeight: 1.18,
+                lineHeight: 1.2,
                 letterSpacing: "-0.8px",
                 margin: "0 0 14px",
+                whiteSpace: "nowrap",
               }}>
                 Atteindre ses rêves ensemble.<br />Sans la douleur d'être seul.
               </h1>
               <p style={{
-                fontSize: "clamp(15px, 2.5vw, 18px)",
+                fontSize: "clamp(14px, 1.3vw, 17px)",
                 fontWeight: 400,
                 color: "rgba(255,255,255,0.55)",
                 lineHeight: 1.55,
