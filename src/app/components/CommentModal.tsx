@@ -61,6 +61,14 @@ function CommentItem({ comment, isLast }: CommentItemProps) {
     comment.myReaction ?? null
   );
   const [reactingTo, setReactingTo] = useState<ReactionType | null>(null);
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (!hydratedRef.current && comment.myReaction != null) {
+      setMyReaction(comment.myReaction ?? null);
+      hydratedRef.current = true;
+    }
+    if (comment.reactionCounts) setCounts(comment.reactionCounts as Record<ReactionType, number>);
+  }, [comment.myReaction, comment.reactionCounts]);
 
   const handleReact = async (r: ReactionType) => {
     if (reactingTo) return;

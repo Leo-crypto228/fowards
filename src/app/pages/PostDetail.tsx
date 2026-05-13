@@ -116,6 +116,15 @@ function ApiCommentRow({
   const [activeReaction, setActiveReaction] = useState<ReactionType | null>((comment.myReaction as ReactionType) ?? null);
   const [reactionCounts, setReactionCounts] = useState<Record<string, number>>(comment.reactionCounts || {});
   const [reactionPending, setReactionPending] = useState(false);
+  // Synchro quand Supabase charge myReaction après le premier rendu
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (!hydratedRef.current && comment.myReaction != null) {
+      setActiveReaction(comment.myReaction as ReactionType);
+      hydratedRef.current = true;
+    }
+    if (comment.reactionCounts) setReactionCounts(comment.reactionCounts);
+  }, [comment.myReaction, comment.reactionCounts]);
   const [showReplies, setShowReplies] = useState(false);
   const [replies, setReplies] = useState<ApiReply[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
@@ -1213,14 +1222,22 @@ export function PostDetail() {
     setLoadingComments(true);
     setCommentsError(null);
     getPostComments(postId, { userId: myUserId })
-      .then(async ({ comments: c }) => {
-        const ids = c.map((cm) => cm.id);
-        const rxMap = await loadReactionCounts(ids, myUserId).catch(() => ({}));
-        setApiComments(c.map((cm) => ({
-          ...cm,
-          reactionCounts: rxMap[cm.id]?.counts ?? cm.reactionCounts,
-          myReaction: rxMap[cm.id]?.myReaction ?? cm.myReaction,
-        })));
+      .then(({ comments: c }) => {
+        setApiComments(c); // affiche immédiatement
+        // charge les réactions Supabase en arrière-plan sans bloquer
+        if (c.length > 0) {
+          loadReactionCounts(c.map((cm) => cm.id), myUserId)
+            .then((rxMap) => {
+              setApiComments((prev) =>
+                prev.map((cm) => ({
+                  ...cm,
+                  reactionCounts: rxMap[cm.id]?.counts ?? cm.reactionCounts,
+                  myReaction: rxMap[cm.id]?.myReaction ?? cm.myReaction,
+                }))
+              );
+            })
+            .catch(() => {});
+        }
       })
       .catch((err) => {
         console.error("Erreur chargement commentaires:", err);
