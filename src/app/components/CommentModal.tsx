@@ -26,9 +26,9 @@ const TYPE_CONFIG: Record<string, { bg: string; color: string; border: string; l
   Réaction:      { bg: "rgba(139,92,246,0.12)",  color: "#a78bfa", border: "rgba(139,92,246,0.28)",  label: "⚡ Réaction" },
 };
 
-const REACTION_CONFIG: Record<ReactionType, { symbol: string; activeColor: string }> = {
-  Actionnable: { symbol: "⚡", activeColor: "#818cf8" },
-  Motivant:    { symbol: "🔥", activeColor: "#fb923c" },
+const REACTION_CONFIG: Record<ReactionType, { activeColor: string }> = {
+  Actionnable: { activeColor: "#818cf8" },
+  Motivant:    { activeColor: "#fb923c" },
 };
 
 const REACTIONS = Object.keys(REACTION_CONFIG) as ReactionType[];
@@ -152,7 +152,6 @@ function CommentItem({ comment, isLast }: CommentItemProps) {
                   opacity: reactingTo && reactingTo !== r ? 0.5 : 1,
                 }}
               >
-                <span style={{ fontSize: 11 }}>{cfg.symbol}</span>
                 <span>{r}</span>
                 {count > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? cfg.activeColor : "rgba(255,255,255,0.28)" }}>{count}</span>}
               </motion.button>

@@ -224,7 +224,6 @@ function ApiCommentRow({
           {(["Actionnable", "Motivant"] as ReactionType[]).map((rt) => {
             const isRtActive = activeReaction === rt;
             const count = reactionCounts[rt] || 0;
-            const symbol = rt === "Actionnable" ? "⚡" : "🔥";
             return (
               <motion.button
                 key={rt}
@@ -242,7 +241,6 @@ function ApiCommentRow({
                   transition: "all 0.16s", userSelect: "none",
                 }}
               >
-                <span style={{ fontSize: 11 }}>{symbol}</span>
                 <span>{rt}</span>
                 {count > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: isRtActive ? "#a5b4fc" : "rgba(255,255,255,0.28)" }}>{count}</span>}
               </motion.button>
