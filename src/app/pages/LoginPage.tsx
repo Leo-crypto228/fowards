@@ -383,7 +383,7 @@ function SignupPanel({ onBack, onNavigate }: SignupPanelProps) {
           password,
           username:   normalizeUsername(username),
           name:       name.trim(),
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `https://fowards.net/auth/callback`,
         }),
       });
       const data = await res.json();
@@ -770,7 +770,7 @@ function ForgotPasswordPanel({ onBack }: ForgotPasswordPanelProps) {
     setPending(true);
     try {
       const { error: authError } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `https://fowards.net/reset-password`,
       });
       if (authError) throw new Error(authError.message);
       setSent(true);
