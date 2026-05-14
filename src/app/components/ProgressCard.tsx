@@ -672,6 +672,7 @@ export function ProgressCard({
   const typeLabel = TYPE_LABELS[progress.type as PostType] ?? progress.type ?? "Avancée";
   const isActive  = activeReaction !== null;
   const ctaConfig = CTA_CONFIG[progress.type as PostType];
+  const hasImages = !!(imagesProp?.length || image);
 
   // Format timestamp
   const displayTimestamp = (() => {
@@ -850,17 +851,16 @@ export function ProgressCard({
           whileTap={{ scale: 0.97 }}
           onClick={(e) => { e.stopPropagation(); navigateToPost("comments", ctaConfig.prefill); }}
           style={{
-            width: "100%",
-            padding: "11px 24px",
+            width: "33%",
+            padding: "9px 20px",
             borderRadius: 999,
-            background: "rgba(255,255,255,0.92)",
-            color: "#111",
-            fontWeight: 700,
+            background: "#000",
+            color: "#fff",
+            fontWeight: 400,
             fontSize: 14,
-            border: "none",
+            border: "1px solid rgba(255,255,255,0.25)",
             cursor: "pointer",
             letterSpacing: "0.01em",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.18)",
             transition: "background 0.15s",
           }}
         >
@@ -877,14 +877,12 @@ export function ProgressCard({
     <>
       {showPostMenu && <div className="fixed inset-0 z-40" onClick={() => setShowPostMenu(false)} />}
 
-      <div className="mx-3 relative">
+      <div className={hasImages ? "relative sm:mx-3" : "mx-3 relative"}>
         <motion.div
-          className="cursor-pointer relative"
+          className={`cursor-pointer relative overflow-hidden ${hasImages ? "rounded-none sm:rounded-[20px]" : "rounded-[20px]"}`}
           style={{
-            borderRadius: 20,
-            background: "#0d0d0d",
+            background: "#000",
             border: "1px solid rgba(255,255,255,0.07)",
-            overflow: "hidden",
           }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
           onClick={handleCardClick}
@@ -905,9 +903,10 @@ export function ProgressCard({
             <div style={{ marginBottom: 8 }}>
               <span style={{
                 display: "inline-flex", alignItems: "center",
-                padding: "2px 12px", borderRadius: 999,
-                background: "rgba(255,255,255,0.90)", color: "#111",
-                fontWeight: 600, fontSize: 12, letterSpacing: "0.01em",
+                padding: "2px 10px", borderRadius: 6,
+                background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)",
+                border: "0.5px solid rgba(255,255,255,0.20)",
+                fontWeight: 500, fontSize: 12, letterSpacing: "0.01em",
               }}>
                 {typeLabel}
               </span>
