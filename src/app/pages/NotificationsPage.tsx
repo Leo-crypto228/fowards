@@ -142,6 +142,16 @@ function NotifRow({
         }}>
           {getNotifText(notif)}
         </p>
+        {notif.postSnippet && (
+          <span style={{
+            fontSize: 12, color: "rgba(255,255,255,0.28)",
+            display: "block", marginTop: 3,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            maxWidth: "100%",
+          }}>
+            « {notif.postSnippet.length > 80 ? notif.postSnippet.slice(0, 80) + "…" : notif.postSnippet} »
+          </span>
+        )}
         <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.28)", marginTop: 3, display: "block" }}>
           {formatTimestamp(notif.timestamp)}
         </span>
@@ -188,18 +198,36 @@ function NotifRow({
   );
 }
 
+// Module-level cache — persiste pendant la session, évite le spinner à chaque ouverture
+let _notifCache: { data: AppNotification[]; ts: number; userId: string } | null = null;
+const NOTIF_CACHE_TTL = 30_000;
+
 /* ── Main Page ───────────────────────────────────────────────────────────── */
 export function NotificationsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { refreshUnread } = useNotifications();
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    if (_notifCache && user?.username && _notifCache.userId === user.username) return _notifCache.data;
+    return [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (_notifCache && user?.username && _notifCache.userId === user.username) return false;
+    return true;
+  });
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     if (!user?.username) return;
-    setLoading(true);
+    const cached = _notifCache;
+    if (cached && cached.userId === user.username && !force) {
+      setNotifications(cached.data);
+      setLoading(false);
+      if (Date.now() - cached.ts < NOTIF_CACHE_TTL) return;
+    } else if (!cached || cached.userId !== user.username) {
+      setLoading(true);
+    }
     const { notifications: data } = await fetchNotifications(user.username, 80);
+    _notifCache = { data, ts: Date.now(), userId: user.username };
     setNotifications(data);
     setLoading(false);
   }, [user?.username]);
@@ -207,23 +235,33 @@ export function NotificationsPage() {
   useEffect(() => { load(); }, [load]);
 
   const handleRead = useCallback(async (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => n.id === id ? { ...n, read: true } : n)
-    );
+    setNotifications((prev) => {
+      const updated = prev.map((n) => n.id === id ? { ...n, read: true } : n);
+      if (_notifCache) _notifCache = { ..._notifCache, data: updated };
+      return updated;
+    });
     await markNotificationRead(id);
     refreshUnread();
   }, [refreshUnread]);
 
   const handleMarkAll = useCallback(async () => {
     if (!user?.username) return;
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      if (_notifCache) _notifCache = { ..._notifCache, data: updated };
+      return updated;
+    });
     await markAllNotificationsRead(user.username);
     refreshUnread();
   }, [user?.username, refreshUnread]);
 
   const handleNavigate = useCallback((notif: AppNotification) => {
     if (notif.postId) {
-      navigate(`/post/${encodeURIComponent(notif.postId)}`);
+      if (notif.targetType === "ways") {
+        navigate(`/ways/${notif.postId}`);
+      } else {
+        navigate(`/post/${notif.postId}`);
+      }
     } else if (notif.type === "follow" && notif.senderId) {
       navigate(`/profile/${notif.senderId}`);
     } else if ((notif.type === "access_accepted" || notif.type === "access_refused") && notif.ownerId) {

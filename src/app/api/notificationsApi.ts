@@ -12,6 +12,8 @@ export interface AppNotification {
   senderAvatar?: string;
   postId?: string | null;
   commentId?: string | null;
+  targetType?: "post" | "ways";
+  postSnippet?: string | null;
   requestId?: string;
   visitorId?: string;
   visitorName?: string;

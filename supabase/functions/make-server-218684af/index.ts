@@ -75,15 +75,27 @@ function genId(): string {
 
 // ── Helper : créer une notification sociale ────────────────────────────────────
 async function createSocialNotif(params: {
-  userId: string;       // destinataire
-  type: string;         // "like" | "comment" | "follow"
-  senderId: string;     // expéditeur
+  userId: string;
+  type: string;
+  senderId: string;
   postId?: string;
   commentId?: string;
+  targetType?: "post" | "ways";
+  postSnippet?: string;
 }): Promise<void> {
   try {
     if (!params.userId || !params.senderId || params.userId === params.senderId) return;
     const notifId = genId();
+    let snippet = params.postSnippet;
+    if (!snippet && params.postId) {
+      try {
+        const pRaw = await kv.get(`ff:post:${params.postId}`);
+        if (pRaw) {
+          const p = JSON.parse(pRaw);
+          snippet = ((p.progress?.description || p.text || "") as string).slice(0, 120) || undefined;
+        }
+      } catch { /* ignore */ }
+    }
     const notif = {
       id: notifId,
       userId: params.userId,
@@ -91,6 +103,8 @@ async function createSocialNotif(params: {
       senderId: params.senderId,
       postId: params.postId || null,
       commentId: params.commentId || null,
+      targetType: params.targetType || "post",
+      postSnippet: snippet || null,
       read: false,
       createdAt: new Date().toISOString(),
     };
@@ -1039,7 +1053,7 @@ app.post("/make-server-218684af/comments", async (c) => {
         if (authorUsername && authorUsername !== userId) {
           await logActivity(authorUsername, "received_comment", { postId, commentId: id });
           // Notification commentaire
-          await createSocialNotif({ userId: authorUsername, type: "comment", senderId: userId, postId, commentId: id });
+          await createSocialNotif({ userId: authorUsername, type: "comment", senderId: userId, postId, commentId: id, targetType: "post" });
         }
       }
     } catch (e) { console.log("received_comment log error:", e); }
@@ -1417,7 +1431,7 @@ app.post("/make-server-218684af/posts/:postId/reactions", async (c) => {
         if (authorUsername && authorUsername !== userId) {
           await logActivity(authorUsername, "received_reaction", { postId });
           // Notification like
-          await createSocialNotif({ userId: authorUsername, type: "like", senderId: userId, postId });
+          await createSocialNotif({ userId: authorUsername, type: "like", senderId: userId, postId, targetType: "post" });
         }
       }
     }
@@ -5627,16 +5641,36 @@ app.get("/make-server-218684af/notifications", async (c) => {
     if (!userId) return c.json({ error: "userId requis." }, 400);
     const limit = Math.min(parseInt(c.req.query("limit") || "50", 10), 100);
     const notifIds: string[] = JSON.parse((await kv.get(`ff:notifs:user:${userId}`)) || "[]");
+    const slice = notifIds.slice(0, limit);
+
+    // Lecture parallèle de toutes les notifications
+    const raws = await Promise.all(slice.map((id) => kv.get(`ff:notif:${id}`)));
+    const parsed = raws.map((r) => r ? JSON.parse(r) : null).filter(Boolean);
+
+    // Collecte des profils uniques à enrichir, puis lecture parallèle
+    const profileIds = new Set<string>();
+    for (const n of parsed) {
+      if (n.senderId)  profileIds.add(n.senderId);
+      if (n.visitorId) profileIds.add(n.visitorId);
+      if (n.ownerId)   profileIds.add(n.ownerId);
+    }
+    const pidArr = Array.from(profileIds);
+    const profRaws = await Promise.all(pidArr.map((id) => kv.get(`ff:profile:${id}`)));
+    const profMap = new Map<string, Record<string, unknown>>();
+    for (let i = 0; i < pidArr.length; i++) {
+      const r = profRaws[i];
+      if (r) profMap.set(pidArr[i], JSON.parse(r));
+    }
+
     const notifications = [];
-    for (const id of notifIds.slice(0, limit)) {
-      const raw = await kv.get(`ff:notif:${id}`);
-      if (!raw) continue;
-      const notif = JSON.parse(raw);
+    for (const notif of parsed) {
       if (notif.createdAt) notif.timestamp = relativeTime(notif.createdAt);
-      // Enrichir expéditeur (like / comment / follow)
-      if (notif.senderId) { const sRaw = await kv.get(`ff:profile:${notif.senderId}`); if (sRaw) { const sp = JSON.parse(sRaw); notif.senderName = sp.name; notif.senderAvatar = sp.avatar; } }
-      if (notif.visitorId) { const vRaw = await kv.get(`ff:profile:${notif.visitorId}`); if (vRaw) { const vp = JSON.parse(vRaw); notif.visitorName = vp.name; notif.visitorAvatar = vp.avatar; } }
-      if (notif.ownerId) { const oRaw = await kv.get(`ff:profile:${notif.ownerId}`); if (oRaw) { const op = JSON.parse(oRaw); notif.ownerName = op.name; notif.ownerAvatar = op.avatar; } }
+      const sp = notif.senderId  ? profMap.get(notif.senderId)  : undefined;
+      const vp = notif.visitorId ? profMap.get(notif.visitorId) : undefined;
+      const op = notif.ownerId   ? profMap.get(notif.ownerId)   : undefined;
+      if (sp) { notif.senderName  = sp.name;  notif.senderAvatar  = sp.avatar; }
+      if (vp) { notif.visitorName = vp.name;  notif.visitorAvatar = vp.avatar; }
+      if (op) { notif.ownerName   = op.name;  notif.ownerAvatar   = op.avatar; }
       notifications.push(notif);
     }
     return c.json({ notifications, total: notifIds.length, unreadCount: notifications.filter((n) => !n.read).length });
@@ -5666,13 +5700,11 @@ app.get("/make-server-218684af/notifications/unread-count", async (c) => {
     const userId = c.req.query("userId");
     if (!userId) return c.json({ error: "userId requis." }, 400);
     const notifIds: string[] = JSON.parse((await kv.get(`ff:notifs:user:${userId}`)) || "[]");
-    let count = 0;
-    for (const id of notifIds.slice(0, 100)) {
-      const raw = await kv.get(`ff:notif:${id}`);
-      if (!raw) continue;
-      const notif = JSON.parse(raw);
-      if (!notif.read) count++;
-    }
+    const raws = await Promise.all(notifIds.slice(0, 100).map((id) => kv.get(`ff:notif:${id}`)));
+    const count = raws.filter((raw) => {
+      if (!raw) return false;
+      try { return !JSON.parse(raw).read; } catch { return false; }
+    }).length;
     return c.json({ unreadCount: count });
   } catch (err) {
     return c.json({ error: `Erreur unread-count: ${err}` }, 500);
@@ -5685,12 +5717,15 @@ app.put("/make-server-218684af/notifications/mark-all-read", async (c) => {
     const userId = c.req.query("userId");
     if (!userId) return c.json({ error: "userId requis." }, 400);
     const notifIds: string[] = JSON.parse((await kv.get(`ff:notifs:user:${userId}`)) || "[]");
-    for (const id of notifIds) {
-      const raw = await kv.get(`ff:notif:${id}`);
-      if (!raw) continue;
-      const notif = JSON.parse(raw);
-      if (!notif.read) { notif.read = true; await kv.set(`ff:notif:${id}`, JSON.stringify(notif)); }
-    }
+    const raws = await Promise.all(notifIds.map((id) => kv.get(`ff:notif:${id}`)));
+    await Promise.all(raws.map((raw, i) => {
+      if (!raw) return Promise.resolve();
+      try {
+        const notif = JSON.parse(raw);
+        if (!notif.read) { notif.read = true; return kv.set(`ff:notif:${notifIds[i]}`, JSON.stringify(notif)); }
+      } catch { /* ignore */ }
+      return Promise.resolve();
+    }));
     return c.json({ success: true, marked: notifIds.length });
   } catch (err) {
     return c.json({ error: `Erreur mark-all-read: ${err}` }, 500);
@@ -6167,7 +6202,7 @@ app.post("/make-server-218684af/ways/:id/like", async (c) => {
       ways.likesCount = (ways.likesCount || 0) + 1;
       const authorUsername = (ways.author as Record<string, unknown>)?.username as string;
       if (authorUsername && authorUsername !== normUser) {
-        await createSocialNotif({ userId: authorUsername, type: "like", senderId: normUser, postId: id });
+        await createSocialNotif({ userId: authorUsername, type: "like", senderId: normUser, postId: id, targetType: "ways" });
       }
     }
 
@@ -6211,7 +6246,7 @@ app.post("/make-server-218684af/ways/:id/comments", async (c) => {
 
     const authorUsername = (ways.author as Record<string, unknown>)?.username as string;
     if (authorUsername && authorUsername !== normUser) {
-      await createSocialNotif({ userId: authorUsername, type: "comment", senderId: normUser, postId: id, commentId });
+      await createSocialNotif({ userId: authorUsername, type: "comment", senderId: normUser, postId: id, commentId, targetType: "ways" });
     }
 
     return c.json({ success: true, comment });
@@ -6286,6 +6321,7 @@ app.post("/make-server-218684af/ways/:id/comments/:commentId/reply", async (c) =
       senderId: normUser,
       postId: id,
       commentId,
+      targetType: "ways",
     });
 
     return c.json({ success: true, reply });
