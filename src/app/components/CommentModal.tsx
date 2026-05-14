@@ -264,6 +264,7 @@ export function CommentModal({
 
   const handleSend = async () => {
     if (!input.trim() || sending) return;
+    navigator.vibrate?.(15);
     setSendError(null);
     setSending(true);
 

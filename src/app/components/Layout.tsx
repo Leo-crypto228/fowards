@@ -156,7 +156,7 @@ export function Layout() {
 
               {/* ── Centre : bouton Créer — boudin violet dans la barre ── */}
               <div style={{ flex: 1.4, display: "flex", justifyContent: "center", alignItems: "center", height: 60 }}>
-                <Link to="/create" style={{ textDecoration: "none" }}>
+                <Link to="/create" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
                   <motion.div
                     whileTap={{ scale: 0.90 }}
                     transition={{ type: "spring", stiffness: 500, damping: 28 }}

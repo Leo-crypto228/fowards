@@ -1412,6 +1412,7 @@ export function PostDetail() {
   const handleSendComment = useCallback(async () => {
     const raw = commentInput.trim();
     if (!raw || submittingComment) return;
+    navigator.vibrate?.(15);
     setSubmittingComment(true);
 
     const tempId = `temp-${Date.now()}`;
