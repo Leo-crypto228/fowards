@@ -15,6 +15,7 @@ import { ActiveCommunityProvider } from "./context/ActiveCommunityContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { useEffect } from "react";
 import { registerPushSubscription } from "./utils/pushManager";
+import { IOSInstallPrompt } from "./components/IOSInstallPrompt";
 
 /**
  * Providers pour les données GLOBALES (disponibles partout, même sans user connecté)
@@ -89,6 +90,8 @@ export default function App() {
 
       {/* 5. Scripts externes (doit rester en dehors des providers) */}
       <ClarityScript />
+      {/* 6. Prompt iOS "Ajouter à l'écran d'accueil" */}
+      <IOSInstallPrompt />
     </>
   );
 }
