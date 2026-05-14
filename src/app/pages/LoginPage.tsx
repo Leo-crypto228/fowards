@@ -260,7 +260,7 @@ export function LoginPage() {
                 <span style={{ display: "block" }}>
                   Atteindre{" "}
                   <span style={{
-                    background: "linear-gradient(180deg, #0d0d28 0%, #4a8fe8 50%, #8b5cf6 100%)",
+                    background: "linear-gradient(160deg, #2563eb 0%, #6366f1 55%, #7c3aed 100%)",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
@@ -275,7 +275,7 @@ export function LoginPage() {
                 lineHeight: 1.55,
                 margin: 0,
               }}>
-                Pose ton vrai blocage. Reçois des retours actionnables d'autres entrepreneurs.
+                Partage tes blocages. Reçois des retours actionnables d'autres entrepreneurs.
               </p>
             </div>
 
