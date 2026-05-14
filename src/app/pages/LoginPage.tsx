@@ -895,6 +895,9 @@ function ForgotPasswordPanel({ onBack }: ForgotPasswordPanelProps) {
             Un lien de réinitialisation a été envoyé à <strong style={{ color: "rgba(255,255,255,0.75)" }}>{email.trim()}</strong>.
             Clique sur le lien dans l'email pour choisir un nouveau mot de passe.
           </p>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.50)", margin: 0 }}>
+            <strong style={{ color: "rgba(255,255,255,0.75)" }}>Pense à vérifier tes spams.</strong>
+          </p>
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={onBack}
