@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Bell, CheckCheck, Heart, MessageCircle, UserPlus, Lock, Check, X } from "lucide-react";
+import { ArrowLeft, Bell, CheckCheck, Heart, MessageCircle, UserPlus, Lock, Check, X, AtSign, Reply, Smile } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import {
@@ -36,25 +36,31 @@ function getSenderDisplay(n: AppNotification): { name: string; avatar: string } 
 function getNotifText(n: AppNotification): string {
   const { name } = getSenderDisplay(n);
   switch (n.type) {
-    case "like":            return `@${name} a aimé ton post`;
-    case "comment":         return `@${name} a commenté ton post`;
-    case "follow":          return `@${name} s'est abonné à toi`;
-    case "access_request":  return `@${name} demande à voir ton profil`;
-    case "access_accepted": return `@${name} a accepté ta demande d'accès`;
-    case "access_refused":  return `@${name} a refusé ta demande d'accès`;
-    default:                return "Nouvelle notification";
+    case "like":             return `@${name} a aimé ton post`;
+    case "comment":          return `@${name} a commenté ton post`;
+    case "follow":           return `@${name} s'est abonné à toi`;
+    case "comment_reply":    return `@${name} a répondu à ton commentaire`;
+    case "comment_reaction": return `@${name} a réagi à ton commentaire`;
+    case "mention":          return `@${name} t'a mentionné`;
+    case "access_request":   return `@${name} demande à voir ton profil`;
+    case "access_accepted":  return `@${name} a accepté ta demande d'accès`;
+    case "access_refused":   return `@${name} a refusé ta demande d'accès`;
+    default:                 return "Nouvelle notification";
   }
 }
 
 function getNotifIcon(type: AppNotification["type"]) {
   switch (type) {
-    case "like":            return <Heart style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
-    case "comment":         return <MessageCircle style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
-    case "follow":          return <UserPlus style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
-    case "access_request":  return <Lock style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
-    case "access_accepted": return <Check style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
-    case "access_refused":  return <X style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
-    default:                return <Bell style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
+    case "like":             return <Heart style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
+    case "comment":          return <MessageCircle style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
+    case "follow":           return <UserPlus style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
+    case "comment_reply":    return <Reply style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
+    case "comment_reaction": return <Smile style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
+    case "mention":          return <AtSign style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
+    case "access_request":   return <Lock style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
+    case "access_accepted":  return <Check style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
+    case "access_refused":   return <X style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
+    default:                 return <Bell style={{ width: 14, height: 14, color: "#fff" }} strokeWidth={2} />;
   }
 }
 

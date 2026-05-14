@@ -1,23 +1,20 @@
 import React from "react";
 
-/**
- * Strips a leading "@" from a handle string for display.
- * The raw handle (with @) is preserved in data/database.
- */
 export function stripAt(handle: string | null | undefined): string {
   if (!handle) return "";
   return handle.startsWith("@") ? handle.slice(1) : handle;
 }
 
+/** Extrait les hashtags d'un texte brut (pour les afficher en bas en pills). */
+export function extractHashtagsFromText(text: string): string[] {
+  if (!text) return [];
+  return [...new Set(text.match(/#[\wÀ-ÿ]+/g) || [])];
+}
+
 /**
- * Renders post/comment text with @mentions displayed WITHOUT the "@" symbol
- * but still rendered as clickable, styled spans that navigate to the profile.
- *
- * The original "@username" strings remain intact in the database — this is
- * purely a display transformation.
- *
- * @param text     The raw text (may contain @mentions)
- * @param navigate Optional react-router navigate function for clickable mentions
+ * Rend le texte d'un post/commentaire :
+ * - Les #hashtags sont supprimés du texte (affichés séparément en bas).
+ * - Les @mentions sont cliquables et colorées en violet #818cf8.
  */
 export function renderPostText(
   text: string,
@@ -25,12 +22,19 @@ export function renderPostText(
 ): React.ReactNode {
   if (!text) return null;
 
-  // Split on @word boundaries, keeping the delimiter
-  const parts = text.split(/(@[A-Za-z0-9_À-ÿ]+)/g);
+  // Supprimer les hashtags du texte affiché (ils sont montrés en bas)
+  const stripped = text
+    .replace(/\s*#[\wÀ-ÿ]+/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+
+  if (!stripped) return null;
+
+  const parts = stripped.split(/(@[A-Za-z0-9_À-ÿ]+)/g);
 
   return parts.map((part, i) => {
     if (/^@[A-Za-z0-9_À-ÿ]+$/.test(part)) {
-      const username = part.slice(1); // strip the @
+      const username = part.slice(1);
       return (
         <span
           key={i}
@@ -43,7 +47,7 @@ export function renderPostText(
               : undefined
           }
           style={{
-            color: "#a5b4fc",
+            color: "#818cf8",
             fontWeight: 600,
             cursor: navigate ? "pointer" : "inherit",
           }}

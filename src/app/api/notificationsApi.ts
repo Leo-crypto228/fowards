@@ -6,7 +6,7 @@ const H = { "Content-Type": "application/json", Authorization: `Bearer ${publicA
 export interface AppNotification {
   id: string;
   userId: string;
-  type: "like" | "comment" | "follow" | "access_request" | "access_accepted" | "access_refused";
+  type: "like" | "comment" | "follow" | "comment_reply" | "comment_reaction" | "mention" | "access_request" | "access_accepted" | "access_refused";
   senderId?: string;
   senderName?: string;
   senderAvatar?: string;

@@ -73,6 +73,12 @@ function genId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// ── Helper : extraire les @mentions d'un texte ────────────────────────────────
+function parseMentions(text: string): string[] {
+  const m = text.match(/@([A-Za-z0-9_À-ÿ]+)/g) || [];
+  return [...new Set(m.map((x) => x.slice(1).toLowerCase()))];
+}
+
 // ── Helper : créer une notification sociale ────────────────────────────────────
 async function createSocialNotif(params: {
   userId: string;
@@ -731,6 +737,15 @@ app.post("/make-server-218684af/posts", async (c) => {
 
     await kv.set(`ff:post:${id}`, JSON.stringify(post));
     await kv.set(`ff:elo:post:${id}`, "500");
+    // Notifier les @mentions dans le texte du post (sauf post anonyme)
+    if (!isAnonymous) {
+      const snippet = progress.description.trim().slice(0, 120);
+      for (const mention of parseMentions(progress.description)) {
+        if (mention !== resolvedUsername) {
+          createSocialNotif({ userId: mention, type: "mention", senderId: resolvedUsername, postId: id, targetType: "post", postSnippet: snippet }).catch(() => {});
+        }
+      }
+    }
     const allIds: string[] = JSON.parse((await kv.get("ff:posts:all")) || "[]");
     allIds.unshift(id);
     if (allIds.length > 500) allIds.splice(500);
@@ -1058,6 +1073,14 @@ app.post("/make-server-218684af/comments", async (c) => {
       }
     } catch (e) { console.log("received_comment log error:", e); }
 
+    // Notifier les @mentions dans le commentaire
+    const commentSnippet = content.slice(0, 120);
+    for (const mention of parseMentions(content)) {
+      if (mention !== userId) {
+        createSocialNotif({ userId: mention, type: "mention", senderId: userId, postId, commentId: id, targetType: "post", postSnippet: commentSnippet }).catch(() => {});
+      }
+    }
+
     console.log(`Commentaire créé: id=${id}, post=${postId}, user=${userId}, type=${commentType}`);
     return c.json({ success: true, comment });
   } catch (err) {
@@ -1183,6 +1206,18 @@ app.post("/make-server-218684af/comments/:commentId/replies", async (c) => {
 
     // Loguer la réponse (anneau rouge)
     await logActivity(userId, "reply", { commentId });
+
+    // Notifier l'auteur du commentaire de la réponse
+    if (parent.userId && parent.userId !== userId) {
+      await createSocialNotif({ userId: parent.userId, type: "comment_reply", senderId: userId, postId: parent.postId || null, commentId, targetType: "post" });
+    }
+    // Notifier les @mentions dans la réponse
+    const replySnippet = content.slice(0, 120);
+    for (const mention of parseMentions(content)) {
+      if (mention !== userId && mention !== parent.userId) {
+        createSocialNotif({ userId: mention, type: "mention", senderId: userId, postId: parent.postId || null, commentId: id, targetType: "post", postSnippet: replySnippet }).catch(() => {});
+      }
+    }
 
     console.log(`Réponse créée: id=${id}, comment=${commentId}, user=${userId}`);
     return c.json({ success: true, reply });
@@ -5629,6 +5664,19 @@ app.get("/make-server-218684af/access-requests/check", async (c) => {
     if (!ownerId || !visitorId) return c.json({ error: "ownerId et visitorId requis." }, 400);
     const accepted: string[] = JSON.parse((await kv.get(`ff:profile-access:${ownerId}`)) || "[]");
     return c.json({ hasAccess: accepted.includes(visitorId) });
+  } catch (err) {
+    return c.json({ error: `Erreur: ${err}` }, 500);
+  }
+});
+
+// POST /notifications/comment-reaction — appelé côté client après une réaction réussie
+app.post("/make-server-218684af/notifications/comment-reaction", async (c) => {
+  try {
+    const { commentId, reactorId, commentAuthorId, postId } = await c.req.json();
+    if (!commentId || !reactorId || !commentAuthorId) return c.json({ error: "Paramètres requis." }, 400);
+    if (reactorId === commentAuthorId) return c.json({ success: true });
+    await createSocialNotif({ userId: commentAuthorId, type: "comment_reaction", senderId: reactorId, postId: postId || null, commentId, targetType: "post" });
+    return c.json({ success: true });
   } catch (err) {
     return c.json({ error: `Erreur: ${err}` }, 500);
   }

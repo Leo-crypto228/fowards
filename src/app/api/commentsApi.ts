@@ -139,7 +139,9 @@ export interface CommentReactionResult {
 export async function reactToComment(
   commentId: string,
   userId: string,
-  reactionType: ReactionType
+  reactionType: ReactionType,
+  commentAuthorId?: string,
+  postId?: string,
 ): Promise<CommentReactionResult> {
   const { data: existing } = await supabase
     .from("comment_reactions")
@@ -170,6 +172,15 @@ export async function reactToComment(
   for (const r of all ?? []) {
     if (r.reaction_type === "Actionnable") counts.Actionnable++;
     else if (r.reaction_type === "Motivant") counts.Motivant++;
+  }
+
+  // Notifier l'auteur du commentaire (fire-and-forget, seulement si ajout)
+  if (!isToggleOff && commentAuthorId && commentAuthorId !== userId) {
+    fetch(`${BASE}/notifications/comment-reaction`, {
+      method: "POST",
+      headers: HEADERS,
+      body: JSON.stringify({ commentId, reactorId: userId, commentAuthorId, postId }),
+    }).catch(() => {});
   }
 
   return {

@@ -25,7 +25,7 @@ import {
   sharePost, getPostAnalytics, incrementPostView, getPostReactions, addPostReaction,
   getSessionId, type ApiAnalytics, type PostReactionType, sendCommunityMessage,
 } from "../api/sharesApi";
-import { stripAt, renderPostText } from "../utils/renderText";
+import { stripAt, renderPostText, extractHashtagsFromText } from "../utils/renderText";
 import { GifPicker, GifMessage, isGifUrl } from "../components/GifPicker";
 import { fetchAuthorGoalProgress, getCachedGoalProgress } from "../api/goalProgressCache";
 
@@ -162,7 +162,7 @@ function ApiCommentRow({
     setShowReactionMenu(false);
 
     try {
-      const result = await reactToComment(comment.id, MY_USER_ID, rt);
+      const result = await reactToComment(comment.id, MY_USER_ID, rt, comment.userId, comment.postId);
       // Sync avec réponse serveur
       setActiveReaction(result.myReaction);
       setReactionCounts(result.reactionCounts);
@@ -222,12 +222,22 @@ function ApiCommentRow({
             <TagPill tag={comment.commentType as CommentTag} small />
           </div>
         )}
-        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.55, margin: "0 0 11px", whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere" }}>
+        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.55, margin: "0 0 6px", whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere" }}>
           {isGifUrl(comment.content)
             ? <GifMessage url={comment.content} />
             : renderPostText(comment.content, navigate)
           }
         </div>
+        {(() => {
+          const tags = extractHashtagsFromText(comment.content);
+          return tags.length > 0 ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+              {tags.map((tag) => (
+                <span key={tag} style={{ fontSize: 12, color: "rgba(139,92,246,0.70)", fontWeight: 500 }}>{tag}</span>
+              ))}
+            </div>
+          ) : null;
+        })()}
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           {/* Actionnable / Motivant reactions */}
           {(["Actionnable", "Motivant"] as ReactionType[]).map((rt) => {
@@ -492,7 +502,17 @@ function CommentRow({
         )}
 
         {/* Text */}
-        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.55, margin: "0 0 11px" }}>{renderPostText(comment.text, navigate)}</p>
+        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.55, margin: "0 0 6px" }}>{renderPostText(comment.text, navigate)}</p>
+        {(() => {
+          const tags = extractHashtagsFromText(comment.text || "");
+          return tags.length > 0 ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+              {tags.map((tag) => (
+                <span key={tag} style={{ fontSize: 12, color: "rgba(139,92,246,0.70)", fontWeight: 500 }}>{tag}</span>
+              ))}
+            </div>
+          ) : null;
+        })()}
 
         {/* Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
