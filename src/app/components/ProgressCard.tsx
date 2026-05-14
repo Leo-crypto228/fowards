@@ -883,7 +883,6 @@ export function ProgressCard({
           className={`cursor-pointer relative overflow-hidden ${hasImages ? "rounded-none sm:rounded-[20px]" : "rounded-[20px]"}`}
           style={{
             background: "#000",
-            ...(hasImages ? { border: "1px solid rgba(255,255,255,0.07)" } : {}),
           }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
           onClick={handleCardClick}
@@ -902,9 +901,8 @@ export function ProgressCard({
               <span style={{
                 display: "inline-flex", alignItems: "center",
                 padding: "2px 10px", borderRadius: 6,
-                background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)",
-                border: "0.5px solid rgba(255,255,255,0.20)",
-                fontWeight: 500, fontSize: 12, letterSpacing: "0.01em",
+                background: "#fff", color: "#111",
+                fontWeight: 600, fontSize: 12, letterSpacing: "0.01em",
               }}>
                 {typeLabel}
               </span>
@@ -1012,7 +1010,7 @@ export function ProgressCard({
       </div>
 
       {/* ── SEPARATOR BETWEEN POSTS ────────────────────────────────────────── */}
-      <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "6px 0" }} />
+      <div style={{ height: 1, background: "rgba(255,255,255,0.14)", margin: "6px 0" }} />
     </>
   );
 }
