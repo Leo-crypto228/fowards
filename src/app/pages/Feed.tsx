@@ -1,5 +1,5 @@
 import { ProgressCard } from "../components/ProgressCard";
-import { Search, WifiOff, Wifi, RefreshCw } from "lucide-react";
+import { Search, WifiOff, Wifi, RefreshCw, Plus } from "lucide-react";
 import logoImage from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 import { motion } from "motion/react";
 import { useState, useRef, useEffect, useCallback } from "react";
