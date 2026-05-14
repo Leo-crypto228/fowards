@@ -1618,7 +1618,7 @@ export function PostDetail() {
   const hasImage = postImages.length > 0;
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#000000", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100dvh", background: "#000000", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* ── Sticky top bar ── */}
       <div style={{ position: "sticky", top: 0, zIndex: 30, padding: "14px 16px 10px", background: "linear-gradient(to bottom, #000000 80%, transparent 100%)" }}>
@@ -1637,7 +1637,7 @@ export function PostDetail() {
           {/* ── Post card ── */}
           <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }}
-            style={{ borderRadius: "20px 20px 0 0", background: "#0d0d0d", border: "1px solid rgba(255,255,255,0.07)", borderBottom: "none", overflow: "hidden", position: "relative" }}
+            style={{ background: "#000", overflow: "hidden", position: "relative" }}
           >
             <ViewProgressBar progress={authorProgress} isNew={displayPost.isNew} />
             <div style={{ padding: "20px 16px 16px" }}>
@@ -1757,7 +1757,7 @@ export function PostDetail() {
               </div>
 
               <div style={{ marginTop: 14, marginBottom: 12 }}>
-                <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,0.92)", color: "#111" }}>{typeLabel}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "#fff", color: "#111" }}>{typeLabel}</span>
               </div>
               <p style={{ fontSize: 15, color: "rgba(240,240,245,0.88)", lineHeight: 1.68, whiteSpace: "pre-wrap", marginBottom: (displayPost.hashtags ?? []).length > 0 ? 14 : 0 }}>
                 {renderPostText(displayPost.progress.description, navigate)}
@@ -1786,7 +1786,7 @@ export function PostDetail() {
           {/* ── Date + detached interaction bar ── */}
           <motion.div
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.08 }}
-            style={{ background: "#0d0d0d", border: "1px solid rgba(255,255,255,0.07)", borderTop: "0.5px solid rgba(255,255,255,0.06)", borderRadius: "0 0 20px 20px", padding: "10px 14px 14px", marginBottom: 18 }}
+            style={{ background: "#000", padding: "10px 14px 14px", marginBottom: 18 }}
           >
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.22)", marginBottom: 10 }}>{formattedDate}</p>
             <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
