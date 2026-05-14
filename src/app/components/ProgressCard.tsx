@@ -851,13 +851,14 @@ export function ProgressCard({
           whileTap={{ scale: 0.97 }}
           onClick={(e) => { e.stopPropagation(); navigateToPost("comments", ctaConfig.prefill); }}
           style={{
-            width: "33%",
-            padding: "9px 20px",
+            width: "auto",
+            whiteSpace: "nowrap",
+            padding: "7px 15px",
             borderRadius: 999,
             background: "#000",
             color: "#fff",
             fontWeight: 400,
-            fontSize: 14,
+            fontSize: 10.5,
             border: "1px solid rgba(255,255,255,0.25)",
             cursor: "pointer",
             letterSpacing: "0.01em",
@@ -882,7 +883,7 @@ export function ProgressCard({
           className={`cursor-pointer relative overflow-hidden ${hasImages ? "rounded-none sm:rounded-[20px]" : "rounded-[20px]"}`}
           style={{
             background: "#000",
-            border: "1px solid rgba(255,255,255,0.07)",
+            ...(hasImages ? { border: "1px solid rgba(255,255,255,0.07)" } : {}),
           }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
           onClick={handleCardClick}
@@ -893,9 +894,6 @@ export function ProgressCard({
 
           {/* ── HEADER ──────────────────────────────────────────────────────── */}
           {renderHeader()}
-
-          {/* ── SEPARATOR ───────────────────────────────────────────────────── */}
-          <div style={{ height: 1, background: "rgba(255,255,255,0.07)", marginBottom: 0 }} />
 
           {/* ── CONTENT ─────────────────────────────────────────────────────── */}
           <div style={{ padding: "10px 12px 0 12px" }}>
