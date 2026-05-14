@@ -13,6 +13,8 @@ import { ProgressionProvider } from "./context/ProgressionContext";
 import { ObjectiveProgressProvider } from "./context/ObjectiveProgressContext";
 import { ActiveCommunityProvider } from "./context/ActiveCommunityContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { useEffect } from "react";
+import { registerPushSubscription } from "./utils/pushManager";
 
 /**
  * Providers pour les données GLOBALES (disponibles partout, même sans user connecté)
@@ -50,6 +52,12 @@ function UserScopedProviders({ children }: { children: React.ReactNode }) {
  */
 function AuthenticatedProviders({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (user?.username) {
+      registerPushSubscription(user.username).catch(() => {});
+    }
+  }, [user?.username]);
 
   if (loading || !user) {
     return <>{children}</>;

@@ -5,7 +5,7 @@ import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.tsx";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "npm:resend";
-
+import webpush from "npm:web-push";
 
 const app = new Hono();
 
@@ -17,6 +17,15 @@ const supabaseAdmin = createClient(
 
 // ── Resend client for emails ──────────────────────────────────────────────────
 const resend = new Resend(Deno.env.get("Resend_API_KEY_Fowards")!);
+
+// ── Web Push VAPID ───────────────────────────────────────────────────────────
+try {
+  webpush.setVapidDetails(
+    "mailto:contact@fowards.app",
+    Deno.env.get("VAPID_PUBLIC_KEY") ?? "",
+    Deno.env.get("VAPID_PRIVATE_KEY") ?? "",
+  );
+} catch {}
 
 const PROFILE_BUCKET  = "make-218684af-profile-images";
 const POST_IMG_BUCKET = "make-218684af-post-images";
@@ -121,6 +130,33 @@ async function createSocialNotif(params: {
     await kv.set(`ff:notifs:user:${params.userId}`, JSON.stringify(notifIds));
   } catch (e) {
     console.log("createSocialNotif error:", e);
+  }
+}
+
+// ── Web Push : envoyer une notif push (max 1/jour/utilisateur) ───────────────
+async function sendPushToUser(username: string, title: string, body: string, url: string): Promise<void> {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const rateLimitKey = `ff:push:daily:${username}:${today}`;
+    if (await kv.get(rateLimitKey)) return; // déjà envoyé aujourd'hui
+    const subsRaw = await kv.get(`ff:push:subs:${username}`);
+    if (!subsRaw) return;
+    const subs: Record<string, unknown>[] = JSON.parse(subsRaw);
+    if (!subs.length) return;
+    await kv.set(rateLimitKey, "1"); // réserver avant d'envoyer (anti-doublon)
+    for (const sub of subs) {
+      try {
+        await (webpush as any).sendNotification(sub, JSON.stringify({ title, body, url }));
+      } catch (err: any) {
+        // 410/404 = subscription expirée → on la supprime
+        if (err?.statusCode === 410 || err?.statusCode === 404) {
+          const newSubs = subs.filter((s) => s.endpoint !== sub.endpoint);
+          await kv.set(`ff:push:subs:${username}`, JSON.stringify(newSubs));
+        }
+      }
+    }
+  } catch (err) {
+    console.error("sendPushToUser error:", err);
   }
 }
 
@@ -754,6 +790,14 @@ app.post("/make-server-218684af/posts", async (c) => {
     userIds.unshift(id);
     await kv.set(`ff:posts:user:${resolvedUsername}`, JSON.stringify(userIds));
 
+    // Notifier les abonnés par push (fire-and-forget, max 1/jour/abonné)
+    if (!isAnonymous) {
+      const followersList: string[] = JSON.parse((await kv.get(`ff:followers:${resolvedUsername}`)) || "[]");
+      for (const followerId of followersList) {
+        sendPushToUser(followerId, "Fowards", `${user.name} a publié un nouveau post`, `/post/${id}`).catch(() => {});
+      }
+    }
+
     // Progression + activité journalière
     await logActivity(resolvedUsername, "post", { postId: id });
     await addProgressScore(resolvedUsername, 5);
@@ -1067,8 +1111,10 @@ app.post("/make-server-218684af/comments", async (c) => {
         const authorUsername = postObj.username;
         if (authorUsername && authorUsername !== userId) {
           await logActivity(authorUsername, "received_comment", { postId, commentId: id });
-          // Notification commentaire
+          // Notification in-app
           await createSocialNotif({ userId: authorUsername, type: "comment", senderId: userId, postId, commentId: id, targetType: "post" });
+          // Notification push externe (max 1/jour)
+          sendPushToUser(authorUsername, "Fowards", `${author || userId} a commenté ton post`, `/post/${postId}`).catch(() => {});
         }
       }
     } catch (e) { console.log("received_comment log error:", e); }
@@ -6375,6 +6421,23 @@ app.post("/make-server-218684af/ways/:id/comments/:commentId/reply", async (c) =
     return c.json({ success: true, reply });
   } catch (err) {
     return c.json({ error: `Échec réponse commentaire Ways: ${err}` }, 500);
+  }
+});
+
+// POST /push/subscribe — Stocker la subscription push d'un utilisateur
+app.post("/make-server-218684af/push/subscribe", async (c) => {
+  try {
+    const { userId, subscription } = await c.req.json();
+    if (!userId || !subscription?.endpoint) return c.json({ error: "userId et subscription requis" }, 400);
+    const key = `ff:push:subs:${userId}`;
+    const existing: Record<string, unknown>[] = JSON.parse((await kv.get(key)) || "[]");
+    const filtered = existing.filter((s) => s.endpoint !== subscription.endpoint);
+    filtered.unshift(subscription);
+    if (filtered.length > 5) filtered.splice(5); // max 5 appareils par user
+    await kv.set(key, JSON.stringify(filtered));
+    return c.json({ success: true });
+  } catch (err) {
+    return c.json({ error: `Erreur: ${err}` }, 500);
   }
 });
 
