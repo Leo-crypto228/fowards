@@ -12,16 +12,19 @@ export function isStandalone(): boolean {
   );
 }
 
-export type BrowserType = "safari" | "chrome" | "google";
+export type BrowserType = "safari" | "chrome" | "google" | "firefox" | "opera" | "brave";
 
 export function detectBrowser(): BrowserType {
   const ua = navigator.userAgent;
-  if (/GSA\//.test(ua)) return "google";
+  if (/GSA\//.test(ua))   return "google";
   if (/CriOS\//.test(ua)) return "chrome";
+  if (/FxiOS\//.test(ua)) return "firefox";
+  if (/OPT\//.test(ua) || /OPiOS/.test(ua)) return "opera";
+  if (/Brave\//.test(ua)) return "brave";
   return "safari";
 }
 
-/** True si le tuto doit être affiché maintenant (jamais vu, ou vu il y a ≥ 2 jours) */
+/** True si le tuto doit être affiché (jamais vu, ou vu il y a ≥ 2 jours) */
 export function shouldShowInstallTuto(): boolean {
   if (!isIOS() || isStandalone()) return false;
   try {

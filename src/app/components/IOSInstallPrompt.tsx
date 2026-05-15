@@ -15,29 +15,79 @@ const NUM_STYLE = {
   width: 18, height: 18, display: "flex" as const,
   alignItems: "center" as const, justifyContent: "center" as const, flexShrink: 0,
 };
-const LABEL_STYLE = { fontSize: 12, color: "rgba(255,255,255,0.6)" };
-const STRONG = { color: "#fff" };
-const ICON_STYLE = { display: "inline" as const, verticalAlign: "middle" as const, marginBottom: 1 };
+const LBL = { fontSize: 12, color: "rgba(255,255,255,0.6)" };
+const B = { color: "#fff" };
+const IC = { display: "inline" as const, verticalAlign: "middle" as const, marginBottom: 1 };
 
 export function InstallTutoSteps({ browser }: { browser: BrowserType }) {
+  // Firefox: no PWA but can add shortcut
+  if (browser === "firefox") return (
+    <>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>1</span>
+        <span style={LBL}>Appuie sur <MoreHorizontal size={13} style={IC} color="#fff" /> <strong style={B}>en bas de Firefox</strong></span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>2</span>
+        <span style={LBL}>Choisis <strong style={B}>"Partager"</strong></span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>3</span>
+        <span style={LBL}>Puis <strong style={B}>"Sur l'écran d'accueil"</strong></span>
+      </div>
+      <p style={{ margin: "6px 0 0", fontSize: 10, color: "rgba(255,255,255,0.30)", lineHeight: 1.4 }}>
+        ⚠️ Firefox ne supporte pas les notifications push — utilise Safari pour les activer.
+      </p>
+    </>
+  );
+
+  if (browser === "opera") return (
+    <>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>1</span>
+        <span style={LBL}>Appuie sur <Share size={13} style={IC} color="#fff" /> <strong style={B}>en bas d'Opera</strong></span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>2</span>
+        <span style={LBL}>Choisis <strong style={B}>"Partager"</strong></span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>3</span>
+        <span style={LBL}>Puis <strong style={B}>"En voir plus"</strong> → <strong style={B}>"Sur l'écran d'accueil"</strong></span>
+      </div>
+    </>
+  );
+
+  if (browser === "brave") return (
+    <>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>1</span>
+        <span style={LBL}>Appuie sur <Share size={13} style={IC} color="#fff" /> <strong style={B}>en bas de Brave</strong></span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>2</span>
+        <span style={LBL}>Choisis <strong style={B}>"Partager"</strong></span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>3</span>
+        <span style={LBL}>Puis <strong style={B}>"En voir plus"</strong> → <strong style={B}>"Sur l'écran d'accueil"</strong></span>
+      </div>
+    </>
+  );
+
   if (browser === "safari") return (
     <>
       <div style={STEP_STYLE}>
         <span style={NUM_STYLE}>1</span>
-        <span style={LABEL_STYLE}>
-          Appuie sur <MoreHorizontal size={13} style={ICON_STYLE} color="#fff" />{" "}
-          <strong style={STRONG}>en haut de Safari</strong>
-        </span>
+        <span style={LBL}>Appuie sur <MoreHorizontal size={13} style={IC} color="#fff" /> <strong style={B}>en haut de Safari</strong></span>
       </div>
       <div style={STEP_STYLE}>
         <span style={NUM_STYLE}>2</span>
-        <span style={LABEL_STYLE}>Choisis <strong style={STRONG}>"Partager"</strong></span>
+        <span style={LBL}>Choisis <strong style={B}>"Partager"</strong></span>
       </div>
       <div style={STEP_STYLE}>
         <span style={NUM_STYLE}>3</span>
-        <span style={LABEL_STYLE}>
-          Puis <strong style={STRONG}>"En voir plus"</strong> → <strong style={STRONG}>"Sur l'écran d'accueil"</strong>
-        </span>
+        <span style={LBL}>Puis <strong style={B}>"En voir plus"</strong> → <strong style={B}>"Sur l'écran d'accueil"</strong></span>
       </div>
     </>
   );
@@ -46,20 +96,15 @@ export function InstallTutoSteps({ browser }: { browser: BrowserType }) {
     <>
       <div style={STEP_STYLE}>
         <span style={NUM_STYLE}>1</span>
-        <span style={LABEL_STYLE}>
-          Appuie sur <Share size={13} style={ICON_STYLE} color="#fff" />{" "}
-          <strong style={STRONG}>en haut de Chrome</strong>
-        </span>
+        <span style={LBL}>Appuie sur <Share size={13} style={IC} color="#fff" /> <strong style={B}>en haut de Chrome</strong></span>
       </div>
       <div style={STEP_STYLE}>
         <span style={NUM_STYLE}>2</span>
-        <span style={LABEL_STYLE}>Choisis <strong style={STRONG}>"Partager"</strong></span>
+        <span style={LBL}>Choisis <strong style={B}>"Partager"</strong></span>
       </div>
       <div style={STEP_STYLE}>
         <span style={NUM_STYLE}>3</span>
-        <span style={LABEL_STYLE}>
-          Puis <strong style={STRONG}>"En voir plus"</strong> → <strong style={STRONG}>"Sur l'écran d'accueil"</strong>
-        </span>
+        <span style={LBL}>Puis <strong style={B}>"En voir plus"</strong> → <strong style={B}>"Sur l'écran d'accueil"</strong></span>
       </div>
     </>
   );
@@ -69,20 +114,15 @@ export function InstallTutoSteps({ browser }: { browser: BrowserType }) {
     <>
       <div style={STEP_STYLE}>
         <span style={NUM_STYLE}>1</span>
-        <span style={LABEL_STYLE}>
-          Appuie sur <Share size={13} style={ICON_STYLE} color="#fff" />{" "}
-          <strong style={STRONG}>en haut de Google</strong>
-        </span>
+        <span style={LBL}>Appuie sur <Share size={13} style={IC} color="#fff" /> <strong style={B}>en haut de Google</strong></span>
       </div>
       <div style={STEP_STYLE}>
         <span style={NUM_STYLE}>2</span>
-        <span style={LABEL_STYLE}>Choisis <strong style={STRONG}>"Partager"</strong></span>
+        <span style={LBL}>Choisis <strong style={B}>"Partager"</strong></span>
       </div>
       <div style={STEP_STYLE}>
         <span style={NUM_STYLE}>3</span>
-        <span style={LABEL_STYLE}>
-          Puis <strong style={STRONG}>"En voir plus"</strong> → <strong style={STRONG}>"Sur l'écran d'accueil"</strong>
-        </span>
+        <span style={LBL}>Puis <strong style={B}>"En voir plus"</strong> → <strong style={B}>"Sur l'écran d'accueil"</strong></span>
       </div>
     </>
   );

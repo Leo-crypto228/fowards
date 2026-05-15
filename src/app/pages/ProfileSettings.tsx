@@ -14,6 +14,7 @@ import {
   type AccessRequest, type Notification,
 } from "../api/privacyApi";
 import { toast } from "sonner";
+import { getPushEnabled, setPushPreference } from "../utils/pushManager";
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
@@ -249,13 +250,18 @@ export function ProfileSettings() {
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestsLoaded, setRequestsLoaded] = useState(false);
 
-  // Notifications
+  // Notifications in-app
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifsLoading, setNotifsLoading] = useState(false);
   const [notifsLoaded, setNotifsLoaded] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Load privacy on mount
+  // Push notifications preference
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [pushLoading, setPushLoading] = useState(true);
+  const [pushToggling, setPushToggling] = useState(false);
+
+  // Load privacy + push preference on mount
   useEffect(() => {
     if (!myUsername) return;
     setPrivacyLoading(true);
@@ -263,6 +269,12 @@ export function ProfileSettings() {
       .then((data) => setIsPrivateState(data.isPrivate))
       .catch((err) => console.error("Erreur chargement privacy:", err))
       .finally(() => setPrivacyLoading(false));
+
+    setPushLoading(true);
+    getPushEnabled(myUsername)
+      .then((enabled) => setPushEnabled(enabled))
+      .catch(() => setPushEnabled(true))
+      .finally(() => setPushLoading(false));
   }, [myUsername]);
 
   // Load requests when tab is active
@@ -316,6 +328,19 @@ export function ProfileSettings() {
       toast.error("Impossible de modifier la confidentialité.");
     } finally {
       setPrivacyToggling(false);
+    }
+  };
+
+  const handleTogglePush = async (value: boolean) => {
+    setPushToggling(true);
+    try {
+      await setPushPreference(myUsername, value);
+      setPushEnabled(value);
+      toast.success(value ? "Notifications activées" : "Notifications désactivées");
+    } catch {
+      toast.error("Impossible de modifier les notifications.");
+    } finally {
+      setPushToggling(false);
     }
   };
 
@@ -561,8 +586,40 @@ export function ProfileSettings() {
               {/* ── Notifications Tab ── */}
               {activeTab === "notifications" && (
                 <div>
+                  {/* Push toggle */}
+                  <SectionLabel>Notifications push</SectionLabel>
+                  <div style={{ ...glass, borderRadius: 22, padding: "20px 20px", marginBottom: 20 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                          <div style={{
+                            width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                            background: pushEnabled ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.06)",
+                            border: pushEnabled ? "0.5px solid rgba(99,102,241,0.30)" : "0.5px solid rgba(255,255,255,0.10)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            <Bell style={{ width: 16, height: 16, color: pushEnabled ? "#818cf8" : "rgba(255,255,255,0.30)" }} />
+                          </div>
+                          <div>
+                            <p style={{ fontSize: 16, fontWeight: 700, color: "#f0f0f5", margin: 0 }}>
+                              {pushLoading ? "Chargement…" : pushEnabled ? "Notifications activées" : "Notifications désactivées"}
+                            </p>
+                            <p style={{ fontSize: 12, color: "rgba(200,200,220,0.45)", margin: "2px 0 0" }}>
+                              Maximum une par jour, pour ce qui compte
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <ToggleSwitch
+                        on={pushEnabled}
+                        onChange={handleTogglePush}
+                        loading={pushToggling || pushLoading}
+                      />
+                    </div>
+                  </div>
+
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                    <SectionLabel>Notifications</SectionLabel>
+                    <SectionLabel>Historique</SectionLabel>
                     <motion.button
                       whileTap={{ scale: 0.88 }}
                       onClick={() => { setNotifsLoaded(false); loadNotifications(); }}

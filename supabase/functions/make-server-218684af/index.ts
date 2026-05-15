@@ -6457,4 +6457,31 @@ app.post("/make-server-218684af/push/opt-out", async (c) => {
   }
 });
 
+// GET /push/status/:username — Statut des notifications (activées ou non)
+app.get("/make-server-218684af/push/status/:username", async (c) => {
+  try {
+    const username = c.req.param("username");
+    const optedOut = await kv.get(`ff:push:opted-out:${username}`);
+    return c.json({ enabled: !optedOut });
+  } catch (err) {
+    return c.json({ error: `Erreur: ${err}` }, 500);
+  }
+});
+
+// POST /push/preference — Activer ou désactiver les notifications
+app.post("/make-server-218684af/push/preference", async (c) => {
+  try {
+    const { username, enabled } = await c.req.json();
+    if (!username) return c.json({ error: "username requis" }, 400);
+    if (enabled) {
+      await kv.del(`ff:push:opted-out:${username}`);
+    } else {
+      await kv.set(`ff:push:opted-out:${username}`, "1");
+    }
+    return c.json({ success: true, enabled });
+  } catch (err) {
+    return c.json({ error: `Erreur: ${err}` }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

@@ -56,3 +56,21 @@ export async function optOutPushNotifications(username: string): Promise<void> {
     body: JSON.stringify({ username }),
   }).catch(() => {});
 }
+
+export async function getPushEnabled(username: string): Promise<boolean> {
+  const res = await fetch(`${BASE}/push/status/${encodeURIComponent(username)}`, { headers: H });
+  const data = await res.json();
+  return data.enabled !== false; // défaut ON si erreur
+}
+
+export async function setPushPreference(username: string, enabled: boolean): Promise<void> {
+  await fetch(`${BASE}/push/preference`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({ username, enabled }),
+  });
+  // Si on réactive, tenter de s'abonner si pas encore fait
+  if (enabled) {
+    await registerPushSubscription(username).catch(() => {});
+  }
+}
