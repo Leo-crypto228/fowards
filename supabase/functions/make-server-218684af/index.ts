@@ -136,6 +136,7 @@ async function createSocialNotif(params: {
 // ── Web Push : envoyer une notif push (max 1/jour/utilisateur) ───────────────
 async function sendPushToUser(username: string, title: string, body: string, url: string): Promise<void> {
   try {
+    if (await kv.get(`ff:push:opted-out:${username}`)) return; // utilisateur a refusé
     const today = new Date().toISOString().slice(0, 10);
     const rateLimitKey = `ff:push:daily:${username}:${today}`;
     if (await kv.get(rateLimitKey)) return; // déjà envoyé aujourd'hui
@@ -6438,6 +6439,18 @@ app.post("/make-server-218684af/push/subscribe", async (c) => {
     filtered.unshift(subscription);
     if (filtered.length > 5) filtered.splice(5); // max 5 appareils par user
     await kv.set(key, JSON.stringify(filtered));
+    return c.json({ success: true });
+  } catch (err) {
+    return c.json({ error: `Erreur: ${err}` }, 500);
+  }
+});
+
+// POST /push/opt-out — L'utilisateur refuse les notifications push
+app.post("/make-server-218684af/push/opt-out", async (c) => {
+  try {
+    const { username } = await c.req.json();
+    if (!username) return c.json({ error: "username requis" }, 400);
+    await kv.set(`ff:push:opted-out:${username}`, "1");
     return c.json({ success: true });
   } catch (err) {
     return c.json({ error: `Erreur: ${err}` }, 500);

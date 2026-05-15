@@ -48,3 +48,11 @@ async function syncSubscription(username: string, subscription: PushSubscription
     body: JSON.stringify({ userId: username, subscription: subscription.toJSON() }),
   }).catch(() => {});
 }
+
+export async function optOutPushNotifications(username: string): Promise<void> {
+  await fetch(`${BASE}/push/opt-out`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({ username }),
+  }).catch(() => {});
+}
