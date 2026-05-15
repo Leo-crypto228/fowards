@@ -1441,7 +1441,7 @@ app.post("/make-server-218684af/posts/:postId/reactions", async (c) => {
     if (!userId)       return c.json({ error: "userId requis." }, 400);
     if (!reactionType) return c.json({ error: "reactionType requis." }, 400);
 
-    const VALID = ["Actionnable", "Motivant"];
+    const VALID = ["Pertinent", "Motivant", "J'adore", "Je soutiens"];
     if (!VALID.includes(reactionType)) {
       return c.json({ error: `reactionType invalide. Valeurs: ${VALID.join(", ")}` }, 400);
     }

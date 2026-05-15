@@ -643,14 +643,6 @@ function PrivateStatsPanel({ postId, userId }: { postId: string; userId: string 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }}
       style={{ marginBottom: 20 }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-        <div style={{ width: 3, height: 18, borderRadius: 999, background: "linear-gradient(to bottom, #6366f1, #a78bfa)" }} />
-        <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.09em", textTransform: "uppercase" }}>
-          Vos stats · privé
-        </p>
-      </div>
-
       {/* Section 1 — Score Elo + distribution */}
       <div style={{ ...surface, padding: "16px 18px", marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
