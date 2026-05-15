@@ -794,7 +794,10 @@ app.post("/make-server-218684af/posts", async (c) => {
     if (!isAnonymous) {
       const followersList: string[] = JSON.parse((await kv.get(`ff:followers:${resolvedUsername}`)) || "[]");
       for (const followerId of followersList) {
-        sendPushToUser(followerId, "Fowards", `${user.name} a publié un nouveau post`, `/post/${id}`).catch(() => {});
+        const pushBody = progress.type === "blocage"
+          ? `${user.name} doute comme toi, soutiens-le`
+          : `${user.name} avance comme toi, soutiens-le`;
+        sendPushToUser(followerId, "Fowards", pushBody, `/post/${id}`).catch(() => {});
       }
     }
 
@@ -1114,7 +1117,7 @@ app.post("/make-server-218684af/comments", async (c) => {
           // Notification in-app
           await createSocialNotif({ userId: authorUsername, type: "comment", senderId: userId, postId, commentId: id, targetType: "post" });
           // Notification push externe (max 1/jour)
-          sendPushToUser(authorUsername, "Fowards", `${author || userId} a commenté ton post`, `/post/${postId}`).catch(() => {});
+          sendPushToUser(authorUsername, "Fowards", `${author || userId} t'a répondu, tu risques d'avancer`, `/post/${postId}`).catch(() => {});
         }
       }
     } catch (e) { console.log("received_comment log error:", e); }
