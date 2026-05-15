@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { Check, ArrowLeft, AlertCircle, X, ImagePlus, ChevronDown, Globe, Users, Info, Send } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { createPost, extractHashtags, LABEL_TO_TYPE, PostType } from "../api/postsApi";
@@ -159,6 +159,7 @@ export function CreateProgress() {
 
   const [selectedType, setSelectedType] = useState<string>("");
   const [isAnonymous, setIsAnonymous]   = useState(false);
+  const [anonHint, setAnonHint]         = useState(false);
   const [text, setText]                 = useState("");
   const [posted, setPosted]             = useState(false); // optimistic: posted instantly
   const [error, setError]               = useState<string | null>(null);
@@ -287,6 +288,37 @@ export function CreateProgress() {
 
   return (
     <div className="min-h-screen" style={{ background: "#000000" }}>
+      {/* Hint "Sélectionne Bloquage pour activer" */}
+      <AnimatePresence>
+        {anonHint && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, exit: { duration: 1 } }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              pointerEvents: "none",
+            }}
+          >
+            <motion.p
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2, exit: { duration: 1 } }}
+              style={{
+                fontSize: 16, fontWeight: 700,
+                color: "rgba(255,255,255,0.75)",
+                textAlign: "center", padding: "0 32px",
+              }}
+            >
+              Sélectionne Bloquage pour activer
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Orbs ambiance */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
         <div className="absolute rounded-full" style={{ width: 340, height: 340, top: -80, right: -60, background: "radial-gradient(circle,rgba(99,102,241,0.04) 0%,transparent 70%)", filter: "blur(40px)" }} />
@@ -451,33 +483,38 @@ export function CreateProgress() {
                 </motion.button>
               );
             })}
-            {/* Toggle anonyme — visible uniquement quand Blocage est sélectionné */}
-            
-              {selectedType === "Blocage" && (
+            {/* Toggle anonyme — toujours visible, actif seulement sur Blocage */}
+            <motion.div
+              style={{
+                display: "flex", alignItems: "center", gap: 9,
+                cursor: selectedType === "Blocage" ? "pointer" : "default",
+                userSelect: "none",
+                opacity: selectedType === "Blocage" ? 1 : 0.35,
+                transition: "opacity 0.2s",
+              }}
+              onClick={() => {
+                if (selectedType === "Blocage") {
+                  setIsAnonymous((v) => !v);
+                } else {
+                  setAnonHint(true);
+                  setTimeout(() => setAnonHint(false), 2000); // exit animation dure 1s → disparu à 3s
+                }
+              }}
+            >
+              {/* Track */}
+              <div style={{ width: 46, height: 26, borderRadius: 999, background: isAnonymous && selectedType === "Blocage" ? "#7c3aed" : "rgba(255,255,255,0.10)", border: isAnonymous && selectedType === "Blocage" ? "none" : "1px solid rgba(255,255,255,0.14)", position: "relative", transition: "background 0.22s ease", flexShrink: 0 }}>
                 <motion.div
-                  key="anon-toggle"
-                  initial={{ opacity: 0, scale: 0.88 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.16 }}
-                  style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", userSelect: "none" }}
-                  onClick={() => setIsAnonymous((v) => !v)}
-                >
-                  {/* Track */}
-                  <div style={{ width: 46, height: 26, borderRadius: 999, background: isAnonymous ? "#7c3aed" : "rgba(255,255,255,0.10)", border: isAnonymous ? "none" : "1px solid rgba(255,255,255,0.14)", position: "relative", transition: "background 0.22s ease", flexShrink: 0 }}>
-                    {/* Thumb */}
-                    <motion.div
-                      animate={{ x: isAnonymous ? 22 : 2 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                      style={{ position: "absolute", top: 3, width: 20, height: 20, borderRadius: "50%", background: "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.40)" }}
-                    />
-                  </div>
-                  {/* Label */}
-                  <span style={{ fontSize: 13, fontWeight: 600, color: isAnonymous ? "#c084fc" : "rgba(240,240,245,0.40)", transition: "color 0.2s" }}>
-                    {isAnonymous ? "Anonyme" : "Non anonyme"}
-                  </span>
-                </motion.div>
-              )}
-            
+                  animate={{ x: isAnonymous && selectedType === "Blocage" ? 22 : 2 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  style={{ position: "absolute", top: 3, width: 20, height: 20, borderRadius: "50%", background: "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.40)" }}
+                />
+              </div>
+              {/* Label */}
+              <span style={{ fontSize: 13, fontWeight: 600, color: isAnonymous && selectedType === "Blocage" ? "#c084fc" : "rgba(240,240,245,0.40)", transition: "color 0.2s" }}>
+                {isAnonymous && selectedType === "Blocage" ? "Anonyme" : "Non anonyme"}
+              </span>
+            </motion.div>
+
           </div>
 
           
