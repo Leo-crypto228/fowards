@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Share } from "lucide-react";
+import { X, Share, MoreHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 const DISMISSED_KEY = "ff:ios-prompt-dismissed";
@@ -15,15 +15,121 @@ function isStandalone(): boolean {
   );
 }
 
+type BrowserType = "safari" | "chrome" | "google";
+
+function detectBrowser(): BrowserType {
+  const ua = navigator.userAgent;
+  if (/GSA\//.test(ua)) return "google";   // Google app (GSA)
+  if (/CriOS\//.test(ua)) return "chrome"; // Chrome for iOS
+  return "safari";
+}
+
+const STEP_STYLE = {
+  display: "flex" as const,
+  alignItems: "center" as const,
+  gap: 8,
+};
+
+const NUM_STYLE = {
+  fontSize: 11,
+  fontWeight: 700,
+  color: "#fff",
+  background: "rgba(255,255,255,0.15)",
+  borderRadius: 99,
+  width: 18,
+  height: 18,
+  display: "flex" as const,
+  alignItems: "center" as const,
+  justifyContent: "center" as const,
+  flexShrink: 0,
+};
+
+const LABEL_STYLE = { fontSize: 12, color: "rgba(255,255,255,0.6)" };
+const STRONG = { color: "#fff" };
+const ICON_STYLE = { display: "inline" as const, verticalAlign: "middle" as const, marginBottom: 1 };
+
+function SafariSteps() {
+  return (
+    <>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>1</span>
+        <span style={LABEL_STYLE}>
+          Appuie sur <MoreHorizontal size={13} style={ICON_STYLE} color="#fff" />{" "}
+          <strong style={STRONG}>en haut de Safari</strong>
+        </span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>2</span>
+        <span style={LABEL_STYLE}>Choisis <strong style={STRONG}>"Partager"</strong></span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>3</span>
+        <span style={LABEL_STYLE}>
+          Puis <strong style={STRONG}>"En voir plus"</strong> → <strong style={STRONG}>"Sur l'écran d'accueil"</strong>
+        </span>
+      </div>
+    </>
+  );
+}
+
+function ChromeSteps() {
+  return (
+    <>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>1</span>
+        <span style={LABEL_STYLE}>
+          Appuie sur <Share size={13} style={ICON_STYLE} color="#fff" />{" "}
+          <strong style={STRONG}>en haut de Chrome</strong>
+        </span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>2</span>
+        <span style={LABEL_STYLE}>Choisis <strong style={STRONG}>"Partager"</strong></span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>3</span>
+        <span style={LABEL_STYLE}>
+          Puis <strong style={STRONG}>"En voir plus"</strong> → <strong style={STRONG}>"Sur l'écran d'accueil"</strong>
+        </span>
+      </div>
+    </>
+  );
+}
+
+function GoogleSteps() {
+  return (
+    <>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>1</span>
+        <span style={LABEL_STYLE}>
+          Appuie sur <Share size={13} style={ICON_STYLE} color="#fff" />{" "}
+          <strong style={STRONG}>en haut de Google</strong>
+        </span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>2</span>
+        <span style={LABEL_STYLE}>Choisis <strong style={STRONG}>"Partager"</strong></span>
+      </div>
+      <div style={STEP_STYLE}>
+        <span style={NUM_STYLE}>3</span>
+        <span style={LABEL_STYLE}>
+          Puis <strong style={STRONG}>"En voir plus"</strong> → <strong style={STRONG}>"Sur l'écran d'accueil"</strong>
+        </span>
+      </div>
+    </>
+  );
+}
+
 export function IOSInstallPrompt() {
   const [visible, setVisible] = useState(false);
+  const [browser, setBrowser] = useState<BrowserType>("safari");
 
   useEffect(() => {
     if (!isIOS() || isStandalone()) return;
     try {
       if (localStorage.getItem(DISMISSED_KEY)) return;
     } catch {}
-    // Afficher après 3 secondes pour ne pas agresser l'utilisateur
+    setBrowser(detectBrowser());
     const t = setTimeout(() => setVisible(true), 3000);
     return () => clearTimeout(t);
   }, []);
@@ -77,18 +183,9 @@ export function IOSInstallPrompt() {
                 Installe Fowards sur ton iPhone
               </p>
               <div style={{ margin: "8px 0 0", display: "flex", flexDirection: "column", gap: 5 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.15)", borderRadius: 99, width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</span>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
-                    Appuie sur <Share size={13} style={{ display: "inline", verticalAlign: "middle", marginBottom: 1 }} color="#fff" /> <strong style={{ color: "#fff" }}>en bas de Safari</strong>
-                  </span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.15)", borderRadius: 99, width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>2</span>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
-                    Choisis <strong style={{ color: "#fff" }}>"Sur l'écran d'accueil"</strong>
-                  </span>
-                </div>
+                {browser === "safari" && <SafariSteps />}
+                {browser === "chrome" && <ChromeSteps />}
+                {browser === "google" && <GoogleSteps />}
               </div>
             </div>
           </div>
