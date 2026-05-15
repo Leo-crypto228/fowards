@@ -288,7 +288,7 @@ export function CreateProgress() {
 
   return (
     <div className="min-h-screen" style={{ background: "#000000" }}>
-      {/* Hint "Sélectionne Bloquage pour activer" */}
+      {/* Hint "Sélectionne Blocage pour activer" */}
       <AnimatePresence>
         {anonHint && (
           <motion.div
@@ -313,7 +313,7 @@ export function CreateProgress() {
                 textAlign: "center", padding: "0 32px",
               }}
             >
-              Sélectionne Bloquage pour activer
+              Sélectionne Blocage pour activer
             </motion.p>
           </motion.div>
         )}
