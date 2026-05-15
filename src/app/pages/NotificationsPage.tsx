@@ -11,6 +11,8 @@ import {
   type AppNotification,
 } from "../api/notificationsApi";
 import { respondToAccessRequest } from "../api/privacyApi";
+import { shouldShowInstallTuto, markInstallTutoShown, detectBrowser, type BrowserType } from "../utils/installTutoSchedule";
+import { InstallTutoSteps } from "../components/IOSInstallPrompt";
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 
@@ -213,6 +215,8 @@ export function NotificationsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { refreshUnread } = useNotifications();
+  const [showTuto, setShowTuto] = useState(false);
+  const [tutoBrowser, setTutoBrowser] = useState<BrowserType>("safari");
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     if (_notifCache && user?.username && _notifCache.userId === user.username) return _notifCache.data;
     return [];
@@ -293,6 +297,14 @@ export function NotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  useEffect(() => {
+    if (shouldShowInstallTuto()) {
+      setTutoBrowser(detectBrowser());
+      markInstallTutoShown();
+      setShowTuto(true);
+    }
+  }, []);
+
   return (
     <div style={{ minHeight: "100dvh", background: "#0a0a0a" }}>
       {/* Header */}
@@ -361,6 +373,42 @@ export function NotificationsPage() {
 
       {/* Content */}
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
+        {/* Carte tuto installation iOS */}
+        {showTuto && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{
+              margin: "12px 16px 4px",
+              borderRadius: 16,
+              background: "rgba(255,255,255,0.05)",
+              border: "0.5px solid rgba(255,255,255,0.12)",
+              padding: "14px 14px 14px 16px",
+              position: "relative",
+            }}
+          >
+            <button
+              onClick={() => setShowTuto(false)}
+              style={{ position: "absolute", top: 10, right: 10, background: "none", border: "none", cursor: "pointer", padding: 4 }}
+            >
+              <X size={14} color="rgba(255,255,255,0.35)" />
+            </button>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <img src="/apple-touch-icon.png" alt="Fowards"
+                style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0 }} />
+              <div>
+                <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "#fff" }}>
+                  Installe Fowards sur ton iPhone
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  <InstallTutoSteps browser={tutoBrowser} />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {loading ? (
           <div style={{ padding: "60px 0", display: "flex", justifyContent: "center" }}>
             <motion.div
