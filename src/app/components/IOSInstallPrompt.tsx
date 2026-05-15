@@ -76,11 +76,20 @@ export function IOSInstallPrompt() {
               <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#fff" }}>
                 Installe Fowards sur ton iPhone
               </p>
-              <p style={{ margin: "6px 0 0", fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>
-                Pour recevoir des notifications, appuie sur{" "}
-                <Share size={13} style={{ display: "inline", verticalAlign: "middle", marginBottom: 1 }} color="rgba(255,255,255,0.75)" />
-                {" "}puis <strong style={{ color: "rgba(255,255,255,0.85)" }}>"Sur l'écran d'accueil"</strong>
-              </p>
+              <div style={{ margin: "8px 0 0", display: "flex", flexDirection: "column", gap: 5 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.15)", borderRadius: 99, width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
+                    Appuie sur <Share size={13} style={{ display: "inline", verticalAlign: "middle", marginBottom: 1 }} color="#fff" /> <strong style={{ color: "#fff" }}>en bas de Safari</strong>
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.15)", borderRadius: 99, width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>2</span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
+                    Choisis <strong style={{ color: "#fff" }}>"Sur l'écran d'accueil"</strong>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>
