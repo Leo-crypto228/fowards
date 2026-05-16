@@ -81,9 +81,10 @@ export async function createPost(payload: CreatePostPayload): Promise<{ success:
 }
 
 // Récupère tous les posts (les plus récents en premier)
-export async function getAllPosts(limit = 50, userId?: string): Promise<{ posts: ApiPost[]; total: number }> {
+export async function getAllPosts(limit = 20, userId?: string, offset = 0): Promise<{ posts: ApiPost[]; total: number; hasMore: boolean }> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (userId) params.set("userId", userId);
+  if (offset > 0) params.set("offset", String(offset));
   const res = await fetchWithRetry(`${BASE}/posts?${params}`, { headers: HEADERS });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || `Erreur serveur: ${res.status}`);

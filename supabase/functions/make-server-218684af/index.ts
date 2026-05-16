@@ -853,26 +853,33 @@ app.post("/make-server-218684af/posts", async (c) => {
 
 app.get("/make-server-218684af/posts", async (c) => {
   try {
-    const limit = Math.min(parseInt(c.req.query("limit") || "50", 10), 200);
+    const limit = Math.min(parseInt(c.req.query("limit") || "20", 10), 100);
+    const offset = parseInt(c.req.query("offset") || "0", 10);
     const requestingUserId = c.req.query("userId") || "";
     const allIds: string[] = JSON.parse((await kv.get("ff:posts:all")) || "[]");
-    const posts = [];
-    // Charger un peu plus que limit pour compenser les manquants, puis trier
-    for (const id of allIds.slice(0, Math.min(allIds.length, limit * 2))) {
-      const raw = await kv.get(`ff:post:${id}`);
-      if (raw) {
+
+    // Slice with buffer to account for deleted posts
+    const idsToFetch = allIds.slice(offset, offset + limit * 2);
+
+    // Parallel KV reads (replaces sequential loop)
+    const raws = await Promise.all(idsToFetch.map(id => kv.get(`ff:post:${id}`)));
+    const posts = raws
+      .map((raw) => {
+        if (!raw) return null;
         const post = JSON.parse(raw);
         if (post.createdAt) post.progress.timestamp = relativeTime(post.createdAt);
-        posts.push(sanitizePost(post as Record<string, unknown>, requestingUserId));
-      }
-    }
-    // Tri décroissant par createdAt (garantit l'ordre même si l'index KV est désynchronisé)
-    posts.sort((a, b) => {
+        return sanitizePost(post as Record<string, unknown>, requestingUserId);
+      })
+      .filter(Boolean);
+
+    posts.sort((a: any, b: any) => {
       const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return tb - ta;
     });
-    return c.json({ posts: posts.slice(0, limit), total: allIds.length });
+
+    const page = posts.slice(0, limit);
+    return c.json({ posts: page, total: allIds.length, hasMore: offset + limit < allIds.length });
   } catch (err) {
     return c.json({ error: `Échec récupération posts: ${err}` }, 500);
   }
@@ -1938,53 +1945,59 @@ app.get("/make-server-218684af/follows/:userId/follower-profiles", async (c) => 
 // GET /follows/:userId/feed — Posts des utilisateurs suivis par userId
 app.get("/make-server-218684af/follows/:userId/feed", async (c) => {
   try {
-    const userId  = c.req.param("userId");
-    const limit   = parseInt(c.req.query("limit") || "50", 10);
+    const userId = c.req.param("userId");
+    const limit = parseInt(c.req.query("limit") || "20", 10);
 
     const followingIds: string[] = JSON.parse((await kv.get(`ff:following:${userId}`)) || "[]");
-    if (followingIds.length === 0) {
-      return c.json({ posts: [], total: 0, following: [] });
-    }
+    if (followingIds.length === 0) return c.json({ posts: [], total: 0, following: [] });
 
-    // Charger les préférences "réduire auteur" et "non pertinent" de l'utilisateur
+    // 1. Prefs + post ID lists en parallèle
+    const [prefRaws, userPostIdRaws] = await Promise.all([
+      Promise.all(followingIds.map(u => kv.get(`ff:user-pref:${userId}:reduce:${u}`))),
+      Promise.all(followingIds.map(u => kv.get(`ff:posts:user:${u}`))),
+    ]);
+
     const reducedAuthors = new Set<string>();
-    for (const username of followingIds) {
-      const pref = await kv.get(`ff:user-pref:${userId}:reduce:${username}`);
-      if (pref === "1") reducedAuthors.add(username);
-    }
+    followingIds.forEach((u, i) => { if (prefRaws[i] === "1") reducedAuthors.add(u); });
 
-    // Collecter les posts de chaque utilisateur suivi
+    // 2. Collect all post IDs to fetch (max 20 per user)
+    type PF = { postId: string; username: string; isReduced: boolean };
+    const postFetches: PF[] = [];
+    followingIds.forEach((username, i) => {
+      const ids: string[] = JSON.parse(userPostIdRaws[i] || "[]");
+      const isReduced = reducedAuthors.has(username);
+      ids.slice(0, 20).forEach(postId => postFetches.push({ postId, username, isReduced }));
+    });
+
+    if (postFetches.length === 0) return c.json({ posts: [], total: 0, following: followingIds });
+
+    // 3. Fetch posts + feedback en parallèle
+    const [postRaws, feedbackRaws] = await Promise.all([
+      Promise.all(postFetches.map(({ postId }) => kv.get(`ff:post:${postId}`))),
+      Promise.all(postFetches.map(({ postId }) => kv.get(`ff:post-feedback:${userId}:${postId}`))),
+    ]);
+
     type FeedPostRaw = { id: string; username: string; createdAt: string; progress: { timestamp?: string }; _reduced?: boolean };
     const allPosts: FeedPostRaw[] = [];
     const reducedCount: Record<string, number> = {};
 
-    for (const username of followingIds) {
-      const userPostIds: string[] = JSON.parse((await kv.get(`ff:posts:user:${username}`)) || "[]");
-      const isReduced = reducedAuthors.has(username);
+    postFetches.forEach(({ postId, username, isReduced }, i) => {
+      const raw = postRaws[i];
+      if (!raw) return;
+      if (feedbackRaws[i] === "not_relevant") return;
 
-      for (const postId of userPostIds.slice(0, 20)) {
-        const raw = await kv.get(`ff:post:${postId}`);
-        if (!raw) continue;
+      const post = JSON.parse(raw) as FeedPostRaw;
+      if (post.createdAt) post.progress.timestamp = relativeTime(post.createdAt);
 
-        // Sauter les posts marqués non pertinents par cet utilisateur
-        const feedback = await kv.get(`ff:post-feedback:${userId}:${postId}`);
-        if (feedback === "not_relevant") continue;
-
-        const post = JSON.parse(raw) as FeedPostRaw;
-        if (post.createdAt) post.progress.timestamp = relativeTime(post.createdAt);
-
-        // Réduire : garder seulement le post le plus récent d'un auteur réduit
-        if (isReduced) {
-          reducedCount[username] = (reducedCount[username] || 0) + 1;
-          if (reducedCount[username] > 1) continue; // skip les autres
-          post._reduced = true;
-        }
-
-        allPosts.push(post);
+      if (isReduced) {
+        reducedCount[username] = (reducedCount[username] || 0) + 1;
+        if (reducedCount[username] > 1) return;
+        post._reduced = true;
       }
-    }
 
-    // Trier : posts normaux d'abord (par date desc), puis posts réduits à la fin
+      allPosts.push(post);
+    });
+
     allPosts.sort((a, b) => {
       if (a._reduced && !b._reduced) return 1;
       if (!a._reduced && b._reduced) return -1;
@@ -1992,7 +2005,7 @@ app.get("/make-server-218684af/follows/:userId/feed", async (c) => {
     });
 
     const limited = allPosts.slice(0, limit);
-    console.log(`Feed abonnements: user=${userId}, ${followingIds.length} suivis, ${limited.length} posts (${reducedAuthors.size} auteurs réduits)`);
+    console.log(`Feed abonnements: user=${userId}, ${followingIds.length} suivis, ${limited.length} posts`);
     return c.json({ posts: limited, total: allPosts.length, following: followingIds });
   } catch (err) {
     return c.json({ error: `Échec feed abonnements: ${err}` }, 500);
@@ -2399,15 +2412,16 @@ app.get("/make-server-218684af/communities/:id/posts", async (c) => {
 
     const idxKey = `ff:comm-actus-idx:${communityId}`;
     const ids: string[] = JSON.parse((await kv.get(idxKey)) || "[]");
-    const posts = [];
 
-    for (const id of ids.slice(0, limit)) {
-      const raw = await kv.get(`ff:post:${id}`);
-      if (!raw) continue;
-      const post = JSON.parse(raw);
-      if (post.createdAt) post.progress.timestamp = relativeTime(post.createdAt);
-      posts.push(post);
-    }
+    const raws = await Promise.all(ids.slice(0, limit).map(id => kv.get(`ff:post:${id}`)));
+    const posts = raws
+      .map(raw => {
+        if (!raw) return null;
+        const post = JSON.parse(raw);
+        if (post.createdAt) post.progress.timestamp = relativeTime(post.createdAt);
+        return post;
+      })
+      .filter(Boolean);
 
     console.log(`GET communities/${communityId}/posts — ${posts.length} posts`);
     return c.json({ posts, total: posts.length });

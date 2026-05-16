@@ -25,7 +25,7 @@ type Tab = (typeof TABS)[number];
 
 // Module-level cache: persists while the page is open, avoids refetch on back-navigation
 const FEED_CACHE_TTL = 300_000;
-let _feedCache: { posts: ApiPost[]; ts: number } | null = null;
+let _feedCache: { posts: ApiPost[]; ts: number; hasMore: boolean; offset: number } | null = null;
 
 // ── Le registre de profils est maintenant centralisé dans /src/app/data/profiles.ts
 // GLOBAL_PROFILES_MAP est importé depuis ce module.
@@ -363,33 +363,64 @@ export function Feed() {
   const [apiPosts, setApiPosts] = useState<ApiPost[]>([]);
   const [loadingApi, setLoadingApi] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const fetchApiPosts = useCallback(async (forceRefresh = false) => {
     if (!forceRefresh && _feedCache && Date.now() - _feedCache.ts < FEED_CACHE_TTL) {
       setApiPosts(_feedCache.posts);
+      setHasMore(_feedCache.hasMore);
       return;
     }
     setLoadingApi(true);
     setApiError(null);
     try {
-      const { posts } = await getAllPosts(60, currentUserId || undefined);
+      const { posts, hasMore: more } = await getAllPosts(20, currentUserId || undefined, 0);
       const valid = posts
         .filter(p => p?.user?.name)
         .filter(p => !p.id?.startsWith("seed-"));
-      valid.sort((a, b) => {
-        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return tb - ta;
-      });
-      _feedCache = { posts: valid, ts: Date.now() };
+      _feedCache = { posts: valid, ts: Date.now(), hasMore: more, offset: valid.length };
       setApiPosts(valid);
+      setHasMore(more);
     } catch (err) {
       console.error("Erreur chargement posts API:", err);
       setApiError("Serveur temporairement inaccessible.");
     } finally {
       setLoadingApi(false);
     }
-  }, []);
+  }, [currentUserId]);
+
+  const fetchMorePosts = useCallback(async () => {
+    if (loadingMore || !hasMore || !_feedCache) return;
+    setLoadingMore(true);
+    try {
+      const offset = _feedCache.offset;
+      const { posts, hasMore: more } = await getAllPosts(20, currentUserId || undefined, offset);
+      const valid = posts
+        .filter(p => p?.user?.name)
+        .filter(p => !p.id?.startsWith("seed-"));
+      const merged = [..._feedCache.posts, ...valid];
+      _feedCache = { posts: merged, ts: _feedCache.ts, hasMore: more, offset: merged.length };
+      setApiPosts(merged);
+      setHasMore(more);
+    } catch (err) {
+      console.error("Erreur chargement posts supplémentaires:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, currentUserId]);
+
+  // IntersectionObserver for infinite scroll sentinel
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) fetchMorePosts(); },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [fetchMorePosts]);
 
   useEffect(() => {
     fetchApiPosts(!!location.state?.refreshPosts);
@@ -950,13 +981,21 @@ export function Feed() {
                 <p style={{ fontSize: 14, color: "rgba(255,255,255,0.28)" }}>Aucun post pour l'instant.</p>
               </div>
             )}
+
+            {/* Infinite scroll sentinel */}
+            <div ref={sentinelRef} style={{ height: 1 }} />
+            {loadingMore && (
+              <div style={{ padding: "16px 20px", textAlign: "center" }}>
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} style={{ display: "inline-block" }}>
+                  <RefreshCw style={{ width: 14, height: 14, color: "rgba(99,102,241,0.55)" }} />
+                </motion.div>
+              </div>
+            )}
           </>
         )}
       </motion.div>
 
-      <div className="max-w-2xl mx-auto py-8 text-center">
-        <p className="text-sm text-muted-foreground">Chargement d'autres avancements...</p>
-      </div>
+      <div className="max-w-2xl mx-auto py-8" />
     </div>
   );
 }
