@@ -26,7 +26,7 @@ export function FollowButton({
   stopPropagation = true,
   onToggled,
 }: FollowButtonProps) {
-  const { isFollowing, toggleFollow, currentUserId } = useFollow();
+  const { isFollowing, toggleFollow, currentUserId, loading: contextLoading } = useFollow();
   const [loading, setLoading] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [confirmUnfollow, setConfirmUnfollow] = useState(false);
@@ -67,6 +67,26 @@ export function FollowButton({
       setHovered(false);
     }
   };
+
+  // Pendant le chargement du context, éviter le flash "+ Foradd" avant de savoir si déjà suivi
+  if (contextLoading && !following) {
+    return (
+      <div style={{
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        padding: pad, borderRadius: 999,
+        background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.12)",
+        height: size === "lg" ? 34 : size === "md" ? 28 : 24,
+        minWidth: 70,
+        ...style,
+      }}>
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+          style={{ width: iconSz, height: iconSz, border: "2px solid rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.55)", borderRadius: "50%" }}
+        />
+      </div>
+    );
+  }
 
   // ── État : NON SUIVI ──────────────────────────────────────────────────────
   if (!following) {

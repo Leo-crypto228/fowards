@@ -26,6 +26,8 @@ export interface ApiComment {
   author: string;
   avatar: string;
   content: string;
+  voiceUrl?: string | null;
+  voiceDuration?: number | null;
   commentType: CommentType | null;
   reactionCounts: Record<ReactionType, number>;
   repliesCount: number;
@@ -55,6 +57,8 @@ export interface CreateCommentPayload {
   eloType?: EloCommentType;
   author?: string;
   avatar?: string;
+  voiceUrl?: string;
+  voiceDuration?: number;
 }
 
 export interface CreateReplyPayload {

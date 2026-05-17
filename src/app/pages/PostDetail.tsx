@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { MY_USER_ID as _authUserId, MY_USER_NAME as _authUserName, MY_USER_AVATAR as _authUserAvatar } from "../api/authStore";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, MessageCircle, Share2, Bookmark,
   Send, Hash, Bold, Smile, X, Check, MoreHorizontal, Reply,
-  AlertTriangle, TrendingDown, ThumbsDown, Plus, Loader2, WifiOff, ChevronDown, ChevronUp,
+  AlertTriangle, TrendingDown, ThumbsDown, Plus, Loader2, WifiOff, ChevronDown, ChevronUp, Mic,
 } from "lucide-react";
+import { VoicePlayer } from "../components/VoicePlayer";
+import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { reportInappropriate, reduceAuthor, markNotRelevant } from "../api/postActionsApi";
 import { useSavedPosts, type SavedPostData } from "../context/SavedPostsContext";
 import { FollowButton } from "../components/FollowButton";
@@ -103,6 +105,16 @@ const SHARE_COMMUNITIES = [
 
 // MY_AVATAR est résolu dynamiquement dans le composant (voir myUserAvatar)
 const EMOJI_LIST = ["😊","🔥","💪","🚀","✨","👏","💡","🎯","⚡","💎","🙌","❤️","😎","🏆","💯","🌟","😤","👍","🤝","💫"];
+
+function VoiceTimer({ startTime }: { startTime: number }) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 500);
+    return () => clearInterval(id);
+  }, [startTime]);
+  const m = Math.floor(elapsed / 60), s = elapsed % 60;
+  return <span style={{ fontSize: 12, color: "#f87171", fontVariantNumeric: "tabular-nums", fontWeight: 600, flexShrink: 0 }}>{m}:{s.toString().padStart(2, "0")}</span>;
+}
 
 /* ── ApiCommentRow — commentaire backend avec réactions persistées + réponses inline ── */
 function ApiCommentRow({
@@ -223,9 +235,11 @@ function ApiCommentRow({
           </div>
         )}
         <div style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.55, margin: "0 0 6px", whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere" }}>
-          {isGifUrl(comment.content)
-            ? <GifMessage url={comment.content} />
-            : renderPostText(comment.content, navigate)
+          {comment.voiceUrl
+            ? <VoicePlayer url={comment.voiceUrl} duration={comment.voiceDuration ?? 0} msgId={comment.id} />
+            : isGifUrl(comment.content)
+              ? <GifMessage url={comment.content} />
+              : renderPostText(comment.content, navigate)
           }
         </div>
         {(() => {
@@ -1086,6 +1100,96 @@ export function PostDetail() {
   }, [postId]);
 
   const [commentInput, setCommentInput] = useState("");
+
+  // ── Enregistrement vocal commentaire ──────────────────────────────────────
+  type VoiceRecState = "idle" | "armed" | "recording" | "uploading";
+  const [voiceState, setVoiceState] = useState<VoiceRecState>("idle");
+  const voiceStateRef = useRef<VoiceRecState>("idle");
+  const voiceArmRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceRecRef   = useRef<MediaRecorder | null>(null);
+  const voiceChunks   = useRef<Blob[]>([]);
+  const voiceStartRef = useRef<number>(0);
+  const setVS = useCallback((s: VoiceRecState) => { voiceStateRef.current = s; setVoiceState(s); }, []);
+
+  const cancelVoice = useCallback(() => {
+    if (voiceArmRef.current) { clearTimeout(voiceArmRef.current); voiceArmRef.current = null; }
+    const rec = voiceRecRef.current;
+    if (rec && rec.state !== "inactive") { rec.onstop = null; rec.stream.getTracks().forEach((t) => t.stop()); rec.stop(); }
+    voiceRecRef.current = null; voiceChunks.current = [];
+    setVS("idle");
+  }, [setVS]);
+
+  const handleMicPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    if (!myUserId || voiceStateRef.current !== "idle") return;
+    const _userId = myUserId, _userName = myUserName, _avatar = myUserAvatar, _postId = postId;
+    setVS("armed");
+    const handleUp = () => {
+      document.removeEventListener("pointerup", handleUp);
+      const cur = voiceStateRef.current;
+      if (cur === "armed") {
+        if (voiceArmRef.current) { clearTimeout(voiceArmRef.current); voiceArmRef.current = null; }
+        setVS("idle"); return;
+      }
+      if (cur === "recording") {
+        const rec = voiceRecRef.current;
+        if (!rec || rec.state === "inactive") { setVS("idle"); return; }
+        const duration = Math.max(1, Math.round((Date.now() - voiceStartRef.current) / 1000));
+        rec.onstop = async () => {
+          const blob = new Blob(voiceChunks.current, { type: rec.mimeType || "audio/webm" });
+          rec.stream.getTracks().forEach((t) => t.stop());
+          voiceRecRef.current = null; voiceChunks.current = [];
+          if (blob.size < 1000) { setVS("idle"); return; }
+          setVS("uploading");
+          try {
+            const fd = new FormData();
+            const ext = (rec.mimeType || "").includes("mp4") ? "m4a" : "webm";
+            fd.append("file", blob, `voice.${ext}`);
+            const upRes = await fetch(
+              `https://${projectId}.supabase.co/functions/v1/make-server-218684af/upload-voice`,
+              { method: "POST", headers: { Authorization: `Bearer ${publicAnonKey}` }, body: fd }
+            );
+            const upData = await upRes.json();
+            if (!upData.url) throw new Error(upData.error || "Erreur upload");
+            const tempId = `temp-voice-${Date.now()}`;
+            const optimistic: ApiComment = {
+              id: tempId, postId: _postId, userId: _userId, author: _userName, avatar: _avatar,
+              content: "", voiceUrl: upData.url, voiceDuration: duration,
+              commentType: null, reactionCounts: { Actionnable: 0, Motivant: 0 },
+              repliesCount: 0, createdAt: new Date().toISOString(), timestamp: "À l'instant", myReaction: null,
+            };
+            setApiComments((prev) => [optimistic, ...prev]);
+            const { comment: saved } = await createComment({
+              postId: _postId, userId: _userId, author: _userName, avatar: _avatar,
+              content: "", voiceUrl: upData.url, voiceDuration: duration,
+            });
+            setApiComments((prev) => prev.map((c) => c.id === tempId ? saved : c));
+          } catch (err) { console.error("Erreur envoi vocal:", err); }
+          finally { setVS("idle"); }
+        };
+        rec.stop();
+      }
+    };
+    document.addEventListener("pointerup", handleUp);
+    voiceArmRef.current = setTimeout(async () => {
+      voiceArmRef.current = null;
+      try {
+        const mime = (() => {
+          if (typeof MediaRecorder === "undefined") return "";
+          for (const t of ["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/aac"])
+            if (MediaRecorder.isTypeSupported(t)) return t;
+          return "";
+        })();
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        voiceChunks.current = [];
+        rec.ondataavailable = (ev) => { if (ev.data.size > 0) voiceChunks.current.push(ev.data); };
+        rec.start(100); voiceRecRef.current = rec; voiceStartRef.current = Date.now();
+        setVS("recording"); navigator.vibrate?.(25);
+      } catch { setVS("idle"); document.removeEventListener("pointerup", handleUp); }
+    }, 1500);
+  }, [myUserId, myUserName, myUserAvatar, postId, setVS]);
+
   // Tools always visible in comments view (layout stable, plus de croissance au focus)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [boldMode, setBoldMode] = useState(false);
@@ -1881,33 +1985,109 @@ export function PostDetail() {
                   )}
                 
 
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 10, minHeight: 46, borderRadius: 22, padding: "8px 14px", background: boldMode ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.07)", border: boldMode ? "0.5px solid rgba(99,102,241,0.45)" : "0.5px solid rgba(99,102,241,0.28)", transition: "all 0.2s" }}>
-                  <HighlightInput
-                    inputRef={inputRef}
-                    value={commentInput}
-                    onChange={(v) => { setCommentInput(v); setShowCommentAutocomplete(true); }}
-                    onFocus={() => { setShowEmojiPicker(false); }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey && !hasCommentAutocomplete) {
-                        e.preventDefault();
-                        handleSendComment();
-                      }
-                    }}
-                    placeholder={replyingTo ? `Répondre à @${replyingTo}…` : "Écrire un commentaire… (Maj+Entrée pour saut de ligne)"}
-                    fontWeight={boldMode ? 700 : 400}
-                    placeholderClassName="placeholder:text-[rgba(144,144,168,0.35)]"
-                    multiline
-                    maxHeight={140}
-                    minHeight={22}
-                  />
-                  <motion.button whileTap={commentInput.trim() && !submittingComment ? { scale: 0.82 } : {}} onClick={handleSendComment} disabled={!commentInput.trim() || submittingComment} style={{ background: "none", border: "none", cursor: commentInput.trim() && !submittingComment ? "pointer" : "default", padding: 0, display: "flex", flexShrink: 0, alignSelf: "flex-end", paddingBottom: 6 }}>
-                    {submittingComment ? (
-                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}><Loader2 style={{ width: 17, height: 17, color: "#818cf8" }} /></motion.div>
-                    ) : (
-                      <Send style={{ width: 17, height: 17, color: commentInput.trim() ? "#818cf8" : "rgba(255,255,255,0.16)", transition: "color 0.2s" }} />
-                    )}
-                  </motion.button>
-                </div>
+                <AnimatePresence mode="wait">
+                  {voiceState !== "idle" ? (
+                    /* ── Enregistrement vocal ── */
+                    <motion.div key="voice-rec"
+                      initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+                      transition={{ duration: 0.13 }}
+                      style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 46, borderRadius: 22, padding: "8px 14px", background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.30)" }}
+                    >
+                      {/* Annuler */}
+                      <motion.button type="button" whileTap={{ scale: 0.88 }}
+                        onPointerDown={(e) => { e.preventDefault(); cancelVoice(); }}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}
+                      >
+                        <X style={{ width: 16, height: 16, color: "rgba(255,255,255,0.40)" }} />
+                      </motion.button>
+
+                      {/* Statut / waveform */}
+                      <div style={{ flex: 1 }}>
+                        {voiceState === "uploading" ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}>
+                              <Loader2 style={{ width: 14, height: 14, color: "#818cf8" }} />
+                            </motion.div>
+                            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.40)" }}>Envoi…</span>
+                          </div>
+                        ) : voiceState === "armed" ? (
+                          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Maintiens pour enregistrer…</span>
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "center", gap: 3, height: 24 }}>
+                            {Array.from({ length: 20 }).map((_, i) => (
+                              <motion.div key={i}
+                                style={{ width: 3, borderRadius: 2, background: "rgba(248,113,113,0.65)" }}
+                                animate={{ height: [4, 4 + Math.random() * 18, 4] }}
+                                transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.07, ease: "easeInOut" }}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Timer + mic pulsant */}
+                      {voiceState === "recording" && (
+                        <>
+                          <VoiceTimer startTime={voiceStartRef.current} />
+                          <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1.2, repeat: Infinity }}
+                            style={{ width: 30, height: 30, borderRadius: "50%", background: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                          >
+                            <Mic style={{ width: 13, height: 13, color: "#fff" }} />
+                          </motion.div>
+                        </>
+                      )}
+                    </motion.div>
+                  ) : (
+                    /* ── Composer normal ── */
+                    <motion.div key="compose"
+                      initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+                      transition={{ duration: 0.13 }}
+                      style={{ display: "flex", alignItems: "flex-end", gap: 8 }}
+                    >
+                      {/* Micro — à gauche de l'encadré */}
+                      <motion.div whileTap={{ scale: 0.88 }} onPointerDown={handleMicPointerDown}
+                        style={{
+                          width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
+                          background: "rgba(99,102,241,0.08)", border: "0.5px solid rgba(99,102,241,0.28)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          cursor: myUserId ? "pointer" : "not-allowed", touchAction: "none", userSelect: "none",
+                          alignSelf: "flex-end",
+                        }}
+                      >
+                        <Mic style={{ width: 16, height: 16, color: "rgba(99,102,241,0.75)" }} />
+                      </motion.div>
+
+                      {/* Encadré texte */}
+                      <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 10, minHeight: 46, borderRadius: 22, padding: "8px 14px", background: boldMode ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.07)", border: boldMode ? "0.5px solid rgba(99,102,241,0.45)" : "0.5px solid rgba(99,102,241,0.28)", transition: "all 0.2s" }}>
+                        <HighlightInput
+                          inputRef={inputRef}
+                          value={commentInput}
+                          onChange={(v) => { setCommentInput(v); setShowCommentAutocomplete(true); }}
+                          onFocus={() => { setShowEmojiPicker(false); }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey && !hasCommentAutocomplete) {
+                              e.preventDefault();
+                              handleSendComment();
+                            }
+                          }}
+                          placeholder={replyingTo ? `Répondre à @${replyingTo}…` : "Écrire un commentaire…"}
+                          fontWeight={boldMode ? 700 : 400}
+                          placeholderClassName="placeholder:text-[rgba(144,144,168,0.35)]"
+                          multiline
+                          maxHeight={140}
+                          minHeight={22}
+                        />
+                        <motion.button whileTap={commentInput.trim() && !submittingComment ? { scale: 0.82 } : {}} onClick={handleSendComment} disabled={!commentInput.trim() || submittingComment} style={{ background: "none", border: "none", cursor: commentInput.trim() && !submittingComment ? "pointer" : "default", padding: 0, display: "flex", flexShrink: 0, alignSelf: "flex-end", paddingBottom: 6 }}>
+                          {submittingComment ? (
+                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}><Loader2 style={{ width: 17, height: 17, color: "#818cf8" }} /></motion.div>
+                          ) : (
+                            <Send style={{ width: 17, height: 17, color: commentInput.trim() ? "#818cf8" : "rgba(255,255,255,0.16)", transition: "color 0.2s" }} />
+                          )}
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 

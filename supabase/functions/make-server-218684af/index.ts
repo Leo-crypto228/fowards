@@ -1093,11 +1093,11 @@ app.delete("/make-server-218684af/posts/:id", async (c) => {
 app.post("/make-server-218684af/comments", async (c) => {
   try {
     const body = await c.req.json();
-    const { postId, userId, content, commentType, author, avatar } = body;
+    const { postId, userId, content, commentType, author, avatar, voiceUrl, voiceDuration } = body;
 
-    if (!postId)   return c.json({ error: "postId requis." }, 400);
-    if (!content?.trim()) return c.json({ error: "Contenu requis." }, 400);
-    if (!userId)   return c.json({ error: "userId requis." }, 400);
+    if (!postId) return c.json({ error: "postId requis." }, 400);
+    if (!userId) return c.json({ error: "userId requis." }, 400);
+    if (!content?.trim() && !voiceUrl) return c.json({ error: "Contenu ou voiceUrl requis." }, 400);
 
     const id = genId();
     const createdAt = new Date().toISOString();
@@ -1108,8 +1108,10 @@ app.post("/make-server-218684af/comments", async (c) => {
       userId,
       author: author || userId,
       avatar: avatar || "",
-      content: content.trim(),
-      commentType: commentType || null, // "Conseil" | "Encouragement" | "Réaction" | "Motivant" | "Je soutiens" | "J'adore" | "Pertinent"
+      content: content?.trim() || "",
+      commentType: commentType || null,
+      voiceUrl: voiceUrl || null,
+      voiceDuration: voiceDuration || null, // "Conseil" | "Encouragement" | "Réaction" | "Motivant" | "Je soutiens" | "J'adore" | "Pertinent"
       reactionCounts: { "Actionnable": 0, "Motivant": 0 },
       repliesCount: 0,
       createdAt,
