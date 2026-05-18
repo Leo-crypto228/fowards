@@ -17,7 +17,7 @@ const CODE_LENGTH     = 8;
 const RESEND_COOLDOWN = 60;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Screen = "landing" | "signup" | "login" | "forgot-password";
+type Screen = "landing" | "signup" | "login" | "forgot-password" | "login-otp";
 
 // ── Star mascot SVG ───────────────────────────────────────────────────────────
 function StarMascot({ size = 225, className }: { size?: number; className?: string }) {
@@ -446,6 +446,12 @@ export function LoginPage() {
             key="login"
             onBack={() => setScreen("landing")}
             onForgotPassword={() => setScreen("forgot-password")}
+            onLoginOtp={() => setScreen("login-otp")}
+          />
+        ) : screen === "login-otp" ? (
+          <LoginOtpPanel
+            key="login-otp"
+            onBack={() => setScreen("login")}
           />
         ) : (
           <ForgotPasswordPanel
@@ -664,9 +670,10 @@ function SignupPanel({ onBack, onNavigate, initialEmail, initialPassword }: Sign
 interface LoginPanelProps {
   onBack: () => void;
   onForgotPassword: () => void;
+  onLoginOtp: () => void;
 }
 
-function LoginPanel({ onBack, onForgotPassword }: LoginPanelProps) {
+function LoginPanel({ onBack, onForgotPassword, onLoginOtp }: LoginPanelProps) {
   const [email,       setEmail]       = useState("");
   const [password,    setPassword]    = useState("");
   const [showPwd,     setShowPwd]     = useState(false);
@@ -830,6 +837,114 @@ function LoginPanel({ onBack, onForgotPassword }: LoginPanelProps) {
           {pending
             ? <><Loader2 style={{ width: 17, height: 17, animation: "spin 1s linear infinite" }} /> Connexion…</>
             : "Se connecter"}
+        </motion.button>
+
+        {/* Connexion sans mot de passe */}
+        <button
+          type="button"
+          onClick={onLoginOtp}
+          style={{
+            background: "none", border: "none", cursor: "pointer", padding: "2px 0",
+            fontSize: 13, color: "rgba(255,255,255,0.35)", fontWeight: 500,
+            textAlign: "center", width: "100%",
+          }}
+        >
+          Se connecter sans mot de passe →
+        </button>
+      </form>
+    </PanelWrapper>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOGIN OTP PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function LoginOtpPanel({ onBack }: { onBack: () => void }) {
+  const [email,   setEmail]   = useState("");
+  const [error,   setError]   = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pending) return;
+    setError(null);
+
+    const trimmed = email.trim();
+    if (!trimmed)               { setError("L'email est requis."); return; }
+    if (!trimmed.includes("@")) { setError("L'email n'est pas valide."); return; }
+
+    setPending(true);
+    try {
+      const res = await fetch(`${BASE}/auth/resend-otp`, {
+        method: "POST",
+        headers: HEADERS,
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+
+      sessionStorage.setItem("ff_verify_email", trimmed);
+      sessionStorage.setItem("ff_verify_mode", "login");
+      navigate("/verify-email", { state: { email: trimmed, mode: "login" } });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Une erreur est survenue.";
+      const low = msg.toLowerCase();
+      if (low.includes("load failed") || low.includes("failed to fetch") || low.includes("network")) {
+        setError("Connexion au serveur impossible. Vérifie ta connexion et réessaie.");
+      } else if (low.includes("security purposes") || low.includes("seconds")) {
+        setError("Patiente quelques secondes avant de renvoyer un code.");
+      } else if (low.includes("rate limit") || low.includes("too many")) {
+        setError("Trop de tentatives. Attends quelques secondes et réessaie.");
+      } else {
+        setError("Une erreur est survenue. Réessaie.");
+      }
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <PanelWrapper onBack={onBack} title="Connexion par code" subtitle="Saisis ton email pour recevoir un code à 8 chiffres.">
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <Field label="Email">
+          <div style={{ position: "relative" }}>
+            <input
+              type="email" value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(null); }}
+              placeholder="ton@email.com"
+              autoComplete="email"
+              style={{ ...INPUT_STYLE, paddingLeft: 44 }}
+              className="focus:border-violet-500/60 placeholder:text-[rgba(144,144,168,0.35)]"
+            />
+            <Mail style={{
+              position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)",
+              width: 16, height: 16, color: "rgba(139,92,246,0.50)", pointerEvents: "none",
+            }} />
+          </div>
+        </Field>
+
+        <ErrorBox error={error} />
+
+        <motion.button
+          type="submit" disabled={pending}
+          whileTap={!pending ? { scale: 0.97 } : {}}
+          style={{
+            width: "100%", padding: "15px", borderRadius: 100,
+            background: pending ? "rgba(79,70,229,0.50)" : "#4f46e5",
+            border: "none", color: "#fff",
+            fontSize: 16, fontWeight: 700,
+            cursor: pending ? "default" : "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            boxShadow: pending ? "none" : "0 4px 20px rgba(79,70,229,0.30)",
+            marginTop: 4,
+            transition: "background 0.2s",
+          }}
+        >
+          {pending
+            ? <><Loader2 style={{ width: 17, height: 17, animation: "spin 1s linear infinite" }} /> Envoi…</>
+            : "Recevoir un code"}
         </motion.button>
       </form>
     </PanelWrapper>
