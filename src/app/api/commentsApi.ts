@@ -28,6 +28,8 @@ export interface ApiComment {
   content: string;
   voiceUrl?: string | null;
   voiceDuration?: number | null;
+  videoUrl?: string | null;
+  videoDuration?: number | null;
   commentType: CommentType | null;
   reactionCounts: Record<ReactionType, number>;
   repliesCount: number;
@@ -59,6 +61,8 @@ export interface CreateCommentPayload {
   avatar?: string;
   voiceUrl?: string;
   voiceDuration?: number;
+  videoUrl?: string;
+  videoDuration?: number;
 }
 
 export interface CreateReplyPayload {

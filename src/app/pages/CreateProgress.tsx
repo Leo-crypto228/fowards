@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Check, ArrowLeft, AlertCircle, X, ImagePlus, Info, Mic } from "lucide-react";
+import { Check, ArrowLeft, AlertCircle, X, ImagePlus, Info, Mic, Video } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { createPost, extractHashtags, LABEL_TO_TYPE, PostType } from "../api/postsApi";
 import { createWays } from "../api/waysApi";
@@ -10,6 +10,7 @@ import { postCheckin } from "../api/progressionApi";
 import { MY_USER_ID, MY_USER_NAME, MY_USER_AVATAR, MY_USER_OBJECTIVE, MY_USER_STREAK } from "../api/authStore";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { VoicePlayer } from "../components/VoicePlayer";
+import { VideoRecorder } from "../components/VideoRecorder";
 import { toast } from "sonner";
 
 const MAX_VOICE_SEC = 60;
@@ -176,6 +177,34 @@ export function CreateProgress() {
   const [voiceSubtitle, setVoiceSubtitle] = useState("");
   const [recordingTime, setRecordingTime] = useState(0);
 
+  // ── Vidéo ─────────────────────────────────────────────────────────────────
+  type VideoPhase = null | "recorder" | "preview";
+  const [videoPhase, setVideoPhase] = useState<VideoPhase>(null);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [videoDurationV, setVideoDurationV] = useState(0);
+  const [videoTitle, setVideoTitle] = useState("");
+  const [videoSub, setVideoSub] = useState("");
+
+  const resetVideo = useCallback(() => {
+    if (videoPreviewUrl) { try { URL.revokeObjectURL(videoPreviewUrl); } catch {} }
+    setVideoBlob(null);
+    setVideoPreviewUrl(null);
+    setVideoDurationV(0);
+    setVideoTitle("");
+    setVideoSub("");
+    setVideoPhase(null);
+  }, [videoPreviewUrl]);
+
+  const handleVideoReady = useCallback((blob: Blob, duration: number) => {
+    if (videoPreviewUrl) { try { URL.revokeObjectURL(videoPreviewUrl); } catch {} }
+    const url = URL.createObjectURL(blob);
+    setVideoBlob(blob);
+    setVideoPreviewUrl(url);
+    setVideoDurationV(duration);
+    setVideoPhase("preview");
+  }, [videoPreviewUrl]);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -324,10 +353,13 @@ export function CreateProgress() {
   };
 
   const hasVoice = voiceMode === "preview" && !!voiceBlob;
+  const hasVideo = videoPhase === "preview" && !!videoBlob;
   const isValid = selectedType !== "" && (
-    hasVoice
-      ? voiceTitle.trim().length > 0
-      : text.trim().length > 0
+    hasVideo
+      ? videoTitle.trim().length > 0
+      : hasVoice
+        ? voiceTitle.trim().length > 0
+        : text.trim().length > 0
   );
 
   const handleSubmit = () => {
@@ -341,6 +373,40 @@ export function CreateProgress() {
     const doSave = async () => {
       try {
         const postType = LABEL_TO_TYPE[selectedType] as PostType;
+
+        // ─── Branche vidéo ────────────────────────────────────────────────────
+        if (hasVideo && videoBlob) {
+          const fd = new FormData();
+          const ext = (videoBlob.type || "").includes("mp4") ? "mp4" : "webm";
+          fd.append("file", videoBlob, `video.${ext}`);
+          fd.append("bucket", "posts");
+          const upRes = await fetch(`${BASE}/upload-video`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+            body: fd,
+          });
+          const upData = await upRes.json();
+          if (!upRes.ok || !upData.url) throw new Error(upData.error || "Erreur upload vidéo");
+
+          const result = await createPost({
+            user: { name: MY_USER_NAME || "Utilisateur", avatar: MY_USER_AVATAR, objective: MY_USER_OBJECTIVE, followers: 0 },
+            streak: MY_USER_STREAK,
+            progress: { type: postType, description: videoTitle.trim() },
+            hashtags: [],
+            username: MY_USER_ID,
+            videoUrl: upData.url,
+            videoDuration: videoDurationV,
+            videoTitle: videoTitle.trim(),
+            videoSubtitle: videoSub.trim() || undefined,
+            isAnonymous: isAnonymous && selectedType === "Blocage" ? true : undefined,
+          });
+          window.dispatchEvent(new CustomEvent("fowards:post-created"));
+          if (quotedPost?.postId) {
+            linkPostReply(quotedPost.postId, result.post.id).catch(() => {});
+          }
+          postCheckin(MY_USER_ID, result.post.id).catch(() => {});
+          return;
+        }
 
         // ─── Branche vocal ────────────────────────────────────────────────────
         if (hasVoice && voiceBlob) {
@@ -407,7 +473,9 @@ export function CreateProgress() {
       } catch (err) {
         console.error("Erreur save post background:", err);
         const msg = err instanceof Error ? err.message : "Réessaie";
-        if (/aujourd|reviens|429/i.test(msg)) {
+        if (/quota vidéo|video-post-quota/i.test(msg)) {
+          toast.error("Quota vidéo atteint", { description: msg, duration: 6000 });
+        } else if (/aujourd|reviens|429/i.test(msg)) {
           toast.error("Quota vocal atteint", { description: "1 post vocal par 24h. Reviens demain.", duration: 6000 });
         } else {
           toast.error("Le post n'a pas pu être enregistré", { description: msg, duration: 4000 });
@@ -677,9 +745,73 @@ export function CreateProgress() {
           </motion.div>
         )}
 
-        {/* ── Zone de texte / Vocal (Partage only) ── */}
+        {/* ── Zone de texte / Vocal / Vidéo (Partage only) ── */}
         <motion.div className="mt-8" style={{ display: mode === "partage" ? undefined : "none" }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.4 }}>
-          {voiceMode === "preview" && voicePreviewUrl ? (
+          {videoPhase === "recorder" ? (
+            // ── Enregistreur vidéo ────────────────────────────────────────────
+            <div style={{ margin: "0 -20px" }}>
+              <VideoRecorder
+                maxSeconds={60}
+                idealHeight={720}
+                onReady={handleVideoReady}
+                onCancel={resetVideo}
+              />
+            </div>
+          ) : videoPhase === "preview" && videoPreviewUrl ? (
+            // ── Aperçu vidéo + titre + sous-titre ────────────────────────────
+            <div>
+              <div style={{ position: "relative", margin: "0 -20px", aspectRatio: "3/4" }}>
+                <video
+                  src={videoPreviewUrl}
+                  controls
+                  playsInline
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", background: "#000" }}
+                />
+                <motion.button
+                  whileTap={{ scale: 0.88 }}
+                  onClick={resetVideo}
+                  style={{
+                    position: "absolute", top: 12, right: 12,
+                    width: 30, height: 30, borderRadius: "50%",
+                    background: "rgba(0,0,0,0.60)", border: "0.5px solid rgba(255,255,255,0.18)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", zIndex: 10,
+                  }}
+                >
+                  <X style={{ width: 14, height: 14, color: "#fff" }} />
+                </motion.button>
+              </div>
+
+              <input
+                value={videoTitle}
+                onChange={(e) => setVideoTitle(e.target.value)}
+                placeholder="Titre (obligatoire)"
+                maxLength={80}
+                style={{ width: "100%", marginTop: 16, background: "transparent", border: "none", outline: "none", fontSize: 19, fontWeight: 700, color: "#f0f0f5", lineHeight: 1.35, letterSpacing: "-0.2px", caretColor: "#6366f1" }}
+                className="placeholder:text-[rgba(144,144,168,0.50)]"
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <span style={{ fontSize: 10.5, color: videoTitle.length > 70 ? "rgba(251,191,36,0.70)" : "rgba(255,255,255,0.18)", fontWeight: 500 }}>
+                  {videoTitle.length}/80
+                </span>
+              </div>
+
+              <textarea
+                value={videoSub}
+                onChange={(e) => setVideoSub(e.target.value)}
+                placeholder="Description (facultatif)"
+                maxLength={200}
+                rows={3}
+                style={{ width: "100%", marginTop: 6, background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 14.5, color: "rgba(235,235,245,0.78)", lineHeight: 1.5, caretColor: "#6366f1" }}
+                className="placeholder:text-[rgba(144,144,168,0.40)]"
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <span style={{ fontSize: 10.5, color: videoSub.length > 180 ? "rgba(251,191,36,0.70)" : "rgba(255,255,255,0.18)", fontWeight: 500 }}>
+                  {videoSub.length}/200
+                </span>
+              </div>
+            </div>
+          ) : voiceMode === "preview" && voicePreviewUrl ? (
             // ── Aperçu vocal + titre + sous-titre ────────────────────────────
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -759,7 +891,7 @@ export function CreateProgress() {
           )}
 
           {/* Hashtags extraits */}
-          {voiceMode === "idle" && text.trim().length > 0 && extractHashtags(text).length > 0 && (
+          {voiceMode === "idle" && videoPhase === null && text.trim().length > 0 && extractHashtags(text).length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
               {extractHashtags(text).map((tag) => (
                 <span key={tag} style={{ fontSize: 12, color: "rgba(139,92,246,0.70)", fontWeight: 500 }}>{tag}</span>
@@ -767,8 +899,8 @@ export function CreateProgress() {
             </div>
           )}
 
-          {/* Aperçu images — carousel horizontal 3:4 (pas de média en mode vocal) */}
-          {voiceMode === "idle" && (
+          {/* Aperçu images — carousel horizontal 3:4 (pas de média en mode vocal/vidéo) */}
+          {voiceMode === "idle" && videoPhase === null && (
             <>
             {images.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -799,14 +931,14 @@ export function CreateProgress() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, paddingBottom: 4 }}>
             {/* Photo (icon only) */}
             <motion.button type="button" whileTap={{ scale: 0.88 }} onClick={() => fileInputRef.current?.click()}
-              disabled={images.length >= 4 || voiceMode !== "idle"}
+              disabled={images.length >= 4 || voiceMode !== "idle" || videoPhase !== null}
               style={{
                 width: 38, height: 38, borderRadius: "50%",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 background: "rgba(255,255,255,0.06)",
                 border: "1px solid rgba(255,255,255,0.10)",
-                cursor: (images.length >= 4 || voiceMode !== "idle") ? "not-allowed" : "pointer",
-                opacity: (images.length >= 4 || voiceMode !== "idle") ? 0.4 : 1,
+                cursor: (images.length >= 4 || voiceMode !== "idle" || videoPhase !== null) ? "not-allowed" : "pointer",
+                opacity: (images.length >= 4 || voiceMode !== "idle" || videoPhase !== null) ? 0.4 : 1,
                 flexShrink: 0,
               }}>
               <ImagePlus style={{ width: 17, height: 17, color: "rgba(255,255,255,0.65)" }} />
@@ -823,7 +955,7 @@ export function CreateProgress() {
               onMouseUp={handleMicMouseUp}
               onMouseLeave={handleMicMouseUp}
               onContextMenu={(e) => e.preventDefault()}
-              disabled={images.length > 0 || (voiceMode === "preview")}
+              disabled={images.length > 0 || voiceMode === "preview" || videoPhase !== null}
               animate={{
                 scale: voiceMode === "holding" ? 1.08 : voiceMode === "recording" ? 1.15 : 1,
                 background: voiceMode === "recording"
@@ -842,8 +974,8 @@ export function CreateProgress() {
                 width: 38, height: 38, borderRadius: "50%",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 border: "1px solid",
-                cursor: (images.length > 0 || voiceMode === "preview") ? "not-allowed" : "pointer",
-                opacity: (images.length > 0 || voiceMode === "preview") ? 0.4 : 1,
+                cursor: (images.length > 0 || voiceMode === "preview" || videoPhase !== null) ? "not-allowed" : "pointer",
+                opacity: (images.length > 0 || voiceMode === "preview" || videoPhase !== null) ? 0.4 : 1,
                 flexShrink: 0,
                 touchAction: "none",
                 userSelect: "none",
@@ -851,6 +983,31 @@ export function CreateProgress() {
                 WebkitTouchCallout: "none" as any,
               }}>
               <Mic style={{ width: 17, height: 17, color: voiceMode === "recording" ? "#f87171" : voiceMode === "holding" ? "#a5b4fc" : "rgba(255,255,255,0.65)" }} />
+            </motion.button>
+
+            {/* Vidéo (toggle) */}
+            <motion.button
+              type="button"
+              onClick={() => {
+                if (videoPhase === null) { setVideoPhase("recorder"); }
+                else if (videoPhase === "recorder") { resetVideo(); }
+              }}
+              disabled={voiceMode !== "idle" || images.length > 0}
+              animate={{
+                background: videoPhase !== null ? "rgba(99,102,241,0.18)" : "rgba(255,255,255,0.06)",
+                borderColor: videoPhase !== null ? "rgba(99,102,241,0.45)" : "rgba(255,255,255,0.10)",
+              }}
+              transition={{ duration: 0.18 }}
+              style={{
+                width: 38, height: 38, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                border: "1px solid",
+                cursor: (voiceMode !== "idle" || images.length > 0) ? "not-allowed" : "pointer",
+                opacity: (voiceMode !== "idle" || images.length > 0) ? 0.4 : 1,
+                flexShrink: 0,
+              }}
+            >
+              <Video style={{ width: 17, height: 17, color: videoPhase !== null ? "#a5b4fc" : "rgba(255,255,255,0.65)" }} />
             </motion.button>
 
             <div style={{ flex: 1 }} />

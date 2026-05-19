@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
-import { Send, ChevronDown, AlertCircle, MessageCircle, X } from "lucide-react";
+import { Send, ChevronDown, AlertCircle, MessageCircle, X, Video } from "lucide-react";
 import {
   createComment,
   getPostComments,
@@ -17,6 +17,8 @@ import { MY_USER_NAME, MY_USER_AVATAR } from "../api/authStore";
 import { toast } from "sonner";
 import { stripAt } from "../utils/renderText";
 import { GifPicker, GifMessage, isGifUrl } from "./GifPicker";
+import { VideoRecorder } from "./VideoRecorder";
+import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 function getMyAvatar() { return MY_USER_AVATAR || "https://images.unsplash.com/photo-1584940121730-93ffb8aa88b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=80"; }
 function getMyName()   { return MY_USER_NAME   || "Utilisateur"; }
@@ -134,7 +136,15 @@ function CommentItem({ comment, isLast }: CommentItemProps) {
         </div>
 
         <div style={{ fontSize: 14.5, color: "rgba(235,235,245,0.82)", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap", wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-word" }}>
-          {isGifUrl(comment.content)
+          {comment.videoUrl ? (
+            <video
+              src={comment.videoUrl}
+              controls
+              playsInline
+              preload="metadata"
+              style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", display: "block", background: "#000", borderRadius: 0, marginBottom: 4 }}
+            />
+          ) : isGifUrl(comment.content)
             ? <GifMessage url={comment.content} />
             : <span>{stripAt(comment.content)}</span>
           }
@@ -207,6 +217,7 @@ export function CommentModal({
   const [posted, setPosted] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [gifOpen, setGifOpen] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef  = useRef<HTMLDivElement>(null);
@@ -251,7 +262,7 @@ export function CommentModal({
     } else {
       document.body.style.overflow = "";
       setKeyboardOffset(0);
-      setInput(""); setCommentType(null); setPosted(false); setSendError(null); setTypeOpen(false); setGifOpen(false);
+      setInput(""); setCommentType(null); setPosted(false); setSendError(null); setTypeOpen(false); setGifOpen(false); setVideoOpen(false);
     }
     return () => { document.body.style.overflow = ""; };
   }, [isOpen, loadComments]);
@@ -357,6 +368,63 @@ export function CommentModal({
       setSending(false);
     }
   };
+
+  const handleVideoReady = useCallback(async (blob: Blob, duration: number) => {
+    setVideoOpen(false);
+    setSending(true);
+    setSendError(null);
+    try {
+      const BASE = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
+
+      const fd = new FormData();
+      const ext = (blob.type || "").includes("mp4") ? "mp4" : "webm";
+      fd.append("file", blob, `video.${ext}`);
+      fd.append("bucket", "comments");
+      const upRes = await fetch(`${BASE}/upload-video`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${publicAnonKey}` },
+        body: fd,
+      });
+      const upData = await upRes.json();
+      if (!upRes.ok || !upData.url) throw new Error(upData.error || "Erreur upload vidéo");
+
+      const optimistic: ApiComment = {
+        id: `temp-${Date.now()}`,
+        postId: postId ?? "",
+        userId: currentUserId,
+        author: getMyName(),
+        avatar: getMyAvatar(),
+        content: "",
+        videoUrl: upData.url,
+        videoDuration: duration,
+        commentType: null,
+        reactionCounts: { Pertinent: 0, Motivant: 0, "J'adore": 0, "Je soutiens": 0 } as any,
+        repliesCount: 0,
+        createdAt: new Date().toISOString(),
+        timestamp: "À l'instant",
+        myReaction: null,
+      };
+      setComments((c) => [...c, optimistic]);
+      setTotalComments((n) => n + 1);
+
+      if (postId) {
+        const { comment: real } = await createComment({
+          postId, userId: currentUserId, content: "",
+          author: getMyName(), avatar: getMyAvatar(),
+          videoUrl: upData.url, videoDuration: duration,
+        });
+        setComments((c) => c.map((x) => (x.id === optimistic.id ? real : x)));
+      }
+      toast.success("Vidéo postée !", { duration: 1800 });
+      onCommentAdded?.();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erreur inconnue";
+      setSendError(msg);
+      toast.error("Échec de l'envoi", { description: msg, duration: 3000 });
+    } finally {
+      setSending(false);
+    }
+  }, [postId, currentUserId, onCommentAdded]);
 
   const handleClose = () => { if (sending) return; onClose(); };
 
@@ -548,6 +616,23 @@ export function CommentModal({
                       >
                         <span style={{ fontSize: 10, fontWeight: 800, color: gifOpen ? "#a5b4fc" : "rgba(255,255,255,0.40)", letterSpacing: "0.04em" }}>GIF</span>
                       </motion.button>
+
+                      {/* Bouton Vidéo */}
+                      <motion.button
+                        whileTap={{ scale: 0.90 }}
+                        onClick={() => setVideoOpen(true)}
+                        disabled={sending}
+                        style={{
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          width: 28, height: 28, borderRadius: 6,
+                          background: videoOpen ? "rgba(99,102,241,0.20)" : "rgba(255,255,255,0.06)",
+                          border: videoOpen ? "0.5px solid rgba(99,102,241,0.45)" : "0.5px solid rgba(255,255,255,0.10)",
+                          cursor: sending ? "not-allowed" : "pointer", WebkitTapHighlightColor: "transparent",
+                          opacity: sending ? 0.4 : 1,
+                        }}
+                      >
+                        <Video style={{ width: 13, height: 13, color: videoOpen ? "#a5b4fc" : "rgba(255,255,255,0.40)" }} />
+                      </motion.button>
                     </div>
 
                     {/* Droite : bouton envoyer */}
@@ -582,6 +667,17 @@ export function CommentModal({
                 </div>
               </div>
             </div>
+            {/* Overlay VideoRecorder */}
+            {videoOpen && (
+              <div style={{ position: "absolute", inset: 0, zIndex: 10, background: "#000" }}>
+                <VideoRecorder
+                  maxSeconds={15}
+                  idealHeight={480}
+                  onReady={handleVideoReady}
+                  onCancel={() => setVideoOpen(false)}
+                />
+              </div>
+            )}
           </motion.div>
         </>
       )}

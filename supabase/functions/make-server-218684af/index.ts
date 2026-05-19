@@ -31,6 +31,8 @@ const PROFILE_BUCKET  = "make-218684af-profile-images";
 const POST_IMG_BUCKET = "make-218684af-post-images";
 const COMMUNITY_IMG_BUCKET = "make-218684af-community-images";
 const VOICE_BUCKET = "make-218684af-voice-msgs";
+const VIDEO_POST_BUCKET    = "make-218684af-videos-posts";
+const VIDEO_COMMENT_BUCKET = "make-218684af-videos-comments";
 
 // Idempotent bucket creation (public so URLs never expire)
 (async () => {
@@ -52,6 +54,14 @@ const VOICE_BUCKET = "make-218684af-voice-msgs";
     if (!names.includes(VOICE_BUCKET)) {
       await supabaseAdmin.storage.createBucket(VOICE_BUCKET, { public: true });
       console.log(`Bucket ${VOICE_BUCKET} créé.`);
+    }
+    if (!names.includes(VIDEO_POST_BUCKET)) {
+      await supabaseAdmin.storage.createBucket(VIDEO_POST_BUCKET, { public: true });
+      console.log(`Bucket ${VIDEO_POST_BUCKET} créé.`);
+    }
+    if (!names.includes(VIDEO_COMMENT_BUCKET)) {
+      await supabaseAdmin.storage.createBucket(VIDEO_COMMENT_BUCKET, { public: true });
+      console.log(`Bucket ${VIDEO_COMMENT_BUCKET} créé.`);
     }
   } catch (err) {
     console.error("Erreur init bucket:", err);
@@ -375,6 +385,11 @@ function safeAudioFileName(mime: string): string {
   return `${crypto.randomUUID().replace(/-/g, "")}.${ext}`;
 }
 
+function safeVideoFileName(mime: string): string {
+  const ext = mime.includes("mp4") ? "mp4" : "webm";
+  return `${crypto.randomUUID().replace(/-/g, "")}.${ext}`;
+}
+
 /** Validation complète : taille, extension autorisée, MIME bytes réels. */
 async function validateUpload(file: File): Promise<
   { ok: true; bytes: Uint8Array; mime: string } | { ok: false; error: string }
@@ -503,6 +518,50 @@ app.post("/make-server-218684af/upload-voice", async (c) => {
     return c.json({ success: true, url: urlData.publicUrl });
   } catch (err) {
     console.error("Erreur upload-voice:", err);
+    return c.json({ error: `Échec upload: ${err}` }, 500);
+  }
+});
+
+// ── Upload vidéo → Supabase Storage ──────────────────────────────────────────
+app.post("/make-server-218684af/upload-video", async (c) => {
+  try {
+    const body = await c.req.parseBody();
+    const file = body["file"];
+    const bucket = String(body["bucket"] || "posts"); // "posts" | "comments"
+
+    if (!file || typeof file === "string") {
+      return c.json({ error: "Fichier vidéo requis (champ 'file')" }, 400);
+    }
+    const f = file as File;
+    if (f.size === 0) return c.json({ error: "Fichier vide." }, 400);
+
+    const maxSize = bucket === "comments" ? 30 * 1024 * 1024 : 100 * 1024 * 1024;
+    if (f.size > maxSize) {
+      return c.json({ error: `Fichier trop volumineux (max ${bucket === "comments" ? "30" : "100"} MB).` }, 400);
+    }
+
+    const mime = f.type || "video/webm";
+    const allowed = ["video/mp4", "video/webm", "video/quicktime"];
+    if (!allowed.some((a) => mime.startsWith(a))) {
+      return c.json({ error: `Format vidéo non supporté: ${mime}` }, 400);
+    }
+
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const fileName = safeVideoFileName(mime);
+    const storageBucket = bucket === "comments" ? VIDEO_COMMENT_BUCKET : VIDEO_POST_BUCKET;
+
+    const { error: upErr } = await supabaseAdmin.storage
+      .from(storageBucket)
+      .upload(fileName, bytes, { contentType: mime, upsert: false });
+    if (upErr) {
+      console.error("Erreur upload vidéo:", upErr);
+      return c.json({ error: `Erreur upload: ${upErr.message}` }, 500);
+    }
+    const { data: urlData } = supabaseAdmin.storage.from(storageBucket).getPublicUrl(fileName);
+    console.log(`Vidéo uploadée: ${fileName} (${mime}), bucket=${storageBucket}`);
+    return c.json({ success: true, url: urlData.publicUrl });
+  } catch (err) {
+    console.error("Erreur upload-video:", err);
     return c.json({ error: `Échec upload: ${err}` }, 500);
   }
 });
@@ -796,7 +855,7 @@ function sanitizePost(post: Record<string, unknown>, requestingUserId?: string):
 app.post("/make-server-218684af/posts", async (c) => {
   try {
     const body = await c.req.json();
-    const { user, streak, progress, hashtags, username, voiceUrl, voiceDuration, voiceSubtitle } = body;
+    const { user, streak, progress, hashtags, username, voiceUrl, voiceDuration, voiceSubtitle, videoUrl, videoDuration, videoTitle, videoSubtitle } = body;
     if (!progress?.description?.trim()) return c.json({ error: "Contenu requis." }, 400);
     if (!progress?.type)               return c.json({ error: "Type requis." }, 400);
     if (!user?.name)                   return c.json({ error: "Utilisateur requis." }, 400);
@@ -804,6 +863,19 @@ app.post("/make-server-218684af/posts", async (c) => {
     const id = genId();
     const createdAt = new Date().toISOString();
     const resolvedUsername = normalizeUsername(username || user.name);
+
+    // Quota vidéo post : 2 par 5 jours glissants
+    if (videoUrl) {
+      const FIVE_DAYS = 5 * 24 * 60 * 60 * 1000;
+      const rawQ = await kv.get(`ff:video-post-quota:${resolvedUsername}`);
+      const timestamps: number[] = rawQ ? JSON.parse(rawQ) : [];
+      const recent = timestamps.filter((ts) => Date.now() - Number(ts) < FIVE_DAYS);
+      if (recent.length >= 2) {
+        const oldest = Math.min(...recent);
+        const daysLeft = Math.ceil((FIVE_DAYS - (Date.now() - oldest)) / (24 * 60 * 60 * 1000));
+        return c.json({ error: `Quota vidéo atteint. Reviens dans ${daysLeft} jour${daysLeft > 1 ? "s" : ""}.` }, 429);
+      }
+    }
 
     // Quota : 1 post vocal par utilisateur par 24h
     if (voiceUrl) {
@@ -831,11 +903,23 @@ app.post("/make-server-218684af/posts", async (c) => {
       voiceUrl: voiceUrl || undefined,
       voiceDuration: typeof voiceDuration === "number" ? voiceDuration : undefined,
       voiceSubtitle: voiceSubtitle ? String(voiceSubtitle).trim().slice(0, 200) : undefined,
+      videoUrl: videoUrl || undefined,
+      videoDuration: typeof videoDuration === "number" ? videoDuration : undefined,
+      videoTitle: videoTitle ? String(videoTitle).trim().slice(0, 80) : undefined,
+      videoSubtitle: videoSubtitle ? String(videoSubtitle).trim().slice(0, 200) : undefined,
     };
 
     await kv.set(`ff:post:${id}`, JSON.stringify(post));
     if (voiceUrl) {
       await kv.set(`ff:voice-quota:${resolvedUsername}`, String(Date.now()));
+    }
+    if (videoUrl) {
+      const FIVE_DAYS = 5 * 24 * 60 * 60 * 1000;
+      const rawQ = await kv.get(`ff:video-post-quota:${resolvedUsername}`);
+      const timestamps: number[] = rawQ ? JSON.parse(rawQ) : [];
+      const recent = timestamps.filter((ts) => Date.now() - Number(ts) < FIVE_DAYS);
+      recent.push(Date.now());
+      await kv.set(`ff:video-post-quota:${resolvedUsername}`, JSON.stringify(recent));
     }
     await kv.set(`ff:elo:post:${id}`, "500");
     // Notifier les @mentions dans le texte du post (sauf post anonyme)
@@ -1111,11 +1195,24 @@ app.delete("/make-server-218684af/posts/:id", async (c) => {
 app.post("/make-server-218684af/comments", async (c) => {
   try {
     const body = await c.req.json();
-    const { postId, userId, content, commentType, author, avatar, voiceUrl, voiceDuration } = body;
+    const { postId, userId, content, commentType, author, avatar, voiceUrl, voiceDuration, videoUrl, videoDuration } = body;
 
     if (!postId) return c.json({ error: "postId requis." }, 400);
     if (!userId) return c.json({ error: "userId requis." }, 400);
-    if (!content?.trim() && !voiceUrl) return c.json({ error: "Contenu ou voiceUrl requis." }, 400);
+    if (!content?.trim() && !voiceUrl && !videoUrl) return c.json({ error: "Contenu, voiceUrl ou videoUrl requis." }, 400);
+
+    // Quota vidéo commentaire : 3 par 5 jours glissants
+    if (videoUrl) {
+      const FIVE_DAYS = 5 * 24 * 60 * 60 * 1000;
+      const rawQ = await kv.get(`ff:video-comment-quota:${userId}`);
+      const timestamps: number[] = rawQ ? JSON.parse(rawQ) : [];
+      const recent = timestamps.filter((ts) => Date.now() - Number(ts) < FIVE_DAYS);
+      if (recent.length >= 3) {
+        const oldest = Math.min(...recent);
+        const daysLeft = Math.ceil((FIVE_DAYS - (Date.now() - oldest)) / (24 * 60 * 60 * 1000));
+        return c.json({ error: `Quota vidéo commentaire atteint. Reviens dans ${daysLeft} jour${daysLeft > 1 ? "s" : ""}.` }, 429);
+      }
+    }
 
     const id = genId();
     const createdAt = new Date().toISOString();
@@ -1129,13 +1226,24 @@ app.post("/make-server-218684af/comments", async (c) => {
       content: content?.trim() || "",
       commentType: commentType || null,
       voiceUrl: voiceUrl || null,
-      voiceDuration: voiceDuration || null, // "Conseil" | "Encouragement" | "Réaction" | "Motivant" | "Je soutiens" | "J'adore" | "Pertinent"
+      voiceDuration: voiceDuration || null,
+      videoUrl: videoUrl || null,
+      videoDuration: typeof videoDuration === "number" ? videoDuration : null,
       reactionCounts: { "Actionnable": 0, "Motivant": 0 },
       repliesCount: 0,
       createdAt,
     };
 
     await kv.set(`ff:comment:${id}`, JSON.stringify(comment));
+
+    if (videoUrl) {
+      const FIVE_DAYS = 5 * 24 * 60 * 60 * 1000;
+      const rawQ = await kv.get(`ff:video-comment-quota:${userId}`);
+      const timestamps: number[] = rawQ ? JSON.parse(rawQ) : [];
+      const recent = timestamps.filter((ts) => Date.now() - Number(ts) < FIVE_DAYS);
+      recent.push(Date.now());
+      await kv.set(`ff:video-comment-quota:${userId}`, JSON.stringify(recent));
+    }
 
     // Index par post
     const postCommentIds: string[] = JSON.parse((await kv.get(`ff:comments:post:${postId}`)) || "[]");

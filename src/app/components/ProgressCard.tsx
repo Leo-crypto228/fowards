@@ -73,6 +73,10 @@ interface ProgressCardProps {
   voiceUrl?: string;
   voiceDuration?: number;
   voiceSubtitle?: string;
+  videoUrl?: string;
+  videoDuration?: number;
+  videoTitle?: string;
+  videoSubtitle?: string;
 }
 
 function AnonAvatar({ size }: { size: number }) {
@@ -462,6 +466,9 @@ export function ProgressCard({
   voiceUrl,
   voiceDuration,
   voiceSubtitle,
+  videoUrl,
+  videoTitle,
+  videoSubtitle,
 }: ProgressCardProps) {
   const navigate = useNavigate();
   const { currentUserId } = useFollow();
@@ -915,8 +922,28 @@ export function ProgressCard({
               </span>
             </div>
 
-            {/* Description / Voice */}
-            {voiceUrl ? (
+            {/* Description / Video / Voice */}
+            {videoUrl ? (
+              <div style={{ margin: "0 -12px 8px" }} onClick={(e) => e.stopPropagation()}>
+                {/* Titre */}
+                <div style={{ fontSize: 15.5, fontWeight: 700, color: "rgba(255,255,255,0.96)", lineHeight: 1.35, marginBottom: 10, letterSpacing: "-0.1px", wordBreak: "break-word", padding: "0 12px" }}>
+                  {videoTitle || progress.description}
+                </div>
+                {/* Lecteur vidéo 3:4 pleine largeur, pas de border-radius */}
+                <video
+                  src={videoUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", display: "block", background: "#000", borderRadius: 0 }}
+                />
+                {videoSubtitle && (
+                  <p style={{ color: "rgba(235,235,245,0.65)", fontSize: 13.5, lineHeight: 1.5, whiteSpace: "pre-wrap", margin: "8px 12px 0", wordBreak: "break-word" }}>
+                    {videoSubtitle}
+                  </p>
+                )}
+              </div>
+            ) : voiceUrl ? (
               <div style={{ margin: "0 0 8px" }} onClick={(e) => e.stopPropagation()}>
                 {/* Titre */}
                 <div style={{

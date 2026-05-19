@@ -50,6 +50,10 @@ export interface ApiPost {
   voiceUrl?: string;
   voiceDuration?: number;
   voiceSubtitle?: string;
+  videoUrl?: string;
+  videoDuration?: number;
+  videoTitle?: string;
+  videoSubtitle?: string;
 }
 
 export interface CreatePostPayload {
@@ -72,6 +76,10 @@ export interface CreatePostPayload {
   voiceUrl?: string;
   voiceDuration?: number;
   voiceSubtitle?: string;
+  videoUrl?: string;
+  videoDuration?: number;
+  videoTitle?: string;
+  videoSubtitle?: string;
 }
 
 // Crée un nouveau post

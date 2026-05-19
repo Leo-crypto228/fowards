@@ -905,6 +905,10 @@ export function Feed() {
                       voiceUrl={(post as any).voiceUrl}
                       voiceDuration={(post as any).voiceDuration}
                       voiceSubtitle={(post as any).voiceSubtitle}
+                      videoUrl={(post as any).videoUrl}
+                      videoDuration={(post as any).videoDuration}
+                      videoTitle={(post as any).videoTitle}
+                      videoSubtitle={(post as any).videoSubtitle}
                       onPostDeleted={() => setFollowingPosts((prev) => prev.filter((p) => p.id !== post.id))}
                     />
                   </motion.div>
@@ -992,6 +996,10 @@ export function Feed() {
                     voiceUrl={(post as any).voiceUrl}
                     voiceDuration={(post as any).voiceDuration}
                     voiceSubtitle={(post as any).voiceSubtitle}
+                    videoUrl={(post as any).videoUrl}
+                    videoDuration={(post as any).videoDuration}
+                    videoTitle={(post as any).videoTitle}
+                    videoSubtitle={(post as any).videoSubtitle}
                     onPostDeleted={() => {
                       setApiPosts((prev) => prev.filter((p) => p.id !== post.id));
                       if (_feedCache) _feedCache.posts = _feedCache.posts.filter((p) => p.id !== post.id);
