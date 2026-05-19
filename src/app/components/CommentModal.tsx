@@ -16,7 +16,7 @@ import { useFollow } from "../context/FollowContext";
 import { MY_USER_NAME, MY_USER_AVATAR } from "../api/authStore";
 import { toast } from "sonner";
 import { stripAt } from "../utils/renderText";
-import { GifPicker, GifMessage, isGifUrl } from "./GifPicker";
+import { GifMessage, isGifUrl } from "./GifPicker";
 import { VideoRecorder } from "./VideoRecorder";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 
@@ -216,7 +216,6 @@ export function CommentModal({
   const [sending, setSending] = useState(false);
   const [posted, setPosted] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [gifOpen, setGifOpen] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -262,7 +261,7 @@ export function CommentModal({
     } else {
       document.body.style.overflow = "";
       setKeyboardOffset(0);
-      setInput(""); setCommentType(null); setPosted(false); setSendError(null); setTypeOpen(false); setGifOpen(false); setVideoOpen(false);
+      setInput(""); setCommentType(null); setPosted(false); setSendError(null); setTypeOpen(false); setVideoOpen(false);
     }
     return () => { document.body.style.overflow = ""; };
   }, [isOpen, loadComments]);
@@ -324,50 +323,6 @@ export function CommentModal({
     }
   };
 
-  // Sélection d'un GIF → l'insérer directement comme message
-  const handleGifSelect = async (gifUrl: string) => {
-    setGifOpen(false);
-    setSendError(null);
-    setSending(true);
-
-    const optimistic: ApiComment = {
-      id: `temp-${Date.now()}`,
-      postId: postId ?? "",
-      userId: currentUserId,
-      author: getMyName(),
-      avatar: getMyAvatar(),
-      content: gifUrl,
-      commentType: null,
-      reactionCounts: { Pertinent: 0, Motivant: 0, "J'adore": 0, "Je soutiens": 0 },
-      repliesCount: 0,
-      createdAt: new Date().toISOString(),
-      timestamp: "À l'instant",
-      myReaction: null,
-    };
-
-    setComments((c) => [...c, optimistic]);
-    setTotalComments((n) => n + 1);
-
-    try {
-      if (postId) {
-        const { comment: real } = await createComment({
-          postId, userId: currentUserId, content: gifUrl,
-          author: getMyName(), avatar: getMyAvatar(),
-        });
-        setComments((c) => c.map((x) => (x.id === optimistic.id ? real : x)));
-      }
-      toast.success("GIF envoyé !", { duration: 1500 });
-      onCommentAdded?.();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erreur inconnue";
-      console.error("Erreur envoi GIF:", err);
-      setComments((c) => c.filter((x) => x.id !== optimistic.id));
-      setTotalComments((n) => Math.max(0, n - 1));
-      setSendError(msg || "Impossible d'envoyer le GIF.");
-    } finally {
-      setSending(false);
-    }
-  };
 
   const handleVideoReady = useCallback(async (blob: Blob, duration: number) => {
     setVideoOpen(false);
@@ -432,9 +387,6 @@ export function CommentModal({
     <>
       {isOpen && (
         <>
-          {/* GIF Picker */}
-          <GifPicker isOpen={gifOpen} onClose={() => setGifOpen(false)} onSelect={handleGifSelect} anchor="center" />
-
           {/* Backdrop */}
           <motion.div
             onClick={handleClose}
@@ -557,7 +509,7 @@ export function CommentModal({
                   />
 
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-                    {/* Gauche : Type de commentaire + bouton GIF */}
+                    {/* Gauche : Type de commentaire + bouton vidéo */}
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       {postId && (
                         <div style={{ position: "relative" }}>
@@ -601,21 +553,6 @@ export function CommentModal({
                           
                         </div>
                       )}
-
-                      {/* Bouton GIF */}
-                      <motion.button
-                        whileTap={{ scale: 0.90 }}
-                        onClick={() => setGifOpen(true)}
-                        style={{
-                          display: "inline-flex", alignItems: "center", justifyContent: "center",
-                          padding: "3px 8px", borderRadius: 6,
-                          background: gifOpen ? "rgba(99,102,241,0.20)" : "rgba(255,255,255,0.06)",
-                          border: gifOpen ? "0.5px solid rgba(99,102,241,0.45)" : "0.5px solid rgba(255,255,255,0.10)",
-                          cursor: "pointer", WebkitTapHighlightColor: "transparent",
-                        }}
-                      >
-                        <span style={{ fontSize: 10, fontWeight: 800, color: gifOpen ? "#a5b4fc" : "rgba(255,255,255,0.40)", letterSpacing: "0.04em" }}>GIF</span>
-                      </motion.button>
 
                       {/* Bouton Vidéo */}
                       <motion.button
