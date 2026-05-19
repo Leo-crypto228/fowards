@@ -14,7 +14,6 @@ import { VideoRecorder } from "../components/VideoRecorder";
 import { toast } from "sonner";
 
 const MAX_VOICE_SEC = 60;
-const HOLD_DURATION_MS = 500;
 
 const BASE    = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
 const POST_TYPES = ["Avancée", "Question", "Blocage", "Conseil(s)", "Actus"];
@@ -260,7 +259,7 @@ export function CreateProgress() {
         setVoiceDuration(dur);
         setVoiceModeBoth("preview");
       };
-      rec.start(100);
+      rec.start();
       mediaRecorderRef.current = rec;
       recordStartRef.current = Date.now();
       setVoiceModeBoth("recording");
@@ -281,12 +280,9 @@ export function CreateProgress() {
 
   const startHold = useCallback(() => {
     if (voiceModeRef.current !== "idle") return;
-    setVoiceModeBoth("holding");
     navigator.vibrate?.(8);
-    holdTimeoutRef.current = setTimeout(() => {
-      if (voiceModeRef.current === "holding") startRecording();
-    }, HOLD_DURATION_MS);
-  }, [startRecording, setVoiceModeBoth]);
+    startRecording();
+  }, [startRecording]);
 
   const endHold = useCallback(() => {
     const mode = voiceModeRef.current;

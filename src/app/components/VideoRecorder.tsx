@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "motion/react";
-import { Camera, Square, RotateCcw, Check, AlertCircle, X } from "lucide-react";
+import { Camera, Square, RotateCcw, Check, AlertCircle, X, FlipHorizontal2 } from "lucide-react";
 
 interface VideoRecorderProps {
   maxSeconds: number;
@@ -11,10 +11,11 @@ interface VideoRecorderProps {
 
 type RecState = "idle" | "requesting" | "recording" | "preview";
 
-export function VideoRecorder({ maxSeconds, onReady, onCancel, idealHeight = 720 }: VideoRecorderProps) {
+export function VideoRecorder({ maxSeconds, onReady, onCancel }: VideoRecorderProps) {
   const [recState, setRecState] = useState<RecState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
 
   const liveRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -26,6 +27,8 @@ export function VideoRecorder({ maxSeconds, onReady, onCancel, idealHeight = 720
   const blobRef = useRef<Blob | null>(null);
   const previewUrlRef = useRef<string | null>(null);
   const finalDurRef = useRef<number>(0);
+  const facingRef = useRef(facingMode);
+  facingRef.current = facingMode;
 
   const clearTimers = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -45,13 +48,14 @@ export function VideoRecorder({ maxSeconds, onReady, onCancel, idealHeight = 720
     };
   }, [clearTimers, stopStream]);
 
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(async (facing?: "user" | "environment") => {
+    const fm = facing ?? facingRef.current;
     setRecState("requesting");
     setErrorMsg(null);
     try {
-      const idealWidth = Math.round(idealHeight * 3 / 4);
+      // Pas de contrainte width/height pour éviter le zoom numérique
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: idealWidth }, height: { ideal: idealHeight }, facingMode: "user" },
+        video: { facingMode: { ideal: fm } },
         audio: true,
       });
       streamRef.current = stream;
@@ -112,11 +116,28 @@ export function VideoRecorder({ maxSeconds, onReady, onCancel, idealHeight = 720
         setErrorMsg("Impossible d'accéder à la caméra.");
       }
     }
-  }, [idealHeight, maxSeconds, clearTimers, stopStream]);
+  }, [maxSeconds, clearTimers, stopStream]);
 
   const stopRecording = useCallback(() => {
     if (recRef.current?.state !== "inactive") recRef.current?.stop();
   }, []);
+
+  const flipCamera = useCallback(() => {
+    const next = facingRef.current === "user" ? "environment" : "user";
+    setFacingMode(next);
+    if (recState === "recording") {
+      // Arrête l'enregistrement actuel, redémarre avec l'autre caméra
+      clearTimers();
+      stopStream();
+      if (recRef.current?.state !== "inactive") {
+        try { recRef.current!.onstop = null; recRef.current!.stop(); } catch {}
+      }
+      chunksRef.current = [];
+      blobRef.current = null;
+      setElapsed(0);
+      startRecording(next);
+    }
+  }, [recState, clearTimers, stopStream, startRecording]);
 
   const retry = useCallback(() => {
     clearTimers();
@@ -135,10 +156,11 @@ export function VideoRecorder({ maxSeconds, onReady, onCancel, idealHeight = 720
 
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
   const pct = Math.min(100, Math.round((elapsed / maxSeconds) * 100));
+  const isFront = facingMode === "user";
 
   return (
     <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", background: "#060609", overflow: "hidden" }}>
-      {/* Live preview */}
+      {/* Live preview — pas de mirror pour la caméra arrière */}
       <video
         ref={liveRef}
         muted
@@ -148,7 +170,7 @@ export function VideoRecorder({ maxSeconds, onReady, onCancel, idealHeight = 720
           position: "absolute", inset: 0, width: "100%", height: "100%",
           objectFit: "cover",
           display: recState === "recording" ? "block" : "none",
-          transform: "scaleX(-1)",
+          transform: isFront ? "scaleX(-1)" : "none",
         }}
       />
 
@@ -178,7 +200,7 @@ export function VideoRecorder({ maxSeconds, onReady, onCancel, idealHeight = 720
             )}
             <motion.button
               whileTap={{ scale: 0.94 }}
-              onClick={startRecording}
+              onClick={() => startRecording()}
               style={{
                 width: 72, height: 72, borderRadius: "50%",
                 background: "rgba(99,102,241,0.18)", border: "2px solid rgba(99,102,241,0.45)",
@@ -223,8 +245,19 @@ export function VideoRecorder({ maxSeconds, onReady, onCancel, idealHeight = 720
                 </span>
               </div>
             </div>
-            {/* Stop button */}
-            <div style={{ position: "absolute", bottom: 28, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
+            {/* Stop button + flip */}
+            <div style={{ position: "absolute", bottom: 28, left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 24 }}>
+              <motion.button
+                whileTap={{ scale: 0.90 }}
+                onClick={flipCamera}
+                style={{
+                  width: 44, height: 44, borderRadius: "50%",
+                  background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.22)",
+                  display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                }}
+              >
+                <FlipHorizontal2 style={{ width: 20, height: 20, color: "#fff" }} />
+              </motion.button>
               <motion.button
                 whileTap={{ scale: 0.90 }}
                 onClick={stopRecording}
@@ -236,6 +269,8 @@ export function VideoRecorder({ maxSeconds, onReady, onCancel, idealHeight = 720
               >
                 <Square style={{ width: 24, height: 24, color: "#fff", fill: "#fff" }} />
               </motion.button>
+              {/* Espace symétrique */}
+              <div style={{ width: 44 }} />
             </div>
           </>
         )}
@@ -272,21 +307,39 @@ export function VideoRecorder({ maxSeconds, onReady, onCancel, idealHeight = 720
         )}
       </div>
 
-      {/* Cancel button (hidden during recording) */}
+      {/* Flip button (idle) + Cancel button */}
       {recState !== "recording" && (
-        <motion.button
-          whileTap={{ scale: 0.88 }}
-          onClick={onCancel}
-          style={{
-            position: "absolute", top: 14, right: 14,
-            width: 30, height: 30, borderRadius: "50%",
-            background: "rgba(0,0,0,0.60)", border: "0.5px solid rgba(255,255,255,0.18)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", zIndex: 10,
-          }}
-        >
-          <X style={{ width: 14, height: 14, color: "#fff" }} />
-        </motion.button>
+        <>
+          {/* Flip (idle seulement, preview n'a pas besoin) */}
+          {recState === "idle" && (
+            <motion.button
+              whileTap={{ scale: 0.88 }}
+              onClick={flipCamera}
+              style={{
+                position: "absolute", top: 14, left: 14,
+                width: 30, height: 30, borderRadius: "50%",
+                background: "rgba(0,0,0,0.60)", border: "0.5px solid rgba(255,255,255,0.18)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", zIndex: 10,
+              }}
+            >
+              <FlipHorizontal2 style={{ width: 14, height: 14, color: "#fff" }} />
+            </motion.button>
+          )}
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={onCancel}
+            style={{
+              position: "absolute", top: 14, right: 14,
+              width: 30, height: 30, borderRadius: "50%",
+              background: "rgba(0,0,0,0.60)", border: "0.5px solid rgba(255,255,255,0.18)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", zIndex: 10,
+            }}
+          >
+            <X style={{ width: 14, height: 14, color: "#fff" }} />
+          </motion.button>
+        </>
       )}
     </div>
   );
