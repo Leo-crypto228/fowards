@@ -50,14 +50,6 @@ export function Layout() {
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const { unreadCount } = useNotifications();
 
-  // Hauteur exacte de l'écran mesurée en JS — fiable sur iOS PWA (100dvh ne l'est pas)
-  const [appH, setAppH] = useState(() => window.innerHeight);
-  useEffect(() => {
-    const update = () => setAppH(window.innerHeight);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
 
 
   // Show "+" button only on /tribes/:id (a specific community page)
@@ -107,7 +99,7 @@ export function Layout() {
   const createCommunityActive = location.pathname === "/tribes/create";
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: appH, overflow: "hidden", paddingTop: "env(safe-area-inset-top)" }}>
+    <div className="fw-app-root flex flex-col bg-background" style={{ overflow: "hidden", paddingTop: "env(safe-area-inset-top)" }}>
       <Toaster
         position="top-center"
         toastOptions={{
@@ -124,7 +116,7 @@ export function Layout() {
       <FcoinNotificationWatcher />
       <main
         className={`flex-1 overflow-y-auto overflow-x-hidden${hideNav ? "" : " fw-main"}`}
-        style={{ paddingBottom: 0 }}
+        style={{ paddingBottom: 0, WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
         <Suspense fallback={
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>

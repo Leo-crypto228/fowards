@@ -7,13 +7,10 @@
   to   { transform: rotate(360deg); }
 }
 
-/* Conteneur racine de l'app — ancré en haut à gauche, hauteur = window.innerHeight via JS */
-#root {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  overflow: hidden;
+/* iOS PWA : hauteur fiable via -webkit-fill-available */
+.fw-app-root {
+  height: 100vh;
+  height: -webkit-fill-available;
 }
 
 /* ── Desktop sidebar nav (>= 1024px) ─────────────────────────── */
