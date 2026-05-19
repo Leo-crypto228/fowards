@@ -175,9 +175,9 @@ export function LoginPage() {
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      padding: "32px 20px",
+      padding: "calc(env(safe-area-inset-top, 0px) + 60px) 20px calc(env(safe-area-inset-bottom, 0px) + 32px) 20px",
       position: "relative",
-      overflow: "hidden",
+      overflowX: "hidden",
     }} className="ll-page">
       {/* Starfield */}
       <StarField />
@@ -196,7 +196,7 @@ export function LoginPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         style={{
-          position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 24px)", left: 24, zIndex: 10,
+          position: "absolute", top: "max(20px, env(safe-area-inset-top, 0px))", left: 24, zIndex: 10,
           fontSize: 17, fontWeight: 800, color: "#fff", letterSpacing: "-0.3px",
         }}
       >
