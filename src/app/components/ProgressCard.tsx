@@ -672,6 +672,11 @@ export function ProgressCard({
     const id = postId ?? `${user?.name || "post"}-${progress.timestamp}`.replace(/\s+/g, "-");
     const postData = { user, progress, image, images: imagesProp, verified, relevantCount: count, commentsCount, sharesCount, viewsCount: liveViewsCount, isNew, hashtags, postCreatedAt };
     try { sessionStorage.setItem("ff_last_post", JSON.stringify(postData)); } catch {}
+    // Sauvegarde position scroll du feed pour la restaurer au retour
+    try {
+      const el = document.getElementById("app-scroll");
+      if (el) sessionStorage.setItem("ff:feedScroll", el.scrollTop.toString());
+    } catch {}
     navigate(`/post/${encodeURIComponent(id)}`, { state: { post: postData } });
   };
 
@@ -680,6 +685,11 @@ export function ProgressCard({
     const id = postId ?? `${user?.name || "post"}-${progress.timestamp}`.replace(/\s+/g, "-");
     const postData = { user, progress, image, images: imagesProp, verified, relevantCount: count, commentsCount, sharesCount, viewsCount: liveViewsCount, isNew, hashtags, postCreatedAt };
     try { sessionStorage.setItem("ff_last_post", JSON.stringify(postData)); } catch {}
+    // Sauvegarde position scroll du feed pour la restaurer au retour
+    try {
+      const el = document.getElementById("app-scroll");
+      if (el) sessionStorage.setItem("ff:feedScroll", el.scrollTop.toString());
+    } catch {}
     navigate(`/post/${encodeURIComponent(id)}`, { state: { post: postData, scrollTo, prefillText } });
   }, [postId, user, progress, image, verified, count, commentsCount, sharesCount, liveViewsCount, isNew, hashtags, postCreatedAt, navigate]);
 

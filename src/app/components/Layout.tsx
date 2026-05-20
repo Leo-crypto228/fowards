@@ -3,7 +3,7 @@ import { Home, Users, Target, Loader2, Plus, Bell } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 import { motion } from "motion/react";
 import { Toaster } from "sonner";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useProgression } from "../context/ProgressionContext";
 import { useAuth } from "../context/AuthContext";
 import { useActiveCommunity } from "../context/ActiveCommunityContext";
@@ -49,6 +49,42 @@ export function Layout() {
   const hideNav = isPostDetail || isWaysViewer || isCreatePage;
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const { unreadCount } = useNotifications();
+
+  // ── Scroll-aware nav bar ───────────────────────────────────────────────────
+  const [navVisible, setNavVisible] = useState(true);
+  const lastNavScrollY = useRef(0);
+
+  // Reset nav visibility on every route change
+  useEffect(() => {
+    setNavVisible(true);
+    lastNavScrollY.current = 0;
+  }, [location.pathname]);
+
+  // Cumulative-delta scroll listener — same thresholds as Feed header
+  useEffect(() => {
+    if (!user || hideNav) return;
+    const scrollEl = document.getElementById("app-scroll") as HTMLElement | null;
+    if (!scrollEl) return;
+
+    let cumDelta = 0;
+    let lastDir = 0;
+
+    const onScroll = () => {
+      const y = scrollEl.scrollTop;
+      const delta = y - lastNavScrollY.current;
+      lastNavScrollY.current = y;
+      if (y < 10) { setNavVisible(true); cumDelta = 0; lastDir = 0; return; }
+      if (delta === 0) return;
+      const dir = delta > 0 ? 1 : -1;
+      if (dir !== lastDir) { cumDelta = 0; lastDir = dir; }
+      cumDelta += delta;
+      if (cumDelta < -25) { setNavVisible(true);  cumDelta = 0; }
+      else if (cumDelta > 45) { setNavVisible(false); cumDelta = 0; }
+    };
+
+    scrollEl.addEventListener("scroll", onScroll, { passive: true });
+    return () => scrollEl.removeEventListener("scroll", onScroll);
+  }, [user, hideNav]);
 
 
 
@@ -146,9 +182,9 @@ export function Layout() {
             borderTop: "0.5px solid rgba(255,255,255,0.10)",
             paddingBottom: 0,
           }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.25 }}
+          initial={{ opacity: 0, y: 0 }}
+          animate={{ opacity: 1, y: navVisible ? 0 : 80 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
         >
           <div className="w-full max-w-[672px] flex items-center lg:flex-col lg:max-w-none lg:gap-4">
 

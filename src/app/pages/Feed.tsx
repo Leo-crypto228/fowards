@@ -20,7 +20,7 @@ const USER_AVATAR =
   "https://images.unsplash.com/photo-1584940121730-93ffb8aa88b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200";
 const USER_STREAK = 27;
 
-const TABS = ["Pour vous", "Abonnements"] as const;
+const TABS = ["Pour toi", "Abonnements"] as const;
 type Tab = (typeof TABS)[number];
 
 // Module-level cache: persists while the page is open, avoids refetch on back-navigation
@@ -316,11 +316,25 @@ export function Feed() {
   }, []);
 
   // Reset header + scroll à chaque arrivée sur le feed
+  // Si l'utilisateur revient d'un post (sessionStorage "ff:feedScroll"), on restaure la position.
   useEffect(() => {
     if (location.pathname !== "/") return;
     setHeaderVisible(true);
     if (idleTimer.current) clearTimeout(idleTimer.current);
     const scrollEl = document.getElementById("app-scroll") as HTMLElement | null;
+    try {
+      const savedStr = sessionStorage.getItem("ff:feedScroll");
+      if (savedStr !== null) {
+        sessionStorage.removeItem("ff:feedScroll");
+        const savedY = parseInt(savedStr, 10);
+        if (savedY > 0 && scrollEl) {
+          scrollEl.scrollTop = savedY;
+          lastScrollY.current = savedY;
+          return; // ne pas remettre à zéro
+        }
+      }
+    } catch {}
+    // Navigation fraîche → remise à zéro
     if (scrollEl) scrollEl.scrollTop = 0;
     lastScrollY.current = 0;
   }, [location.pathname]);
@@ -373,10 +387,11 @@ export function Feed() {
   const liveStreak = authUser?.streak ?? USER_STREAK;
 
   // ── API posts state ──────────────────────────────────────────────────────
-  const [apiPosts, setApiPosts] = useState<ApiPost[]>([]);
+  // Initialiser depuis le cache module-level pour éviter le flash au retour d'un post
+  const [apiPosts, setApiPosts] = useState<ApiPost[]>(() => _feedCache?.posts ?? []);
   const [loadingApi, setLoadingApi] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(() => _feedCache?.hasMore ?? true);
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 

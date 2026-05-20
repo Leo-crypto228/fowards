@@ -1650,18 +1650,33 @@ export function PostDetail() {
   return (
     <div style={{ height: "100dvh", background: "#000000", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-      {/* ── Sticky top bar ── */}
-      <div style={{ position: "sticky", top: 0, zIndex: 30, padding: "14px 16px 10px", background: "linear-gradient(to bottom, #000000 80%, transparent 100%)" }}>
-        <motion.button whileTap={{ scale: 0.92 }} onClick={() => navigate(-1)}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px 8px 12px", borderRadius: 999, background: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "0.5px solid rgba(255,255,255,0.14)", boxShadow: "0 2px 12px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.09)", cursor: "pointer" }}
-        >
-          <ArrowLeft style={{ width: 16, height: 16, color: "rgba(255,255,255,0.80)", strokeWidth: 2.2 }} />
-          <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.80)" }}>Retour</span>
-        </motion.button>
-      </div>
+      {/* ── Bouton retour flottant — survole le contenu, respecte le bandeau status bar ── */}
+      <motion.button
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+        whileTap={{ scale: 0.88 }}
+        onClick={() => navigate(-1)}
+        style={{
+          position: "fixed",
+          top: "calc(env(safe-area-inset-top, 0px) + 12px)",
+          left: 16,
+          zIndex: 100,
+          width: 38, height: 38, borderRadius: "50%",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(20,20,30,0.72)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          border: "0.5px solid rgba(255,255,255,0.14)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.08)",
+          cursor: "pointer",
+        }}
+      >
+        <ArrowLeft style={{ width: 16, height: 16, color: "rgba(255,255,255,0.82)", strokeWidth: 2.2 }} />
+      </motion.button>
 
-      {/* ── Scrollable content ── */}
-      <div ref={listRef} style={{ flex: 1, overflowY: "auto" }}>
+      {/* ── Scrollable content — paddingTop pour laisser le fond noir visible sous le bouton ── */}
+      <div ref={listRef} style={{ flex: 1, overflowY: "auto", paddingTop: "56px" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 12px" }}>
 
           {/* ── Post card ── */}
