@@ -469,6 +469,19 @@ export function Feed() {
     return () => window.removeEventListener("fowards:post-created", handler);
   }, [fetchApiPosts]);
 
+  // Met à jour le compteur de commentaires d'un post sans re-fetch complet
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { postId } = (e as CustomEvent<{ postId: string }>).detail;
+      if (!postId) return;
+      const patch = (p: ApiPost) => p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p;
+      setApiPosts((prev) => prev.map(patch));
+      if (_feedCache) _feedCache.posts = _feedCache.posts.map(patch);
+    };
+    window.addEventListener("fowards:comment-added", handler);
+    return () => window.removeEventListener("fowards:comment-added", handler);
+  }, []);
+
   // ── Ways feed ────────────────────────────────────────────────────────────
   const [waysFeed, setWaysFeed] = useState<WaysFeedEntry[]>([]);
   const waysLoadedRef = useRef(false);

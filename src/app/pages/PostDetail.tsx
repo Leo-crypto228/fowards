@@ -1384,6 +1384,8 @@ export function PostDetail() {
           repliesCount: 0, createdAt: new Date().toISOString(), timestamp: "À l'instant", myReaction: null,
         };
         setApiComments((prev) => [optimistic, ...prev]);
+        setCommentsTotal((n) => n + 1);
+        window.dispatchEvent(new CustomEvent("fowards:comment-added", { detail: { postId: _postId } }));
         const { comment: saved } = await createComment({
           postId: _postId, userId: _userId, author: _userName, avatar: _avatar,
           content: "", voiceUrl: upData.url, voiceDuration: duration,
@@ -1418,6 +1420,8 @@ export function PostDetail() {
         repliesCount: 0, createdAt: new Date().toISOString(), timestamp: "À l'instant", myReaction: null,
       };
       setApiComments((prev) => [optimistic, ...prev]);
+      setCommentsTotal((n) => n + 1);
+      window.dispatchEvent(new CustomEvent("fowards:comment-added", { detail: { postId: _postId } }));
       const { comment: saved } = await createComment({
         postId: _postId, userId: _userId, author: _userName, avatar: _avatar,
         content: "", videoUrl: upData.url, videoDuration: duration,
@@ -1618,6 +1622,7 @@ export function PostDetail() {
     };
     setApiComments((prev) => [optimistic, ...prev]);
     setCommentsTotal((n) => n + 1);
+    window.dispatchEvent(new CustomEvent("fowards:comment-added", { detail: { postId } }));
     const capturedEloType = eloType;
     const capturedRaw = boldMode ? `**${raw}**` : raw;
     setCommentInput(""); setBoldMode(false);
@@ -1665,6 +1670,8 @@ export function PostDetail() {
       myReaction: null,
     };
     setApiComments((prev) => [gifComment, ...prev]);
+    setCommentsTotal((n) => n + 1);
+    window.dispatchEvent(new CustomEvent("fowards:comment-added", { detail: { postId } }));
 
     try {
       const { comment: real } = await createComment({
