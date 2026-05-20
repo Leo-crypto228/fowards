@@ -1013,8 +1013,8 @@ app.get("/make-server-218684af/posts", async (c) => {
     // Slice with buffer to account for deleted posts
     const idsToFetch = allIds.slice(offset, offset + limit * 2);
 
-    // Parallel KV reads (replaces sequential loop)
-    const raws = await Promise.all(idsToFetch.map(id => kv.get(`ff:post:${id}`)));
+    // Single batch query instead of N individual selects
+    const raws = await kv.mget(idsToFetch.map(id => `ff:post:${id}`));
     const posts = raws
       .map((raw) => {
         if (!raw) return null;
@@ -1045,16 +1045,17 @@ app.get("/make-server-218684af/posts/user/:username", async (c) => {
     const normStr = (s: string) => s.toLowerCase().replace(/\s+/g, "");
     const isOwnProfile = requestingUserId && normStr(requestingUserId) === normStr(username);
     const userIds: string[] = JSON.parse((await kv.get(`ff:posts:user:${username}`)) || "[]");
+    const slicedIds = userIds.slice(0, Math.min(userIds.length, limit * 2));
+    const userPostRaws = await kv.mget(slicedIds.map(id => `ff:post:${id}`));
     const posts = [];
-    for (const id of userIds.slice(0, Math.min(userIds.length, limit * 2))) {
-      const raw = await kv.get(`ff:post:${id}`);
-      if (raw) {
-        const post = JSON.parse(raw);
-        // Sur le profil d'autrui : masquer les posts anonymes
-        if (post.isAnonymous && !isOwnProfile) continue;
-        if (post.createdAt) post.progress.timestamp = relativeTime(post.createdAt);
-        posts.push(sanitizePost(post as Record<string, unknown>, requestingUserId));
-      }
+    for (let i = 0; i < slicedIds.length; i++) {
+      const raw = userPostRaws[i];
+      if (!raw) continue;
+      const post = JSON.parse(raw);
+      // Sur le profil d'autrui : masquer les posts anonymes
+      if (post.isAnonymous && !isOwnProfile) continue;
+      if (post.createdAt) post.progress.timestamp = relativeTime(post.createdAt);
+      posts.push(sanitizePost(post as Record<string, unknown>, requestingUserId));
     }
     // Tri décroissant par createdAt
     posts.sort((a, b) => {
@@ -1356,10 +1357,19 @@ app.get("/make-server-218684af/comments/post/:postId", async (c) => {
     const anonRealAuthor: string | null = postObj?.isAnonymous ? (postObj.realAuthorUsername || null) : null;
 
     const commentIds: string[] = JSON.parse((await kv.get(`ff:comments:post:${postId}`)) || "[]");
-    const comments = [];
+    const slicedCommentIds = commentIds.slice(0, limit);
 
-    for (const id of commentIds.slice(0, limit)) {
-      const raw = await kv.get(`ff:comment:${id}`);
+    // Fetch all comments + all reactions in two parallel batch queries
+    const [commentRaws, reactionRaws] = await Promise.all([
+      kv.mget(slicedCommentIds.map(id => `ff:comment:${id}`)),
+      requestingUser
+        ? kv.mget(slicedCommentIds.map(id => `ff:reaction:${id}:${requestingUser}`))
+        : Promise.resolve(slicedCommentIds.map(() => null)),
+    ]);
+
+    const comments = [];
+    for (let i = 0; i < slicedCommentIds.length; i++) {
+      const raw = commentRaws[i];
       if (!raw) continue;
       const comment = JSON.parse(raw);
       if (comment.createdAt) comment.timestamp = relativeTime(comment.createdAt);
@@ -1368,15 +1378,9 @@ app.get("/make-server-218684af/comments/post/:postId", async (c) => {
         comment.author = "Anonyme";
         comment.avatar = "";
       }
-
       // Réaction de l'utilisateur courant
-      if (requestingUser) {
-        const reactionRaw = await kv.get(`ff:reaction:${id}:${requestingUser}`);
-        comment.myReaction = reactionRaw ? JSON.parse(reactionRaw).reactionType : null;
-      } else {
-        comment.myReaction = null;
-      }
-
+      const reactionRaw = reactionRaws[i];
+      comment.myReaction = reactionRaw ? JSON.parse(reactionRaw).reactionType : null;
       comments.push(comment);
     }
 
