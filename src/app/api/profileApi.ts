@@ -29,6 +29,9 @@ export interface UserProfile {
   postsCount: number;
   followersCount: number;
   followingCount: number;
+  // Impact Score & Grade
+  impact_score?: number;
+  grade?: string;
   joinedAt?: string;
   createdAt?: string;
   updatedAt?: string;

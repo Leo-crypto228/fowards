@@ -17,6 +17,8 @@ interface Msg {
   user: string;
   handle: string;
   avatar: string;
+  /** Grade de l'auteur au moment de l'envoi */
+  authorGrade?: string;
   text: string;
   timestamp: string;
   image?: string;
@@ -53,6 +55,7 @@ function apiToMsg(m: ApiCommunityMessage): Msg {
     user: m.author,
     handle: m.handle,
     avatar: m.avatar,
+    authorGrade: m.authorGrade,
     text: m.content,
     timestamp: m.timestamp ?? "À l'instant",
     image: m.image ?? undefined,
@@ -173,10 +176,15 @@ function MessageThread({ msg, all, depth, replyingToId, onSelect, animDelay = 0 
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 3 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 3, flexWrap: "wrap" }}>
             <span style={{ fontSize: nameSize, fontWeight: 700, color: isSelected ? "rgba(165,180,252,0.95)" : "rgba(255,255,255,0.85)", transition: "color 0.18s ease" }}>
               {msg.user}
             </span>
+            {msg.authorGrade && (
+              <span style={{ fontSize: nameSize - 1, fontWeight: 400, color: "rgba(255,255,255,0.35)", whiteSpace: "nowrap" }}>
+                {"· "}{msg.authorGrade === "Top Voice" ? <span translate="no">Top Voice</span> : msg.authorGrade}
+              </span>
+            )}
             <span style={{ fontSize: nameSize - 1, color: "rgba(255,255,255,0.28)", fontWeight: 400 }}>{stripAt(msg.handle)}</span>
             <span style={{ fontSize: nameSize - 1, color: "rgba(255,255,255,0.20)" }}>· {msg.timestamp}</span>
           </div>

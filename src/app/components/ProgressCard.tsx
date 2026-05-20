@@ -483,6 +483,7 @@ export function ProgressCard({
   const [liveAvatar, setLiveAvatar] = useState(user.avatar);
   const [liveObjective, setLiveObjective] = useState(user.objective);
   const [liveFollowers, setLiveFollowers] = useState(user.followers);
+  const [liveGrade, setLiveGrade] = useState<string | undefined>(undefined);
 
   // ── Author goal progress ───────────────────────────────────────────────────
   const [authorProgress, setAuthorProgress] = useState<number>(
@@ -496,6 +497,7 @@ export function ProgressCard({
       if (cached.avatar)    setLiveAvatar(cached.avatar);
       if (cached.objective) setLiveObjective(cached.objective);
       setLiveFollowers(cached.followers);
+      setLiveGrade(cached.grade || "Membre");
       return;
     }
     fetchProfile(postUsername).then((p) => {
@@ -503,6 +505,7 @@ export function ProgressCard({
       if (p.avatar)    setLiveAvatar(p.avatar);
       if (p.objective) setLiveObjective(p.objective);
       setLiveFollowers(p.followers);
+      setLiveGrade(p.grade || "Membre");
     });
   }, [postUsername, isAnonymous]);
 
@@ -835,8 +838,11 @@ export function ProgressCard({
             {isAnonymous ? "Anonyme" : (user?.name || "")}
           </span>
           {!isAnonymous && verified && <VerifiedBadge />}
-          {!isAnonymous && liveFollowers !== undefined && (
-            <span style={{ ...SEC, whiteSpace: "nowrap" }}>· {formatFollowers(liveFollowers)} abonnés</span>
+          {!isAnonymous && liveGrade && (
+            <span style={{ ...SEC, whiteSpace: "nowrap", fontWeight: 400 }}>
+              {" · "}
+              {liveGrade === "Top Voice" ? <span translate="no">Top Voice</span> : liveGrade}
+            </span>
           )}
         </div>
         {/* Row 2: objective or "ton post anonyme" badge */}

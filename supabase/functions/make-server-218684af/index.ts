@@ -955,6 +955,10 @@ app.post("/make-server-218684af/posts", async (c) => {
     await addProgressScore(resolvedUsername, 5);
     await checkAndAwardFcoins(resolvedUsername);
 
+    // Impact Score
+    awardImpact(resolvedUsername, "post").catch(() => {});
+    if (userIds.length === 1) awardImpact(resolvedUsername, "first_post").catch(() => {});
+
     // ── Analyse IA du post → micro-progression de l'objectif actif ───────────
     try {
       const gRaw2 = await kv.get(`ff:goals:${resolvedUsername}`);
@@ -1217,12 +1221,19 @@ app.post("/make-server-218684af/comments", async (c) => {
     const id = genId();
     const createdAt = new Date().toISOString();
 
+    // Grade de l'auteur au moment du commentaire (snapshot)
+    const authorImpactRaw = await kv.get(`ff:impact:${userId}`);
+    const authorGrade = authorImpactRaw
+      ? (JSON.parse(authorImpactRaw).grade || "Membre")
+      : "Membre";
+
     const comment = {
       id,
       postId,
       userId,
       author: author || userId,
       avatar: avatar || "",
+      authorGrade,
       content: content?.trim() || "",
       commentType: commentType || null,
       voiceUrl: voiceUrl || null,
@@ -1294,6 +1305,11 @@ app.post("/make-server-218684af/comments", async (c) => {
     const cmtCnt = parseInt((await kv.get(`ff:comment-count:${userId}`)) || "0") + 1;
     await kv.set(`ff:comment-count:${userId}`, String(cmtCnt));
     await checkAndAwardFcoins(userId);
+
+    // Impact Score
+    if (videoUrl) awardImpact(userId, "comment_video").catch(() => {});
+    else if (voiceUrl) awardImpact(userId, "comment_voice").catch(() => {});
+    else awardImpact(userId, "comment_text", { contentLength: (content?.trim() || "").length }).catch(() => {});
 
     // Loguer received_comment pour l'auteur du post (anneau rouge auteur)
     try {
@@ -1544,6 +1560,11 @@ app.post("/make-server-218684af/comments/:commentId/reactions", async (c) => {
       if (!reactionUserIds.includes(userId)) {
         reactionUserIds.push(userId);
         await kv.set(`ff:reactions:comment:${commentId}`, JSON.stringify(reactionUserIds));
+      }
+
+      // Impact Score: +1 à l'auteur du commentaire (plafonné à 5 par commentaire)
+      if (comment.userId && comment.userId !== userId) {
+        awardImpact(comment.userId, "comment_like_received", { commentId }).catch(() => {});
       }
     }
 
@@ -2255,6 +2276,12 @@ app.post("/make-server-218684af/community/:communityId/messages", async (c) => {
     const id = genId();
     const createdAt = new Date().toISOString();
 
+    // Grade de l'auteur du message (snapshot)
+    const msgAuthorImpactRaw = await kv.get(`ff:impact:${userId}`);
+    const msgAuthorGrade = msgAuthorImpactRaw
+      ? (JSON.parse(msgAuthorImpactRaw).grade || "Membre")
+      : "Membre";
+
     const message = {
       id,
       communityId,
@@ -2263,6 +2290,7 @@ app.post("/make-server-218684af/community/:communityId/messages", async (c) => {
       author: author || userId,
       handle: handle || ("@" + userId),
       avatar: avatar || "",
+      authorGrade: msgAuthorGrade,
       content: content?.trim() || "",
       image: image || null,
       sharedPostId: sharedPostId || null,
@@ -3281,6 +3309,10 @@ app.put("/make-server-218684af/profiles/:username", async (c) => {
     // Permanent completion flags — once set, never cleared
     if (profile.onboardingDone) await kv.set(`ff:done:onboarding:${username}`, "1").catch(() => {});
     if (profile.firstPostCreated) await kv.set(`ff:done:firstpost:${username}`, "1").catch(() => {});
+    // One-shot: profil complété (+20 Impact) — déclenché quand bio + avatar + objectif sont remplis
+    if (profile.bio?.trim() && profile.avatar?.trim() && profile.objective?.trim()) {
+      awardImpact(username, "inscription_complete").catch(() => {});
+    }
     console.log(`PUT profile/${username}`);
 
     // ── Propagation live dans les posts existants (avatar, objective, streak) ──
@@ -3343,6 +3375,29 @@ app.get("/make-server-218684af/profiles/by-uid/:supabaseId", async (c) => {
     return c.json({ found: true, profile, kvUsername: storedUsername });
   } catch (err) {
     return c.json({ error: `Echec lookup UID: ${err}`, found: false }, 500);
+  }
+});
+
+// POST /impact/daily-login — Connexion quotidienne (+1 Impact par 24h, max 7/semaine)
+app.post("/make-server-218684af/impact/daily-login", async (c) => {
+  try {
+    const { userId } = await c.req.json();
+    if (!userId) return c.json({ error: "userId requis." }, 400);
+    const result = await awardImpact(userId, "daily_login");
+    return c.json({ success: true, score: result.score, grade: result.grade });
+  } catch (err) {
+    return c.json({ error: `Échec daily-login impact: ${err}` }, 500);
+  }
+});
+
+// GET /impact/:userId — Score Impact et grade courant
+app.get("/make-server-218684af/impact/:userId", async (c) => {
+  try {
+    const userId = c.req.param("userId");
+    const result = await getImpact(userId);
+    return c.json({ score: result.score, grade: result.grade });
+  } catch (err) {
+    return c.json({ error: `Échec récupération impact: ${err}` }, 500);
   }
 });
 
@@ -3715,6 +3770,111 @@ function computeDailyScore(entry: Partial<DailyEntry>): number {
     total += count <= thresh ? count * pts : thresh * pts + (count - thresh) * pts * 0.5;
   }
   return Math.min(100, Math.round(total));
+}
+
+// ── Impact Score System ──────────────────────────────────────────────────────
+
+function calculateGrade(score: number): string {
+  if (score >= 800) return "Top Voice";
+  if (score >= 300) return "Niveau 3";
+  if (score >= 100) return "Niveau 2";
+  if (score >= 30)  return "Niveau 1";
+  return "Membre";
+}
+
+async function awardImpact(userId: string, action: string, data?: Record<string, unknown>): Promise<{ score: number; grade: string }> {
+  try {
+    const key = `ff:impact:${userId}`;
+    const raw = await kv.get(key);
+    const impact = raw ? JSON.parse(raw) : { score: 0, grade: "Membre" };
+    let points = 0;
+
+    switch (action) {
+      case "inscription_complete": {
+        const oneshotKey = `ff:impact:oneshot:${userId}:inscription`;
+        if (await kv.get(oneshotKey)) break;
+        await kv.set(oneshotKey, "1");
+        points = 20;
+        break;
+      }
+      case "first_post": {
+        const oneshotKey = `ff:impact:oneshot:${userId}:first_post`;
+        if (await kv.get(oneshotKey)) break;
+        await kv.set(oneshotKey, "1");
+        points = 15;
+        break;
+      }
+      case "post":
+        points = 5;
+        break;
+      case "comment_text": {
+        const contentLen = (data?.contentLength as number) || 0;
+        if (contentLen >= 20) points = 3;
+        break;
+      }
+      case "comment_voice":
+        points = 5;
+        break;
+      case "comment_video":
+        points = 7;
+        break;
+      case "comment_like_received": {
+        const commentId = data?.commentId as string;
+        if (!commentId) break;
+        const capKey = `ff:impact:cmt-likes:${commentId}`;
+        const current = parseInt((await kv.get(capKey)) || "0");
+        if (current >= 5) break; // plafond 5 pts par commentaire
+        await kv.set(capKey, String(current + 1));
+        points = 1;
+        break;
+      }
+      case "daily_login": {
+        const today = new Date().toISOString().slice(0, 10);
+        const loginKey = `ff:impact:login:${userId}:${today}`;
+        if (await kv.get(loginKey)) break; // déjà attribué aujourd'hui
+        // Vérifier le plafond hebdomadaire (7/semaine)
+        let weeklyCount = 0;
+        for (let i = 0; i < 7; i++) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          if (await kv.get(`ff:impact:login:${userId}:${d.toISOString().slice(0, 10)}`)) weeklyCount++;
+        }
+        if (weeklyCount >= 7) break;
+        await kv.set(loginKey, "1");
+        points = 1;
+        break;
+      }
+    }
+
+    if (points > 0) {
+      impact.score = (impact.score || 0) + points;
+      impact.grade = calculateGrade(impact.score);
+      impact.lastUpdate = new Date().toISOString();
+      await kv.set(key, JSON.stringify(impact));
+      // Sync vers le profil (champs grade + impact_score pour GET /profiles)
+      const profileRaw = await kv.get(`ff:profile:${userId}`);
+      if (profileRaw) {
+        const profile = JSON.parse(profileRaw);
+        profile.grade = impact.grade;
+        profile.impact_score = impact.score;
+        await kv.set(`ff:profile:${userId}`, JSON.stringify(profile));
+      }
+      console.log(`Impact: user=${userId}, action=${action}, +${points}pts → score=${impact.score} (${impact.grade})`);
+    }
+    return { score: impact.score || 0, grade: impact.grade || "Membre" };
+  } catch (e) {
+    console.error(`awardImpact error: user=${userId}, action=${action}:`, e);
+    return { score: 0, grade: "Membre" };
+  }
+}
+
+async function getImpact(userId: string): Promise<{ score: number; grade: string }> {
+  try {
+    const raw = await kv.get(`ff:impact:${userId}`);
+    if (!raw) return { score: 0, grade: "Membre" };
+    const impact = JSON.parse(raw);
+    return { score: impact.score || 0, grade: impact.grade || calculateGrade(impact.score || 0) };
+  } catch { return { score: 0, grade: "Membre" }; }
 }
 
 async function logActivity(userId: string, actionType: string, data?: Record<string, unknown>): Promise<void> {
@@ -5603,6 +5763,12 @@ app.post("/make-server-218684af/community/:communityId/messages", async (c) => {
     const id = genId();
     const createdAt = new Date().toISOString();
 
+    // Grade de l'auteur (snapshot)
+    const chanMsgImpactRaw = await kv.get(`ff:impact:${userId}`);
+    const chanMsgAuthorGrade = chanMsgImpactRaw
+      ? (JSON.parse(chanMsgImpactRaw).grade || "Membre")
+      : "Membre";
+
     const message = {
       id,
       communityId,
@@ -5611,6 +5777,7 @@ app.post("/make-server-218684af/community/:communityId/messages", async (c) => {
       author: author || userId,
       handle: handle || `@${userId}`,
       avatar: avatar || "",
+      authorGrade: chanMsgAuthorGrade,
       content: content?.trim() || "",
       image: image || null,
       sharedPostId: sharedPostId || null,

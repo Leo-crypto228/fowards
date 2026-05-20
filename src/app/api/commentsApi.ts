@@ -25,6 +25,8 @@ export interface ApiComment {
   userId: string;
   author: string;
   avatar: string;
+  /** Grade de l'auteur au moment de la création du commentaire */
+  authorGrade?: string;
   content: string;
   voiceUrl?: string | null;
   voiceDuration?: number | null;

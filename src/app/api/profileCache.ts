@@ -27,6 +27,7 @@ export interface CachedProfile {
   streak: number;
   followers: number;
   name: string;
+  grade: string;
 }
 
 // Mémoire partagée entre tous les composants
@@ -52,6 +53,7 @@ export async function fetchProfile(username: string): Promise<CachedProfile | nu
         streak: p.streak || 0,
         followers: p.followersCount || 0,
         name: p.name || normalized,
+        grade: p.grade || "Membre",
       };
       cache.set(normalized, profile);
       return profile;

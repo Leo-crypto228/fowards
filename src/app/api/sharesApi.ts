@@ -216,6 +216,8 @@ export interface ApiCommunityMessage {
   author: string;
   handle: string;
   avatar: string;
+  /** Grade de l'auteur au moment de l'envoi du message */
+  authorGrade?: string;
   content: string;
   image?: string | null;
   sharedPostId?: string | null;

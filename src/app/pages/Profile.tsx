@@ -545,14 +545,10 @@ function PersonCard({ name, avatar, objective, followers, streak, tags }: {
       <div style={{ flex: 1, minWidth: 0, paddingTop: 0 }}>
         {/* Name */}
         <p style={{ fontSize: 17, fontWeight: 700, color: "#f0f0f5", margin: "0 0 3px" }}>{safeName}</p>
-        {/* @handle + followers */}
+        {/* @handle */}
         <div style={{ display: "flex", alignItems: "center", gap: 5, margin: "0 0 6px", flexWrap: "wrap" }}>
           <span style={{ fontSize: 13, color: "rgba(255,255,255,0.40)", fontWeight: 400 }}>
             {safeName.toLowerCase().replace(/\s+/g, "_")}
-          </span>
-          <span style={{ color: "rgba(255,255,255,0.22)", fontSize: 13 }}>·</span>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>
-            {followers >= 1000 ? `${(followers / 1000).toFixed(1)}k` : followers} abonnés
           </span>
         </div>
         <p style={{ fontSize: 14, color: "rgba(200,200,220,0.58)", lineHeight: 1.45, marginBottom: 6 }}>{objective}</p>
@@ -1460,6 +1456,8 @@ export function Profile() {
   const streak        = supaProfile?.streak             ?? DEFAULT_PROFILE_DATA.streak;
   const followers     = supaProfile?.followersCount     ?? 0;
   const following     = supaProfile?.followingCount     ?? 0;
+  const userGrade     = supaProfile?.grade              ?? "Membre";
+  const impactScore   = supaProfile?.impact_score       ?? 0;
   const progressPct   = supaProfile?.progressPct        ?? DEFAULT_PROFILE_DATA.progressPct;
   const displayName   = supaProfile?.name               ?? authUser?.name ?? DEFAULT_PROFILE_DATA.name;
   const displayHandle = supaProfile?.handle             ?? `@${MY_EFFECTIVE_USERNAME}`;
@@ -1594,11 +1592,14 @@ export function Profile() {
                     }}
                   />
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                    <button onClick={() => setActiveTab("suivi")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", gap: 4, alignItems: "baseline" }}>
-                      <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f5" }}>{followers}</span>
-                      <span style={{ fontSize: 13, color: "rgba(200,200,220,0.48)" }}>abonnés</span>
-                    </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+                    {/* Grade — remplace l'affichage du nombre d'abonnés */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 999, background: "rgba(99,102,241,0.10)", border: "0.5px solid rgba(99,102,241,0.28)" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#c7d2fe" }}>
+                        {userGrade === "Top Voice" ? <span translate="no">Top Voice</span> : userGrade}
+                      </span>
+                      <span style={{ fontSize: 11, color: "rgba(165,180,252,0.50)", fontWeight: 400 }}>· {impactScore} pts</span>
+                    </div>
                     <span style={{ color: "rgba(144,144,168,0.28)", fontSize: 14 }}>•</span>
                     <button onClick={() => setActiveTab("suivi")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", gap: 4, alignItems: "baseline" }}>
                       <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f5" }}>{following}</span>

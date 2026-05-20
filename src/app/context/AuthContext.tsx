@@ -7,6 +7,7 @@ import { supabase } from "../api/supabaseClient";
 import { normalizeUsername } from "../api/profileCache";
 import { setAuthUser, getAuthUser, type StoredAuthUser } from "../api/authStore";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
+import { dailyLoginImpact } from "../api/impactApi";
 
 const BASE    = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
 const HEADERS = { "Content-Type": "application/json", Authorization: `Bearer ${publicAnonKey}` };
@@ -212,6 +213,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await applyUser(sess?.user ?? null);
         setLoading(false);
         clearTimeout(failsafe);
+        // Connexion quotidienne Impact (+1/j, max 7/sem) — fire-and-forget
+        if (sess?.user) {
+          const username = normalizeUsername(
+            sess.user.user_metadata?.username || sess.user.email?.split("@")[0] || ""
+          );
+          if (username) dailyLoginImpact(username).catch(() => {});
+        }
       }
     );
     return () => { subscription.unsubscribe(); clearTimeout(failsafe); };

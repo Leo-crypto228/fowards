@@ -272,6 +272,11 @@ function ApiCommentRow({
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: comment.commentType ? 6 : 5 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.90)" }}>{comment.author}</span>
+            {comment.author !== "Anonyme" && comment.authorGrade && (
+              <span style={{ fontSize: 11, fontWeight: 400, color: "rgba(255,255,255,0.38)", whiteSpace: "nowrap" }}>
+                {"· "}{comment.authorGrade === "Top Voice" ? <span translate="no">Top Voice</span> : comment.authorGrade}
+              </span>
+            )}
             {comment.author !== "Anonyme" && <span style={{ fontSize: "0.70em", color: "rgba(255,255,255,0.30)", fontWeight: 400 }}>{handle}</span>}
             <span style={{ fontSize: 12, color: "rgba(255,255,255,0.22)" }}>•</span>
             <span style={{ fontSize: 12, color: "rgba(255,255,255,0.28)" }}>{comment.timestamp ?? "À l'instant"}</span>
