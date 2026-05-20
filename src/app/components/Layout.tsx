@@ -142,6 +142,7 @@ export function Layout() {
         id="app-scroll"
         className={`flex-1 overflow-y-auto overflow-x-hidden${hideNav ? "" : " fw-main"}`}
         style={{
+          minHeight: 0,
           paddingTop: "env(safe-area-inset-top, 0px)",
           paddingBottom: hideNav ? 0 : 60,
           WebkitOverflowScrolling: "touch",

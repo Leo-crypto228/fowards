@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import {
@@ -251,9 +252,9 @@ function PostMenu({ postId, authorUsername, authorName, postContent, currentUser
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
       style={{
-        position: "absolute",
-        bottom: 52, right: 8,
-        zIndex: 100,
+        position: "fixed",
+        bottom: 100, right: 16,
+        zIndex: 9999,
         minWidth: 252,
         background: "rgba(8,8,12,0.97)",
         backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
@@ -900,8 +901,6 @@ export function ProgressCard({
   // ==========================================================================
   return (
     <>
-      {showPostMenu && <div className="fixed inset-0 z-40" onClick={() => setShowPostMenu(false)} />}
-
       <div className={hasImages ? "relative sm:mx-3" : "mx-3 relative"} style={{ contain: "layout" }}>
         <motion.div
           className={`cursor-pointer relative overflow-hidden ${hasImages ? "rounded-none sm:rounded-[20px]" : "rounded-[20px]"}`}
@@ -1059,25 +1058,28 @@ export function ProgressCard({
           {renderCTA()}
         </motion.div>
 
-        {/* Post menu dropdown */}
-        
-          {showPostMenu && (
-            <PostMenu
-              postId={postId}
-              authorUsername={postUsername}
-              authorName={user?.name || ""}
-              postContent={progress.description}
-              currentUserId={currentUserId || ""}
-              isOwner={isSelfPost}
-              onClose={() => setShowPostMenu(false)}
-              onPostDeleted={onPostDeleted}
-            />
-          )}
-        
       </div>
 
       {/* ── SEPARATOR BETWEEN POSTS ────────────────────────────────────────── */}
       <div style={{ height: 1, background: "rgba(255,255,255,0.14)", margin: "6px 0" }} />
+
+      {/* Post menu — rendu en portal pour échapper à la couche vidéo iOS */}
+      {showPostMenu && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setShowPostMenu(false)} />
+          <PostMenu
+            postId={postId}
+            authorUsername={postUsername}
+            authorName={user?.name || ""}
+            postContent={progress.description}
+            currentUserId={currentUserId || ""}
+            isOwner={isSelfPost}
+            onClose={() => setShowPostMenu(false)}
+            onPostDeleted={onPostDeleted}
+          />
+        </>,
+        document.body
+      )}
     </>
   );
 }
