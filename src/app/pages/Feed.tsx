@@ -288,7 +288,7 @@ function AutocompleteDropdown({
 
 /* ───── Main Feed ───── */
 export function Feed() {
-  const [activeTab, setActiveTab] = useState<Tab>("Pour vous");
+  const [activeTab, setActiveTab] = useState<Tab>("Pour toi");
   const [query, setQuery] = useState("");
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -941,7 +941,7 @@ export function Feed() {
         )}
 
         {/* ── ONGLET POUR VOUS ── */}
-        {activeTab === "Pour vous" && (
+        {activeTab === "Pour toi" && (
           <>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 18px 10px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 7 }}>

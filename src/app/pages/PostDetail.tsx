@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, MessageCircle, Share2,
   Send, X, Check, MoreHorizontal, Reply,
-  AlertTriangle, TrendingDown, ThumbsDown, Plus, Loader2, WifiOff, ChevronDown, ChevronUp, Mic,
+  AlertTriangle, TrendingDown, ThumbsDown, Plus, Loader2, WifiOff, ChevronDown, ChevronUp, Mic, Camera,
 } from "lucide-react";
 import { VoicePlayer } from "../components/VoicePlayer";
+import { VideoRecorder } from "../components/VideoRecorder";
+import { toast } from "sonner";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { reportInappropriate, reduceAuthor, markNotRelevant } from "../api/postActionsApi";
 import { useSavedPosts, type SavedPostData } from "../context/SavedPostsContext";
@@ -30,6 +32,27 @@ import {
 import { stripAt, renderPostText, extractHashtagsFromText } from "../utils/renderText";
 import { GifPicker, GifMessage, isGifUrl } from "../components/GifPicker";
 import { fetchAuthorGoalProgress, getCachedGoalProgress } from "../api/goalProgressCache";
+
+/* ─── Video-comment quota (2 per rolling 5 days, non-cumulative) ──────────── */
+const VC_KEY = "ff:vc_quota";
+const VC_MAX = 2;
+const VC_WINDOW = 5 * 24 * 60 * 60 * 1000; // 5 days in ms
+function getVcTs(): number[] {
+  try { return JSON.parse(localStorage.getItem(VC_KEY) ?? "[]"); } catch { return []; }
+}
+function canPostVideoComment(): boolean {
+  const cutoff = Date.now() - VC_WINDOW;
+  return getVcTs().filter((t) => t > cutoff).length < VC_MAX;
+}
+function recordVcUsage() {
+  const cutoff = Date.now() - VC_WINDOW;
+  const recent = [...getVcTs().filter((t) => t > cutoff), Date.now()];
+  try { localStorage.setItem(VC_KEY, JSON.stringify(recent)); } catch {}
+}
+function remainingVcCount(): number {
+  const cutoff = Date.now() - VC_WINDOW;
+  return Math.max(0, VC_MAX - getVcTs().filter((t) => t > cutoff).length);
+}
 
 /* ─── Types ───────────────────────────────���─���───────────────────────────────── */
 
@@ -328,9 +351,19 @@ function ApiCommentRow({
           <div style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.55, margin: "0 0 6px", whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere" }}>
             {comment.voiceUrl
               ? <VoicePlayer url={comment.voiceUrl} duration={comment.voiceDuration ?? 0} msgId={comment.id} />
-              : isGifUrl(comment.content)
-                ? <GifMessage url={comment.content} />
-                : renderPostText(comment.content, navigate)
+              : comment.videoUrl
+                ? (
+                  <video
+                    src={comment.videoUrl}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    style={{ width: "100%", maxHeight: 240, borderRadius: 12, display: "block", objectFit: "cover", background: "#060609", marginBottom: 2 }}
+                  />
+                )
+                : isGifUrl(comment.content)
+                  ? <GifMessage url={comment.content} />
+                  : renderPostText(comment.content, navigate)
             }
           </div>
         )}
@@ -1319,6 +1352,42 @@ export function PostDetail() {
     rec.stop();
   }, [myUserId, myUserName, myUserAvatar, postId, setVS]);
 
+  // ── Video comment upload ──────────────────────────────────────────────────
+  const handleVideoCommentReady = useCallback(async (blob: Blob, duration: number) => {
+    const _userId = myUserId, _userName = myUserName, _avatar = myUserAvatar, _postId = postId;
+    setVideoCommentUploading(true);
+    try {
+      const fd = new FormData();
+      const ext = (blob.type || "").includes("mp4") ? "mp4" : "webm";
+      fd.append("file", blob, `video.${ext}`);
+      const upRes = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-218684af/upload-video`,
+        { method: "POST", headers: { Authorization: `Bearer ${publicAnonKey}` }, body: fd }
+      );
+      const upData = await upRes.json();
+      if (!upData.url) throw new Error(upData.error || "Erreur upload vidéo");
+      recordVcUsage();
+      const tempId = `temp-vc-${Date.now()}`;
+      const optimistic: ApiComment = {
+        id: tempId, postId: _postId, userId: _userId, author: _userName, avatar: _avatar,
+        content: "", videoUrl: upData.url, videoDuration: duration,
+        commentType: null, reactionCounts: { Actionnable: 0, Motivant: 0 },
+        repliesCount: 0, createdAt: new Date().toISOString(), timestamp: "À l'instant", myReaction: null,
+      };
+      setApiComments((prev) => [optimistic, ...prev]);
+      const { comment: saved } = await createComment({
+        postId: _postId, userId: _userId, author: _userName, avatar: _avatar,
+        content: "", videoUrl: upData.url, videoDuration: duration,
+      });
+      setApiComments((prev) => prev.map((c) => c.id === tempId ? saved : c));
+    } catch (err) {
+      console.error("Erreur upload vidéo commentaire:", err);
+      toast("Erreur lors de l'envoi de la vidéo", { icon: "⚠️" });
+    } finally {
+      setVideoCommentUploading(false);
+    }
+  }, [myUserId, myUserName, myUserAvatar, postId]);
+
   // Tools always visible in comments view (layout stable, plus de croissance au focus)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [boldMode, setBoldMode] = useState(false);
@@ -1335,6 +1404,8 @@ export function PostDetail() {
   const [showCommentAutocomplete, setShowCommentAutocomplete] = useState(false);
   const [showPostMenu, setShowPostMenu] = useState(false);
   const [gifOpen, setGifOpen] = useState(false);
+  const [videoCommentOpen, setVideoCommentOpen] = useState(false);
+  const [videoCommentUploading, setVideoCommentUploading] = useState(false);
   type MenuActionState = "idle" | "loading" | "done" | "error";
   const [menuStates, setMenuStates] = useState<Record<string, MenuActionState>>({});
   const [menuFeedback, setMenuFeedback] = useState<Record<string, string>>({});
@@ -1675,6 +1746,40 @@ export function PostDetail() {
         <ArrowLeft style={{ width: 16, height: 16, color: "rgba(255,255,255,0.82)", strokeWidth: 2.2 }} />
       </motion.button>
 
+      {/* ── Overlay VideoRecorder pour vidéo-commentaire ── */}
+      <AnimatePresence>
+        {videoCommentOpen && (
+          <motion.div
+            key="vc-overlay"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000", display: "flex", flexDirection: "column" }}
+          >
+            {/* Close button */}
+            <div style={{ position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 12px)", right: 16, zIndex: 10 }}>
+              <motion.button onClick={() => setVideoCommentOpen(false)} whileTap={{ scale: 0.88 }}
+                style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "0.5px solid rgba(255,255,255,0.14)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <X style={{ width: 16, height: 16, color: "#fff" }} />
+              </motion.button>
+            </div>
+            {/* Quota info */}
+            <div style={{ position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 20px)", left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 10 }}>
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.40)", fontWeight: 500 }}>
+                Vidéo commentaire · {remainingVcCount()} restante{remainingVcCount() !== 1 ? "s" : ""} / 5 jours · max 20s
+              </span>
+            </div>
+            <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+              <VideoRecorder
+                maxSeconds={20}
+                onReady={(blob, dur) => { setVideoCommentOpen(false); handleVideoCommentReady(blob, dur); }}
+                onCancel={() => setVideoCommentOpen(false)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Scrollable content — paddingTop pour laisser le fond noir visible sous le bouton ── */}
       <div ref={listRef} style={{ flex: 1, overflowY: "auto", paddingTop: "56px" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 12px" }}>
@@ -1990,6 +2095,33 @@ export function PostDetail() {
                       style={{ height: 46, width: 46, borderRadius: 999, flexShrink: 0, background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(120,120,140,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: myUserId ? "pointer" : "not-allowed", alignSelf: "flex-end" }}
                     >
                       <Mic style={{ width: 18, height: 18, color: "rgba(255,255,255,0.65)" }} />
+                    </motion.button>
+                    {/* ── Bouton vidéo commentaire ── */}
+                    <motion.button
+                      type="button"
+                      whileTap={!videoCommentUploading && canPostVideoComment() ? { scale: 0.88 } : {}}
+                      onClick={() => {
+                        if (videoCommentUploading) return;
+                        if (!canPostVideoComment()) {
+                          toast(`Limite atteinte — ${VC_MAX} vidéos par 5 jours`, { icon: "📹" });
+                          return;
+                        }
+                        setVideoCommentOpen(true);
+                      }}
+                      style={{
+                        height: 46, width: 46, borderRadius: 999, flexShrink: 0,
+                        background: canPostVideoComment() ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.03)",
+                        border: "0.5px solid rgba(120,120,140,0.25)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: videoCommentUploading || !canPostVideoComment() ? "not-allowed" : "pointer",
+                        alignSelf: "flex-end",
+                        opacity: canPostVideoComment() ? 1 : 0.4,
+                      }}
+                    >
+                      {videoCommentUploading
+                        ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}><Loader2 style={{ width: 18, height: 18, color: "#818cf8" }} /></motion.div>
+                        : <Camera style={{ width: 18, height: 18, color: "rgba(255,255,255,0.65)" }} />
+                      }
                     </motion.button>
                   </motion.div>
                 )}

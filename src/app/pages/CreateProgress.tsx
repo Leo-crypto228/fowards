@@ -747,7 +747,7 @@ export function CreateProgress() {
             // ── Enregistreur vidéo ────────────────────────────────────────────
             <div style={{ margin: "0 -20px" }}>
               <VideoRecorder
-                maxSeconds={60}
+                maxSeconds={20}
                 idealHeight={720}
                 onReady={handleVideoReady}
                 onCancel={resetVideo}
