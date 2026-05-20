@@ -1325,6 +1325,7 @@ export function PostDetail() {
   const voiceRecRef   = useRef<MediaRecorder | null>(null);
   const voiceChunks   = useRef<Blob[]>([]);
   const voiceStartRef = useRef<number>(0);
+  const voiceMimeRef  = useRef<string>("");
   const setVS = useCallback((s: VoiceRecState) => { voiceStateRef.current = s; setVoiceState(s); }, []);
 
   const cancelVoice = useCallback(() => {
@@ -1345,6 +1346,7 @@ export function PostDetail() {
       })();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      voiceMimeRef.current = mime;
       voiceChunks.current = [];
       rec.ondataavailable = (ev) => { if (ev.data.size > 0) voiceChunks.current.push(ev.data); };
       rec.start(100); voiceRecRef.current = rec; voiceStartRef.current = Date.now();
@@ -1358,14 +1360,15 @@ export function PostDetail() {
     if (!rec || rec.state === "inactive") { setVS("idle"); return; }
     const duration = Math.max(1, Math.round((Date.now() - voiceStartRef.current) / 1000));
     rec.onstop = async () => {
-      const blob = new Blob(voiceChunks.current, { type: rec.mimeType || "audio/webm" });
+      const blobMime = voiceMimeRef.current || rec.mimeType || "audio/webm";
+      const blob = new Blob(voiceChunks.current, { type: blobMime });
       rec.stream.getTracks().forEach((t) => t.stop());
       voiceRecRef.current = null; voiceChunks.current = [];
       if (blob.size < 1000) { setVS("idle"); return; }
       setVS("uploading");
       try {
         const fd = new FormData();
-        const ext = (rec.mimeType || "").includes("mp4") ? "m4a" : "webm";
+        const ext = blobMime.includes("mp4") ? "m4a" : "webm";
         fd.append("file", blob, `voice.${ext}`);
         const upRes = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-218684af/upload-voice`,

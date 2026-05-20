@@ -229,6 +229,7 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
   const mediaRecorderRef  = useRef<MediaRecorder | null>(null);
   const chunksRef         = useRef<Blob[]>([]);
   const recordStartRef    = useRef<number>(0);
+  const voiceMimeRef      = useRef<string>("");
 
   const setRS = useCallback((s: RecordingState) => {
     recordingStateRef.current = s;
@@ -378,7 +379,8 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
         const duration = Math.max(1, Math.round((Date.now() - recordStartRef.current) / 1000));
 
         rec.onstop = async () => {
-          const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
+          const blobMime = voiceMimeRef.current || rec.mimeType || "audio/webm";
+          const blob = new Blob(chunksRef.current, { type: blobMime });
           rec.stream.getTracks().forEach((t) => t.stop());
           mediaRecorderRef.current = null;
           chunksRef.current = [];
@@ -388,7 +390,7 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
 
           try {
             const fd = new FormData();
-            const ext = (rec.mimeType || "").includes("mp4") || (rec.mimeType || "").includes("m4a") ? "m4a" : "webm";
+            const ext = blobMime.includes("mp4") || blobMime.includes("m4a") ? "m4a" : "webm";
             fd.append("file", blob, `voice.${ext}`);
 
             const upRes = await fetch(`${BASE}/upload-voice`, {
@@ -438,6 +440,7 @@ export function ChannelChat({ communityId, channelId, channelName, channelEmoji 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const mime = pickMimeType();
+        voiceMimeRef.current = mime;
         const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
         chunksRef.current = [];
         rec.ondataavailable = (ev) => { if (ev.data.size > 0) chunksRef.current.push(ev.data); };

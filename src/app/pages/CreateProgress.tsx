@@ -249,7 +249,7 @@ export function CreateProgress() {
       rec.ondataavailable = (ev) => { if (ev.data.size > 0) voiceChunksRef.current.push(ev.data); };
       rec.onstop = () => {
         clearVoiceTimers();
-        const blob = new Blob(voiceChunksRef.current, { type: rec.mimeType || "audio/webm" });
+        const blob = new Blob(voiceChunksRef.current, { type: mime || rec.mimeType || "audio/webm" });
         stream.getTracks().forEach((t) => t.stop());
         const dur = Math.max(1, Math.round((Date.now() - recordStartRef.current) / 1000));
         if (blob.size < 1000) { resetVoice(); return; }
