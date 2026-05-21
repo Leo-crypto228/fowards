@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { Home, Users, Target, Loader2, Plus, Bell } from "lucide-react";
+import logoImage from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 import { useNotifications } from "../context/NotificationContext";
 import { motion } from "motion/react";
 import { Toaster } from "sonner";
@@ -160,7 +161,7 @@ export function Layout() {
       {/* ── NAV — flex-flow sur mobile (dans le conteneur fixed = bas de l'écran garanti) ── */}
       {!hideNav && (
         <motion.nav
-          className="fw-nav fixed bottom-0 left-0 right-0 z-50 flex bg-black w-full justify-center lg:right-auto lg:top-0 lg:bottom-0 lg:w-[72px] lg:flex-col lg:justify-center lg:left-[calc(50%-440px)]"
+          className="fw-nav fixed bottom-0 left-0 right-0 z-50 flex bg-black w-full justify-center lg:right-auto lg:top-0 lg:bottom-0 lg:w-[72px] lg:flex-col lg:justify-start lg:items-center lg:left-[calc(50%-440px)]"
           style={{
             borderTop: "0.5px solid rgba(255,255,255,0.10)",
             paddingBottom: 0,
@@ -169,7 +170,12 @@ export function Layout() {
           animate={{ opacity: 1, y: navVisible ? 0 : 80 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
         >
-          <div className="w-full max-w-[672px] flex items-center lg:flex-col lg:max-w-none lg:gap-8">
+          {/* Logo — desktop only, top of sidebar */}
+          <div className="hidden lg:flex items-center justify-center w-full" style={{ paddingTop: "max(20px, env(safe-area-inset-top, 20px))", paddingBottom: 24 }}>
+            <img src={logoImage} alt="Fowards" style={{ width: 38, height: 38, objectFit: "contain", mixBlendMode: "screen", display: "block" }} />
+          </div>
+
+          <div className="w-full max-w-[672px] flex items-center lg:flex-col lg:max-w-none lg:gap-8 lg:flex-1 lg:justify-center">
 
             <Link to="/" className="flex-1 h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full" style={{ textDecoration: "none" }}>
               <motion.div whileTap={{ scale: 0.82 }}>

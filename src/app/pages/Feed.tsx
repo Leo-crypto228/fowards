@@ -691,8 +691,8 @@ export function Feed() {
       >
         <div className="max-w-2xl mx-auto px-3 pb-0" style={{ paddingTop: "14px" }}>
 
-          {/* Row 1: logo centré */}
-          <div className="flex items-center justify-center mb-3">
+          {/* Row 1: logo centré — masqué sur desktop (logo dans le sidebar) */}
+          <div className="flex items-center justify-center mb-3 lg:hidden">
             <motion.div
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
