@@ -17,7 +17,7 @@
 @media (min-width: 1024px) {
   .fw-main {
     padding-bottom: 0 !important;
-    padding-left: 72px !important;
+    padding-left: 0 !important;
   }
   .fw-nav {
     right: auto !important;

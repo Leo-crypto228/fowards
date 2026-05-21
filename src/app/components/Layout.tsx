@@ -160,7 +160,7 @@ export function Layout() {
       {/* ── NAV — flex-flow sur mobile (dans le conteneur fixed = bas de l'écran garanti) ── */}
       {!hideNav && (
         <motion.nav
-          className="fw-nav fixed bottom-0 left-0 right-0 z-50 flex bg-black w-full justify-center lg:right-auto lg:top-0 lg:bottom-0 lg:w-[72px] lg:flex-col lg:justify-center lg:left-[calc(50%-312px)]"
+          className="fw-nav fixed bottom-0 left-0 right-0 z-50 flex bg-black w-full justify-center lg:right-auto lg:top-0 lg:bottom-0 lg:w-[72px] lg:flex-col lg:justify-center lg:left-[calc(50%-328px)]"
           style={{
             borderTop: "0.5px solid rgba(255,255,255,0.10)",
             paddingBottom: 0,
