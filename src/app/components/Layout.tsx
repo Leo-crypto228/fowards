@@ -160,7 +160,7 @@ export function Layout() {
       {/* ── NAV — flex-flow sur mobile (dans le conteneur fixed = bas de l'écran garanti) ── */}
       {!hideNav && (
         <motion.nav
-          className="fw-nav fixed bottom-0 left-0 right-0 z-50 flex bg-black w-full justify-center lg:right-auto lg:top-0 lg:bottom-0 lg:w-[72px] lg:flex-col lg:justify-center"
+          className="fw-nav fixed bottom-0 left-0 right-0 z-50 flex bg-black w-full justify-center lg:right-auto lg:top-0 lg:bottom-0 lg:w-[72px] lg:flex-col lg:justify-center lg:left-[calc(50%-312px)]"
           style={{
             borderTop: "0.5px solid rgba(255,255,255,0.10)",
             paddingBottom: 0,
@@ -169,7 +169,7 @@ export function Layout() {
           animate={{ opacity: 1, y: navVisible ? 0 : 80 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
         >
-          <div className="w-full max-w-[672px] flex items-center lg:flex-col lg:max-w-none lg:gap-4">
+          <div className="w-full max-w-[672px] flex items-center lg:flex-col lg:max-w-none lg:gap-8">
 
             <Link to="/" className="flex-1 h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full" style={{ textDecoration: "none" }}>
               <motion.div whileTap={{ scale: 0.82 }}>
