@@ -697,10 +697,11 @@ export function Feed() {
       >
         <div className="max-w-2xl mx-auto px-3 pb-0" style={{ paddingTop: "14px" }}>
 
-          {/* Row 1: logo gauche + stats centrées — masqué sur desktop */}
-          <div className="flex items-center mb-3 lg:hidden" style={{ gap: 0, minHeight: 47 }}>
-            {/* Logo à gauche */}
+          {/* Row 1: logo gauche (mobile) + stats centrées (mobile + desktop) */}
+          <div className="flex items-center mb-3" style={{ gap: 0, minHeight: 47 }}>
+            {/* Logo à gauche — masqué sur desktop (déjà dans le sidebar) */}
             <motion.div
+              className="lg:hidden"
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: [0.25, 0, 0.35, 1] }}
@@ -773,8 +774,8 @@ export function Feed() {
               )}
             </div>
 
-            {/* Spacer droit pour équilibrer le logo */}
-            <div style={{ width: 40, flexShrink: 0 }} />
+            {/* Spacer droit — masqué sur desktop (plus de logo à équilibrer) */}
+            <div className="lg:hidden" style={{ width: 40, flexShrink: 0 }} />
           </div>
 
           {/* Row 2: Search bar — liquid glass */}
