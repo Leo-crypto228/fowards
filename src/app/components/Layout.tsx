@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { Home, Users, Target, Loader2, Plus, Bell } from "lucide-react";
 import logoImage from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 import { useNotifications } from "../context/NotificationContext";
+import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { motion } from "motion/react";
 import { Toaster } from "sonner";
 import { useEffect, useState, Suspense } from "react";
@@ -38,6 +39,10 @@ function FcoinNotificationWatcher() {
   }, [newFcoinNotification, clearNotification]);
   return null;
 }
+
+// Ping fire-and-forget au montage — réveille le Deno isolate avant le premier vrai appel
+const _BASE = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
+fetch(`${_BASE}/ping`, { headers: { Authorization: `Bearer ${publicAnonKey}` } }).catch(() => {});
 
 export function Layout() {
   const location = useLocation();

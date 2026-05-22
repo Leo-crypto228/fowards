@@ -82,6 +82,9 @@ app.use(
 );
 app.use("*", logger(console.log));
 
+// ── Ping — warm-up endpoint, aucun appel KV, répond immédiatement ─────────────
+app.get("/make-server-218684af/ping", (c) => c.json({ ok: true, ts: Date.now() }));
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -3542,60 +3545,87 @@ app.get("/make-server-218684af/stats/today", async (c) => {
   }
 });
 
-// GET /members/history — Historique complet (vrais comptes Supabase Auth seulement)
-// Rebuild automatique toutes les heures via clé de version ff:members:history-v2-ts
+// GET /members/history — Vrais comptes Supabase Auth, rebuild batché toutes les heures
 app.get("/make-server-218684af/members/history", async (c) => {
   try {
-    const limitParam = parseInt(c.req.query("limit") || "50", 10);
-    const limit = Math.min(200, Math.max(1, limitParam));
+    const limitParam = parseInt(c.req.query("limit") || "100", 10);
+    const limit = Math.min(500, Math.max(1, limitParam));
     const forceRebuild = c.req.query("rebuild") === "true";
 
-    const HIST_KEY = "ff:members:history-v2";   // clé v2 = ignore l'ancienne histoire polluée
-    const TS_KEY   = "ff:members:history-v2-ts";
-    const TTL_MS   = 3_600_000; // 1 heure
+    const HIST_KEY = "ff:members:history-v3";  // v3 = clé propre, ignore les pollutions antérieures
+    const TS_KEY   = "ff:members:history-v3-ts";
+    const TTL_MS   = 3_600_000; // rebuild max 1×/heure
 
-    const builtAtRaw = await kv.get(TS_KEY);
+    // ── Lecture parallèle cache + timestamp ──────────────────────────────────
+    const [cachedRaw, builtAtRaw] = await Promise.all([
+      kv.get(HIST_KEY),
+      kv.get(TS_KEY),
+    ]);
     const age = builtAtRaw ? Date.now() - new Date(builtAtRaw as string).getTime() : Infinity;
     const needsRebuild = forceRebuild || age > TTL_MS;
 
     let hist: Array<{ id: string; name: string; avatar: string; objective: string; joinedAt: string }> = [];
 
-    if (!needsRebuild) {
-      const raw = await kv.get(HIST_KEY);
-      if (raw) hist = JSON.parse(raw);
-    }
-
-    if (needsRebuild || hist.length === 0) {
-      // Récupérer les vrais utilisateurs depuis Supabase Auth
+    if (!needsRebuild && cachedRaw) {
+      hist = JSON.parse(cachedRaw);
+    } else {
+      // ── 1. Vrais utilisateurs depuis Supabase Auth (1 seul appel) ────────
       const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
-      const realUsernames = new Set<string>();
-      if (authData?.users) {
-        for (const u of authData.users) {
-          const uname = ((u.user_metadata?.username as string) || "").toLowerCase().trim();
-          if (uname) realUsernames.add(uname);
-          // Mapping uid → username pour comptes qui ont changé de pseudo
-          const mapped = await kv.get(`ff:uid-to-user:${u.id}`);
-          if (mapped) realUsernames.add((mapped as string).toLowerCase().trim());
+      const users = authData?.users ?? [];
+
+      // Extraire les usernames depuis user_metadata (0 appel KV supplémentaire)
+      const usernamesFromMeta: string[] = [];
+      const usersNeedingLookup: string[] = []; // uids sans username en metadata
+      for (const u of users) {
+        const uname = ((u.user_metadata?.username as string) || "").toLowerCase().trim();
+        if (uname) {
+          usernamesFromMeta.push(uname);
+        } else {
+          usersNeedingLookup.push(u.id);
         }
       }
 
-      const profileRaws = await kv.getByPrefix("ff:profile:");
+      // ── 2. Batch lookup uid→username pour les comptes sans metadata (1 seul appel mget) ──
+      const uidMappings = usersNeedingLookup.length > 0
+        ? await kv.mget(usersNeedingLookup.map((uid) => `ff:uid-to-user:${uid}`))
+        : [];
+
+      const realUsernames = new Set<string>(usernamesFromMeta);
+      for (const mapped of uidMappings) {
+        if (mapped) realUsernames.add((mapped as string).toLowerCase().trim());
+      }
+
+      // ── 3. Batch fetch tous les profils réels en 1 seul appel mget ────────
+      const usernameList = Array.from(realUsernames);
+      const profileRaws = usernameList.length > 0
+        ? await kv.mget(usernameList.map((id) => `ff:profile:${id}`))
+        : [];
+
       hist = [];
-      for (const raw of profileRaws) {
+      for (let i = 0; i < usernameList.length; i++) {
+        const raw = profileRaws[i];
+        if (!raw) continue;
         try {
           const p = JSON.parse(raw);
-          const id = (p.username || "").toLowerCase().trim();
-          if (!id || !realUsernames.has(id)) continue;  // exclure faux profils
-          if (!p.avatar?.trim() || !p.objective?.trim()) continue;
-          if (hist.find((m) => m.id === id)) continue;
-          hist.push({ id, name: p.name || id, avatar: p.avatar || "", objective: p.objective || "", joinedAt: p.createdAt || new Date().toISOString() });
+          const id = usernameList[i];
+          hist.push({
+            id,
+            name: p.name || id,
+            avatar: p.avatar || "",
+            objective: p.objective || "",
+            joinedAt: p.createdAt || new Date().toISOString(),
+          });
         } catch { /* skip */ }
       }
       hist.sort((a, b) => b.joinedAt.localeCompare(a.joinedAt));
       if (hist.length > 500) hist.splice(500);
-      await kv.set(HIST_KEY, JSON.stringify(hist));
-      await kv.set(TS_KEY, new Date().toISOString());
-      console.log(`members/history rebuild: ${hist.length} vrais membres`);
+
+      // ── 4. Sauvegarder en parallèle ──────────────────────────────────────
+      await Promise.all([
+        kv.set(HIST_KEY, JSON.stringify(hist)),
+        kv.set(TS_KEY, new Date().toISOString()),
+      ]);
+      console.log(`members/history v3 rebuild: ${hist.length} membres réels`);
     }
 
     return c.json({ members: hist.slice(0, limit), total: hist.length });
