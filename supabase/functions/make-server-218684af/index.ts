@@ -3358,6 +3358,9 @@ app.put("/make-server-218684af/profiles/:username", async (c) => {
     // One-shot: profil complété (+20 Impact) — déclenché quand bio + avatar + objectif sont remplis
     if (profile.bio?.trim() && profile.avatar?.trim() && profile.objective?.trim()) {
       awardImpact(username, "inscription_complete").catch(() => {});
+    }
+    // Enregistrer le membre dès qu'il a un avatar + objectif (profil partiellement rempli)
+    if (profile.avatar?.trim() && profile.objective?.trim()) {
       addDailyMember({ id: username, name: profile.name || username, avatar: profile.avatar || "", objective: profile.objective || "" }).catch(() => {});
     }
     console.log(`PUT profile/${username}`);
@@ -3539,28 +3542,43 @@ app.get("/make-server-218684af/stats/today", async (c) => {
   }
 });
 
-// GET /members/history — Historique complet des membres (avec lazy init depuis les profils existants)
+// GET /members/history — Historique complet des membres (seulement vrais comptes Supabase Auth)
 app.get("/make-server-218684af/members/history", async (c) => {
   try {
     const limitParam = parseInt(c.req.query("limit") || "50", 10);
     const limit = Math.min(200, Math.max(1, limitParam));
+    const rebuild = c.req.query("rebuild") === "true";
 
     let hist: Array<{ id: string; name: string; avatar: string; objective: string; joinedAt: string }> =
-      JSON.parse((await kv.get("ff:members:history")) || "[]");
+      rebuild ? [] : JSON.parse((await kv.get("ff:members:history")) || "[]");
 
-    // Lazy init: si l'historique est vide, le reconstruire depuis tous les profils existants
+    // Lazy init (ou rebuild forcé) : reconstruire depuis les vrais comptes Supabase Auth
     if (hist.length === 0) {
+      // Récupérer uniquement les vrais utilisateurs depuis Supabase Auth
+      const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
+      const realUsernames = new Set<string>();
+      if (authData?.users) {
+        for (const u of authData.users) {
+          const uname = (u.user_metadata?.username as string || "").toLowerCase().trim();
+          if (uname) realUsernames.add(uname);
+          // Aussi via uid-to-user mapping
+          const mapped = await kv.get(`ff:uid-to-user:${u.id}`);
+          if (mapped) realUsernames.add((mapped as string).toLowerCase().trim());
+        }
+      }
+
       const profileRaws = await kv.getByPrefix("ff:profile:");
       for (const raw of profileRaws) {
         try {
           const p = JSON.parse(raw);
-          const id = p.username || "";
-          if (!id || !p.bio?.trim() || !p.avatar?.trim() || !p.objective?.trim()) continue;
+          const id = (p.username || "").toLowerCase().trim();
+          // Seulement les vrais utilisateurs avec un profil raisonnablement rempli
+          if (!id || !realUsernames.has(id)) continue;
+          if (!p.avatar?.trim() || !p.objective?.trim()) continue;
           if (hist.find((m) => m.id === id)) continue;
           hist.push({ id, name: p.name || id, avatar: p.avatar || "", objective: p.objective || "", joinedAt: p.createdAt || new Date().toISOString() });
         } catch { /* skip */ }
       }
-      // Trier du plus récent au plus ancien
       hist.sort((a, b) => b.joinedAt.localeCompare(a.joinedAt));
       if (hist.length > 500) hist.splice(500);
       if (hist.length > 0) await kv.set("ff:members:history", JSON.stringify(hist));

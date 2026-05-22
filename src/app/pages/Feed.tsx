@@ -1,5 +1,5 @@
 import { ProgressCard } from "../components/ProgressCard";
-import { Search, WifiOff, Wifi, RefreshCw, Plus } from "lucide-react";
+import { Search, WifiOff, RefreshCw, Plus } from "lucide-react";
 import logoImage from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 import { motion } from "motion/react";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -500,9 +500,20 @@ export function Feed() {
 
   // ── Daily stats (barre d'accueil mobile) ─────────────────────────────────
   const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
+  const refreshStats = useCallback(() => { getTodayStats().then(setTodayStats).catch(() => {}); }, []);
+  useEffect(() => { refreshStats(); }, [refreshStats]);
+  // Rafraîchir les stats après création d'un post
   useEffect(() => {
-    getTodayStats().then(setTodayStats).catch(() => {});
-  }, []);
+    const handler = () => { setTimeout(refreshStats, 1500); };
+    window.addEventListener("fowards:post-created", handler);
+    return () => window.removeEventListener("fowards:post-created", handler);
+  }, [refreshStats]);
+  // Rafraîchir quand la page redevient visible (retour d'arrière-plan)
+  useEffect(() => {
+    const handler = () => { if (document.visibilityState === "visible") refreshStats(); };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [refreshStats]);
 
   // Prefetch Ways feed and following feed in the background on mount
   useEffect(() => {
@@ -721,43 +732,53 @@ export function Feed() {
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15, duration: 0.35 }}
-                  style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  style={{ display: "flex", alignItems: "center", gap: 14 }}
                 >
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>
-                    Aujourd'hui
-                  </span>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", fontWeight: 600 }}>
-                    {todayStats.posts} post{todayStats.posts !== 1 ? "s" : ""}
-                  </span>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)" }}>·</span>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", fontWeight: 600 }}>
-                    {todayStats.interactions} Intéractions
-                  </span>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)" }}>·</span>
-                  {/* Membres — cliquable avec gradient overlay */}
+                  {/* Aujourd'hui */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", letterSpacing: "0.01em" }}>Aujourd'hui</span>
+                  </div>
+
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)" }}>·</span>
+
+                  {/* Posts */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)" }}>Posts</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)", lineHeight: 1 }}>{todayStats.posts}</span>
+                  </div>
+
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)" }}>·</span>
+
+                  {/* Intéractions */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)" }}>Intéractions</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)", lineHeight: 1 }}>{todayStats.interactions}</span>
+                  </div>
+
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)" }}>·</span>
+
+                  {/* Membres — gradient pill cliquable */}
                   <motion.button
                     whileTap={{ scale: 0.92 }}
                     onClick={() => navigate("/new-members")}
-                    style={{
-                      position: "relative", background: "none", border: "none",
-                      padding: 0, cursor: "pointer", display: "flex", alignItems: "center",
-                    }}
+                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
                   >
-                    <span
-                      style={{
-                        fontSize: 12, fontWeight: 700,
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)" }}>Membres</span>
+                      <div style={{
                         background: "linear-gradient(90deg, #818cf8 0%, #a78bfa 100%)",
-                        WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                      }}
-                    >
-                      {todayStats.members} membre{todayStats.members !== 1 ? "s" : ""}
-                    </span>
+                        borderRadius: 999, padding: "1px 8px",
+                      }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", lineHeight: "18px", display: "block" }}>
+                          {todayStats.members}
+                        </span>
+                      </div>
+                    </div>
                   </motion.button>
                 </motion.div>
               ) : (
                 /* Placeholder pendant le chargement */
-                <div style={{ height: 16, width: 180, borderRadius: 8, background: "rgba(255,255,255,0.06)" }} />
+                <div style={{ height: 28, width: 200, borderRadius: 8, background: "rgba(255,255,255,0.06)" }} />
               )}
             </div>
 
@@ -1022,34 +1043,6 @@ export function Feed() {
         {/* ── ONGLET POUR VOUS ── */}
         {activeTab === "Pour toi" && (
           <>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 18px 10px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                {loadingApi ? (
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
-                    <RefreshCw style={{ width: 11, height: 11, color: "rgba(99,102,241,0.55)" }} />
-                  </motion.div>
-                ) : apiError ? (
-                  <WifiOff style={{ width: 11, height: 11, color: "rgba(248,113,113,0.55)" }} />
-                ) : (
-                  <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 2.2, repeat: Infinity }}
-                    style={{ width: 6, height: 6, borderRadius: "50%", background: apiPosts.length > 0 ? "#22c55e" : "rgba(255,255,255,0.18)" }} />
-                )}
-                <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.30)", letterSpacing: "0.04em" }}>
-                  {loadingApi
-                    ? "Chargement..."
-                    : apiError
-                      ? "Hors ligne"
-                      : apiPosts.length > 0
-                        ? `${apiPosts.length} en direct`
-                        : "Flux en direct"}
-                </span>
-              </div>
-              <motion.button whileTap={{ scale: 0.88 }} onClick={() => fetchApiPosts(true)}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 4, borderRadius: 6 }}>
-                <RefreshCw style={{ width: 11, height: 11, color: "rgba(99,102,241,0.45)" }} />
-              </motion.button>
-            </div>
-
             {/* Bandeau hors-ligne discret — le feed reste lisible grâce au fallback */}
             
               {apiError && !loadingApi && (
@@ -1066,12 +1059,6 @@ export function Feed() {
             
               {displayedFeedPosts.map((post, i) => (
                 <motion.div key={post.id ?? `demo-${i}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
-                  {i === 0 && post.username === currentUserId && currentUserId !== "" && (
-                    <div style={{ padding: "0 18px 5px", display: "flex", alignItems: "center", gap: 6 }}>
-                      <Wifi style={{ width: 10, height: 10, color: "#818cf8" }} />
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#818cf8", letterSpacing: "0.07em" }}>VOTRE DERNIER POST</span>
-                    </div>
-                  )}
                   <ProgressCard
                     postId={post.id ?? `demo-${i}`}
                     user={post.user}
