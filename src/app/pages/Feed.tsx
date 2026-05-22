@@ -700,19 +700,20 @@ export function Feed() {
           {/* Row 1: logo gauche (mobile) + stats centrées (mobile + desktop) */}
           <div className="flex items-center mb-3" style={{ gap: 0, minHeight: 47 }}>
             {/* Logo à gauche — masqué sur desktop (déjà dans le sidebar) */}
-            <motion.div
-              className="lg:hidden"
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, ease: [0.25, 0, 0.35, 1] }}
-              style={{ flexShrink: 0, display: "flex", alignItems: "center" }}
-            >
-              <img
-                src={logoImage}
-                alt="Fowards"
-                style={{ width: 40, height: 40, objectFit: "contain", mixBlendMode: "screen", display: "block" }}
-              />
-            </motion.div>
+            <div className="lg:hidden" style={{ flexShrink: 0 }}>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, ease: [0.25, 0, 0.35, 1] }}
+                style={{ display: "flex", alignItems: "center" }}
+              >
+                <img
+                  src={logoImage}
+                  alt="Fowards"
+                  style={{ width: 40, height: 40, objectFit: "contain", mixBlendMode: "screen", display: "block" }}
+                />
+              </motion.div>
+            </div>
 
             {/* Stats centrées */}
             <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
