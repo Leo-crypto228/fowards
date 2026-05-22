@@ -732,47 +732,46 @@ export function Feed() {
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15, duration: 0.35 }}
-                  style={{ display: "flex", alignItems: "center", gap: 14 }}
+                  style={{ display: "flex", alignItems: "flex-start", gap: 12 }}
                 >
                   {/* Aujourd'hui */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", letterSpacing: "0.01em" }}>Aujourd'hui</span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", letterSpacing: "0.01em", lineHeight: 1 }}>Aujourd'hui</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.0)", lineHeight: 1 }}>0</span>
                   </div>
 
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)" }}>·</span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", marginTop: 1 }}>·</span>
 
                   {/* Posts */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)" }}>Posts</span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", lineHeight: 1 }}>Posts</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)", lineHeight: 1 }}>{todayStats.posts}</span>
                   </div>
 
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)" }}>·</span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", marginTop: 1 }}>·</span>
 
                   {/* Intéractions */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)" }}>Intéractions</span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", lineHeight: 1 }}>Intéractions</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)", lineHeight: 1 }}>{todayStats.interactions}</span>
                   </div>
 
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)" }}>·</span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", marginTop: 1 }}>·</span>
 
-                  {/* Membres — gradient pill cliquable */}
+                  {/* Membres — pill gris/noir sur label+nombre */}
                   <motion.button
                     whileTap={{ scale: 0.92 }}
                     onClick={() => navigate("/new-members")}
                     style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
                   >
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)" }}>Membres</span>
-                      <div style={{
-                        background: "linear-gradient(90deg, #818cf8 0%, #a78bfa 100%)",
-                        borderRadius: 999, padding: "1px 8px",
-                      }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", lineHeight: "18px", display: "block" }}>
-                          {todayStats.members}
-                        </span>
-                      </div>
+                    <div style={{
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                      background: "linear-gradient(160deg, #2a2a2a 0%, #0d0d0d 100%)",
+                      borderRadius: 10, padding: "4px 10px",
+                      border: "0.5px solid rgba(255,255,255,0.10)",
+                    }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", lineHeight: 1 }}>Membres</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.90)", lineHeight: 1 }}>{todayStats.members}</span>
                     </div>
                   </motion.button>
                 </motion.div>

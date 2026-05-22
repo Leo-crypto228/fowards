@@ -3542,38 +3542,50 @@ app.get("/make-server-218684af/stats/today", async (c) => {
   }
 });
 
-// GET /members/history — Historique complet des membres (seulement vrais comptes Supabase Auth)
+// GET /members/history — Historique complet (vrais comptes Supabase Auth seulement)
+// Rebuild automatique toutes les heures via clé de version ff:members:history-v2-ts
 app.get("/make-server-218684af/members/history", async (c) => {
   try {
     const limitParam = parseInt(c.req.query("limit") || "50", 10);
     const limit = Math.min(200, Math.max(1, limitParam));
-    const rebuild = c.req.query("rebuild") === "true";
+    const forceRebuild = c.req.query("rebuild") === "true";
 
-    let hist: Array<{ id: string; name: string; avatar: string; objective: string; joinedAt: string }> =
-      rebuild ? [] : JSON.parse((await kv.get("ff:members:history")) || "[]");
+    const HIST_KEY = "ff:members:history-v2";   // clé v2 = ignore l'ancienne histoire polluée
+    const TS_KEY   = "ff:members:history-v2-ts";
+    const TTL_MS   = 3_600_000; // 1 heure
 
-    // Lazy init (ou rebuild forcé) : reconstruire depuis les vrais comptes Supabase Auth
-    if (hist.length === 0) {
-      // Récupérer uniquement les vrais utilisateurs depuis Supabase Auth
+    const builtAtRaw = await kv.get(TS_KEY);
+    const age = builtAtRaw ? Date.now() - new Date(builtAtRaw as string).getTime() : Infinity;
+    const needsRebuild = forceRebuild || age > TTL_MS;
+
+    let hist: Array<{ id: string; name: string; avatar: string; objective: string; joinedAt: string }> = [];
+
+    if (!needsRebuild) {
+      const raw = await kv.get(HIST_KEY);
+      if (raw) hist = JSON.parse(raw);
+    }
+
+    if (needsRebuild || hist.length === 0) {
+      // Récupérer les vrais utilisateurs depuis Supabase Auth
       const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
       const realUsernames = new Set<string>();
       if (authData?.users) {
         for (const u of authData.users) {
-          const uname = (u.user_metadata?.username as string || "").toLowerCase().trim();
+          const uname = ((u.user_metadata?.username as string) || "").toLowerCase().trim();
           if (uname) realUsernames.add(uname);
-          // Aussi via uid-to-user mapping
+          // Mapping uid → username pour comptes qui ont changé de pseudo
           const mapped = await kv.get(`ff:uid-to-user:${u.id}`);
           if (mapped) realUsernames.add((mapped as string).toLowerCase().trim());
         }
       }
 
       const profileRaws = await kv.getByPrefix("ff:profile:");
+      hist = [];
       for (const raw of profileRaws) {
         try {
           const p = JSON.parse(raw);
           const id = (p.username || "").toLowerCase().trim();
-          // Seulement les vrais utilisateurs avec un profil raisonnablement rempli
-          if (!id || !realUsernames.has(id)) continue;
+          if (!id || !realUsernames.has(id)) continue;  // exclure faux profils
           if (!p.avatar?.trim() || !p.objective?.trim()) continue;
           if (hist.find((m) => m.id === id)) continue;
           hist.push({ id, name: p.name || id, avatar: p.avatar || "", objective: p.objective || "", joinedAt: p.createdAt || new Date().toISOString() });
@@ -3581,7 +3593,9 @@ app.get("/make-server-218684af/members/history", async (c) => {
       }
       hist.sort((a, b) => b.joinedAt.localeCompare(a.joinedAt));
       if (hist.length > 500) hist.splice(500);
-      if (hist.length > 0) await kv.set("ff:members:history", JSON.stringify(hist));
+      await kv.set(HIST_KEY, JSON.stringify(hist));
+      await kv.set(TS_KEY, new Date().toISOString());
+      console.log(`members/history rebuild: ${hist.length} vrais membres`);
     }
 
     return c.json({ members: hist.slice(0, limit), total: hist.length });
