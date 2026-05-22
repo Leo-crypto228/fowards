@@ -37,6 +37,7 @@ const NotificationsPage = lazy(() => import("./pages/NotificationsPage").then(m 
 const CreateWays        = lazy(() => import("./pages/CreateWays").then(m => ({ default: m.CreateWays })));
 const WaysViewer        = lazy(() => import("./pages/WaysViewer").then(m => ({ default: m.WaysViewer })));
 const WaysComments      = lazy(() => import("./pages/WaysComments").then(m => ({ default: m.WaysComments })));
+const NewMembersPage    = lazy(() => import("./pages/NewMembersPage").then(m => ({ default: m.NewMembersPage })));
 
 export const router = createBrowserRouter([
   // ── Auth pages (hors Layout, hors guard) ─────────────────────────────────
@@ -80,6 +81,7 @@ export const router = createBrowserRouter([
       { path: "ways/create",        Component: CreateWays },
       { path: "ways/:id/comments",  Component: WaysComments },
       { path: "ways/:id",           Component: WaysViewer },
+      { path: "new-members",        Component: NewMembersPage },
     ],
   },
 ]);

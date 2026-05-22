@@ -10,6 +10,7 @@ import { searchHashtags, searchUsers } from "../data/suggestions";
 import { HighlightInput } from "../components/HighlightInput";
 import { getAllPosts, ApiPost } from "../api/postsApi";
 import { getFollowingFeed, type FeedPost } from "../api/followsApi";
+import { getTodayStats, type TodayStats } from "../api/statsApi";
 import { getBatchGoalProgress } from "../api/progressionApi";
 import { useFollow } from "../context/FollowContext";
 import { useAuth } from "../context/AuthContext";
@@ -497,6 +498,12 @@ export function Feed() {
     }
   }, [currentUserId]);
 
+  // ── Daily stats (barre d'accueil mobile) ─────────────────────────────────
+  const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
+  useEffect(() => {
+    getTodayStats().then(setTodayStats).catch(() => {});
+  }, []);
+
   // Prefetch Ways feed and following feed in the background on mount
   useEffect(() => {
     if (currentUserId && !waysLoadedRef.current) fetchWaysFeed();
@@ -691,20 +698,71 @@ export function Feed() {
       >
         <div className="max-w-2xl mx-auto px-3 pb-0" style={{ paddingTop: "14px" }}>
 
-          {/* Row 1: logo centré — masqué sur desktop (logo dans le sidebar) */}
-          <div className="flex items-center justify-center mb-3 lg:hidden">
+          {/* Row 1: logo gauche + stats centrées — masqué sur desktop */}
+          <div className="flex items-center mb-3 lg:hidden" style={{ gap: 0, minHeight: 47 }}>
+            {/* Logo à gauche */}
             <motion.div
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: [0.25, 0, 0.35, 1] }}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+              style={{ flexShrink: 0, display: "flex", alignItems: "center" }}
             >
               <img
                 src={logoImage}
                 alt="Fowards"
-                style={{ width: 47, height: 47, objectFit: "contain", mixBlendMode: "screen", display: "block" }}
+                style={{ width: 40, height: 40, objectFit: "contain", mixBlendMode: "screen", display: "block" }}
               />
             </motion.div>
+
+            {/* Stats centrées */}
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+              {todayStats ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, duration: 0.35 }}
+                  style={{ display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>
+                    Aujourd'hui
+                  </span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", fontWeight: 600 }}>
+                    {todayStats.posts} post{todayStats.posts !== 1 ? "s" : ""}
+                  </span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)" }}>·</span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", fontWeight: 600 }}>
+                    {todayStats.interactions} Intéractions
+                  </span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)" }}>·</span>
+                  {/* Membres — cliquable avec gradient overlay */}
+                  <motion.button
+                    whileTap={{ scale: 0.92 }}
+                    onClick={() => navigate("/new-members")}
+                    style={{
+                      position: "relative", background: "none", border: "none",
+                      padding: 0, cursor: "pointer", display: "flex", alignItems: "center",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 12, fontWeight: 700,
+                        background: "linear-gradient(90deg, #818cf8 0%, #a78bfa 100%)",
+                        WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                      }}
+                    >
+                      {todayStats.members} membre{todayStats.members !== 1 ? "s" : ""}
+                    </span>
+                  </motion.button>
+                </motion.div>
+              ) : (
+                /* Placeholder pendant le chargement */
+                <div style={{ height: 16, width: 180, borderRadius: 8, background: "rgba(255,255,255,0.06)" }} />
+              )}
+            </div>
+
+            {/* Spacer droit pour équilibrer le logo */}
+            <div style={{ width: 40, flexShrink: 0 }} />
           </div>
 
           {/* Row 2: Search bar — liquid glass */}

@@ -148,6 +148,44 @@ async function createSocialNotif(params: {
   }
 }
 
+// ── Daily stats helpers ───────────────────────────────────────────────────────
+async function incrementDailyStat(field: "posts" | "interactions"): Promise<void> {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `ff:daily-stats:${today}`;
+    const raw = await kv.get(key);
+    const stats = raw ? JSON.parse(raw) : { date: today, posts: 0, interactions: 0 };
+    stats[field] = (stats[field] || 0) + 1;
+    await kv.set(key, JSON.stringify(stats));
+  } catch (e) {
+    console.log("incrementDailyStat error:", e);
+  }
+}
+
+async function addDailyMember(member: { id: string; name: string; avatar: string; objective: string }): Promise<void> {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    // Track who joined today (for the member count in stats bar)
+    const dailyKey = `ff:daily-members:${today}`;
+    const existing: string[] = JSON.parse((await kv.get(dailyKey)) || "[]");
+    if (!existing.includes(member.id)) {
+      existing.push(member.id);
+      await kv.set(dailyKey, JSON.stringify(existing));
+    }
+    // Permanent history for "Nouveaux membres" page
+    const histKey = "ff:members:history";
+    const hist: Array<{ id: string; name: string; avatar: string; objective: string; joinedAt: string }> =
+      JSON.parse((await kv.get(histKey)) || "[]");
+    if (!hist.find((m) => m.id === member.id)) {
+      hist.unshift({ ...member, joinedAt: new Date().toISOString() });
+      if (hist.length > 500) hist.splice(500);
+      await kv.set(histKey, JSON.stringify(hist));
+    }
+  } catch (e) {
+    console.log("addDailyMember error:", e);
+  }
+}
+
 // ── Web Push : envoyer une notif push (max 1/jour/utilisateur) ───────────────
 async function sendPushToUser(username: string, title: string, body: string, url: string): Promise<void> {
   try {
@@ -958,6 +996,7 @@ app.post("/make-server-218684af/posts", async (c) => {
     // Impact Score
     awardImpact(resolvedUsername, "post").catch(() => {});
     if (userIds.length === 1) awardImpact(resolvedUsername, "first_post").catch(() => {});
+    incrementDailyStat("posts").catch(() => {});
 
     // ── Analyse IA du post → micro-progression de l'objectif actif ───────────
     try {
@@ -1311,6 +1350,7 @@ app.post("/make-server-218684af/comments", async (c) => {
     if (videoUrl) awardImpact(userId, "comment_video").catch(() => {});
     else if (voiceUrl) awardImpact(userId, "comment_voice").catch(() => {});
     else awardImpact(userId, "comment_text", { contentLength: (content?.trim() || "").length }).catch(() => {});
+    incrementDailyStat("interactions").catch(() => {});
 
     // Loguer received_comment pour l'auteur du post (anneau rouge auteur)
     try {
@@ -1570,6 +1610,7 @@ app.post("/make-server-218684af/comments/:commentId/reactions", async (c) => {
       if (comment.userId && comment.userId !== userId) {
         awardImpact(comment.userId, "comment_like_received", { commentId }).catch(() => {});
       }
+      incrementDailyStat("interactions").catch(() => {});
     }
 
     await kv.set(`ff:comment:${commentId}`, JSON.stringify(comment));
@@ -1776,6 +1817,7 @@ app.post("/make-server-218684af/posts/:postId/reactions", async (c) => {
           // Notification like
           await createSocialNotif({ userId: authorUsername, type: "like", senderId: userId, postId, targetType: "post" });
         }
+        incrementDailyStat("interactions").catch(() => {});
       }
     }
 
@@ -3316,6 +3358,7 @@ app.put("/make-server-218684af/profiles/:username", async (c) => {
     // One-shot: profil complété (+20 Impact) — déclenché quand bio + avatar + objectif sont remplis
     if (profile.bio?.trim() && profile.avatar?.trim() && profile.objective?.trim()) {
       awardImpact(username, "inscription_complete").catch(() => {});
+      addDailyMember({ id: username, name: profile.name || username, avatar: profile.avatar || "", objective: profile.objective || "" }).catch(() => {});
     }
     console.log(`PUT profile/${username}`);
 
@@ -3453,6 +3496,79 @@ app.put("/make-server-218684af/profiles/:oldUsername/rename", async (c) => {
   } catch (err) {
     console.error("Erreur rename:", err);
     return c.json({ error: `Echec rename: ${err}` }, 500);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// DAILY STATS — Compteurs journaliers (posts, interactions, nouveaux membres)
+// ════════════════════════════════════════════════════════════════════════════
+
+// GET /stats/today — Stats du jour pour la barre d'accueil mobile
+app.get("/make-server-218684af/stats/today", async (c) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const [statsRaw, dailyMemberIds] = await Promise.all([
+      kv.get(`ff:daily-stats:${today}`),
+      kv.get(`ff:daily-members:${today}`),
+    ]);
+    const stats = statsRaw ? JSON.parse(statsRaw) : { posts: 0, interactions: 0 };
+    const memberIds: string[] = dailyMemberIds ? JSON.parse(dailyMemberIds) : [];
+
+    // Charger les profils des nouveaux membres du jour
+    const newMembers: Array<{ id: string; name: string; avatar: string; objective: string }> = [];
+    if (memberIds.length > 0) {
+      const profileRaws = await kv.mget(memberIds.slice(0, 20).map((id) => `ff:profile:${id}`));
+      for (let i = 0; i < memberIds.length && i < 20; i++) {
+        const raw = profileRaws[i];
+        if (raw) {
+          const p = JSON.parse(raw);
+          newMembers.push({ id: memberIds[i], name: p.name || memberIds[i], avatar: p.avatar || "", objective: p.objective || "" });
+        }
+      }
+    }
+
+    return c.json({
+      date: today,
+      posts: stats.posts || 0,
+      interactions: stats.interactions || 0,
+      members: memberIds.length,
+      newMembers,
+    });
+  } catch (err) {
+    return c.json({ error: `Échec stats/today: ${err}` }, 500);
+  }
+});
+
+// GET /members/history — Historique complet des membres (avec lazy init depuis les profils existants)
+app.get("/make-server-218684af/members/history", async (c) => {
+  try {
+    const limitParam = parseInt(c.req.query("limit") || "50", 10);
+    const limit = Math.min(200, Math.max(1, limitParam));
+
+    let hist: Array<{ id: string; name: string; avatar: string; objective: string; joinedAt: string }> =
+      JSON.parse((await kv.get("ff:members:history")) || "[]");
+
+    // Lazy init: si l'historique est vide, le reconstruire depuis tous les profils existants
+    if (hist.length === 0) {
+      const profileRaws = await kv.getByPrefix("ff:profile:");
+      for (const raw of profileRaws) {
+        try {
+          const p = JSON.parse(raw);
+          const id = p.username || "";
+          if (!id || !p.bio?.trim() || !p.avatar?.trim() || !p.objective?.trim()) continue;
+          if (hist.find((m) => m.id === id)) continue;
+          hist.push({ id, name: p.name || id, avatar: p.avatar || "", objective: p.objective || "", joinedAt: p.createdAt || new Date().toISOString() });
+        } catch { /* skip */ }
+      }
+      // Trier du plus récent au plus ancien
+      hist.sort((a, b) => b.joinedAt.localeCompare(a.joinedAt));
+      if (hist.length > 500) hist.splice(500);
+      if (hist.length > 0) await kv.set("ff:members:history", JSON.stringify(hist));
+    }
+
+    return c.json({ members: hist.slice(0, limit), total: hist.length });
+  } catch (err) {
+    return c.json({ error: `Échec members/history: ${err}` }, 500);
   }
 });
 
