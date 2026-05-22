@@ -300,26 +300,25 @@ export function Feed() {
 
   // ── Scroll-aware header (+ nav via custom event) ──────────────────────────
   const [headerVisible, setHeaderVisible] = useState(true);
-  const lastScrollY = useRef(0);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerH, setHeaderH] = useState(0);
+  // Ref partagé entre l'effet scroll et l'effet reset (position de restauration)
+  const scrollPosRef = useRef(0);
+
   useEffect(() => {
     if (!headerRef.current) return;
     const ro = new ResizeObserver((entries) => {
-      for (const e of entries) {
-        const h = e.contentRect.height;
-        setHeaderH(Math.round(h) + 1);
-      }
+      for (const e of entries) setHeaderH(Math.round(e.contentRect.height) + 1);
     });
     ro.observe(headerRef.current);
     return () => ro.disconnect();
   }, []);
 
   // Reset header + scroll à chaque arrivée sur le feed
-  // Si l'utilisateur revient d'un post (sessionStorage "ff:feedScroll"), on restaure la position.
   useEffect(() => {
     if (location.pathname !== "/") return;
     setHeaderVisible(true);
+    window.dispatchEvent(new CustomEvent("fowards:feedScroll", { detail: { visible: true } }));
     const scrollEl = document.getElementById("app-scroll") as HTMLElement | null;
     try {
       const savedStr = sessionStorage.getItem("ff:feedScroll");
@@ -328,67 +327,56 @@ export function Feed() {
         const savedY = parseInt(savedStr, 10);
         if (savedY > 0) {
           if (scrollEl) scrollEl.scrollTop = savedY;
-          window.scrollTo(0, savedY);
-          lastScrollY.current = savedY;
+          scrollPosRef.current = savedY;
           return;
         }
       }
     } catch {}
-    // Navigation fraîche → remise à zéro
     if (scrollEl) scrollEl.scrollTop = 0;
-    window.scrollTo(0, 0);
-    lastScrollY.current = 0;
+    scrollPosRef.current = 0;
   }, [location.pathname]);
 
+  // ── Scroll listener — écoute uniquement #app-scroll (le vrai conteneur PWA)
   useEffect(() => {
     const scrollEl = document.getElementById("app-scroll") as HTMLElement | null;
+    if (!scrollEl) return;
 
-    // ── Déterminer le vrai conteneur de scroll ─────────────────────────────
-    // Sur desktop/browser: fw-app-root a height:100vh donc #app-scroll scroll.
-    // Sur certains setups: c'est window qui scroll. On écoute LES DEUX et on
-    // prend le Y de celui qui a réellement bougé. Le deuxième appel voit
-    // delta === 0 (lastScrollY déjà mis à jour) et sort immédiatement.
-    const getY = () => {
-      const elY = scrollEl?.scrollTop ?? 0;
-      return elY > 0 ? elY : window.scrollY;
-    };
+    let ticking = false;
+    let accumulated = 0; // pixels accumulés dans la direction courante
+    let lastDir = 0;     // +1 = bas, -1 = haut
 
-    // 8 px accumulation buffer — safe on iOS where each event is only 1-3 px.
-    let buf = 0;
-    let lastDir = 0;
-
-    // Single source of truth: update header state AND notify Layout's nav in
-    // the same synchronous call → React batches both into one render frame.
-    const setVisible = (visible: boolean) => {
+    const broadcast = (visible: boolean) => {
       setHeaderVisible(visible);
       window.dispatchEvent(new CustomEvent("fowards:feedScroll", { detail: { visible } }));
     };
 
     const onScroll = () => {
-      const y = getY();
-      const delta = y - lastScrollY.current;
-      lastScrollY.current = y;
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const y = scrollEl.scrollTop;
+        const delta = y - scrollPosRef.current;
+        scrollPosRef.current = y;
 
-      if (y < 8) { buf = 0; lastDir = 0; setVisible(true); return; }
-      if (delta === 0) return; // déduplique les doubles-feux window + element
+        // Remonté tout en haut → toujours afficher
+        if (y < 12) { accumulated = 0; lastDir = 0; broadcast(true); return; }
+        if (delta === 0) return;
 
-      const dir = delta > 0 ? 1 : -1;
-      if (dir !== lastDir) { buf = 0; lastDir = dir; }
-      buf += Math.abs(delta);
+        const dir = delta > 0 ? 1 : -1;
+        if (dir !== lastDir) { accumulated = 0; lastDir = dir; }
+        accumulated += Math.abs(delta);
 
-      if (buf >= 8) {
-        setVisible(dir < 0); // up → show, down → hide
-        buf = 0;
-      }
+        // Seuil de 10px dans la même direction pour basculer
+        if (accumulated >= 10) {
+          broadcast(dir < 0); // haut → show, bas → hide
+          accumulated = 0;
+        }
+      });
     };
 
-    // Écouter sur les deux cibles — le double-fire est neutralisé par delta === 0
-    scrollEl?.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      scrollEl?.removeEventListener("scroll", onScroll);
-      window.removeEventListener("scroll", onScroll);
-    };
+    scrollEl.addEventListener("scroll", onScroll, { passive: true });
+    return () => scrollEl.removeEventListener("scroll", onScroll);
   }, []);
 
   // Utiliser les vraies données de l'utilisateur connecté
@@ -737,7 +725,8 @@ export function Feed() {
                   {/* Aujourd'hui */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", letterSpacing: "0.01em", lineHeight: 1 }}>Aujourd'hui</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.0)", lineHeight: 1 }}>0</span>
+                    {/* Spacer invisible pour aligner avec les colonnes ayant un chiffre */}
+                    <span style={{ fontSize: 13, lineHeight: 1, opacity: 0 }} aria-hidden>0</span>
                   </div>
 
                   <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", marginTop: 1 }}>·</span>
@@ -756,24 +745,27 @@ export function Feed() {
                     <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)", lineHeight: 1 }}>{todayStats.interactions}</span>
                   </div>
 
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", marginTop: 1 }}>·</span>
-
-                  {/* Membres — pill gris/noir sur label+nombre */}
-                  <motion.button
-                    whileTap={{ scale: 0.92 }}
-                    onClick={() => navigate("/new-members")}
-                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                  >
-                    <div style={{
-                      display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                      background: "linear-gradient(160deg, #2a2a2a 0%, #0d0d0d 100%)",
-                      borderRadius: 10, padding: "4px 10px",
-                      border: "0.5px solid rgba(255,255,255,0.10)",
-                    }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", lineHeight: 1 }}>Membres</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.90)", lineHeight: 1 }}>{todayStats.members}</span>
-                    </div>
-                  </motion.button>
+                  {/* Membres — visible uniquement si > 0, sinon les 2 stats se recentrent */}
+                  {todayStats.members > 0 && (
+                    <>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", marginTop: 1 }}>·</span>
+                      <motion.button
+                        whileTap={{ scale: 0.92 }}
+                        onClick={() => navigate("/new-members")}
+                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                      >
+                        <div style={{
+                          display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                          background: "linear-gradient(160deg, #2a2a2a 0%, #0d0d0d 100%)",
+                          borderRadius: 10, padding: "4px 10px",
+                          border: "0.5px solid rgba(255,255,255,0.10)",
+                        }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", lineHeight: 1 }}>Membres</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.90)", lineHeight: 1 }}>{todayStats.members}</span>
+                        </div>
+                      </motion.button>
+                    </>
+                  )}
                 </motion.div>
               ) : (
                 /* Placeholder pendant le chargement */
