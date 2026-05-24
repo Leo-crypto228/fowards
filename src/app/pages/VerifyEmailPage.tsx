@@ -264,7 +264,7 @@ export function VerifyEmailPage() {
         {/* Logo */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 40 }}>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: "#f0f0f5", margin: 0, letterSpacing: "-0.5px" }}>
-            FuturFeed
+            Fowards
           </h1>
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.40)", margin: "6px 0 0" }}>
             Construis ton futur, jour après jour.

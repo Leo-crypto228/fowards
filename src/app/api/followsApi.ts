@@ -1,4 +1,5 @@
 import { projectId, publicAnonKey } from "/utils/supabase/info";
+import { fetchWithRetry } from "./fetchRetry";
 
 const BASE = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
 const HEADERS = {
@@ -56,7 +57,7 @@ export async function getFollowStatus(
 export async function getFollowing(
   userId: string
 ): Promise<{ following: string[]; total: number }> {
-  const res = await fetch(
+  const res = await fetchWithRetry(
     `${BASE}/follows/${encodeURIComponent(userId)}/following`,
     { headers: HEADERS }
   );
@@ -69,7 +70,7 @@ export async function getFollowing(
 export async function getFollowers(
   userId: string
 ): Promise<{ followers: string[]; total: number }> {
-  const res = await fetch(
+  const res = await fetchWithRetry(
     `${BASE}/follows/${encodeURIComponent(userId)}/followers`,
     { headers: HEADERS }
   );

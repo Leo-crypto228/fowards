@@ -1,4 +1,5 @@
 import { projectId, publicAnonKey } from "/utils/supabase/info";
+import { fetchWithRetry } from "./fetchRetry";
 
 const BASE = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
 const HEADERS = {
@@ -26,13 +27,13 @@ export interface HistoryMember extends DailyMember {
 }
 
 export async function getTodayStats(): Promise<TodayStats> {
-  const res = await fetch(`${BASE}/stats/today`, { headers: HEADERS });
+  const res = await fetchWithRetry(`${BASE}/stats/today`, { headers: HEADERS });
   if (!res.ok) throw new Error(`stats/today ${res.status}`);
   return res.json();
 }
 
 export async function getMembersHistory(limit = 50): Promise<{ members: HistoryMember[]; total: number }> {
-  const res = await fetch(`${BASE}/members/history?limit=${limit}`, { headers: HEADERS });
+  const res = await fetchWithRetry(`${BASE}/members/history?limit=${limit}`, { headers: HEADERS });
   if (!res.ok) throw new Error(`members/history ${res.status}`);
   return res.json();
 }

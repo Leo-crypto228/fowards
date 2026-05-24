@@ -2976,8 +2976,8 @@ app.post("/make-server-218684af/auth/signup", async (c) => {
       await storeOtp(normalizedEmail, otpCodeSignup);
       await sendViaResend(
         normalizedEmail,
-        `${otpCodeSignup} — Bienvenue sur FuturFeed, confirme ton compte`,
-        buildOtpEmailHtml(otpCodeSignup, `Bienvenue ${displayName} 🎉`, "Entre ce code dans l'app pour activer ton compte FuturFeed.")
+        `${otpCodeSignup} — Bienvenue sur Fowards, confirme ton compte`,
+        buildOtpEmailHtml(otpCodeSignup, `Bienvenue ${displayName} 🎉`, "Entre ce code dans l'app pour activer ton compte Fowards.")
       );
       console.log(`[signup] Email OTP bienvenue (8 chiffres) envoyé à ${normalizedEmail}`);
     } catch (otpSendErr) {
@@ -3002,7 +3002,7 @@ function buildOtpEmailHtml(otpCode: string, title: string, subtitle: string): st
     <tr><td align="center" style="padding:40px 20px;">
       <table width="100%" style="max-width:480px;background:rgba(20,20,28,1);border:1px solid rgba(139,92,246,0.25);border-radius:24px;padding:40px 32px;">
         <tr><td align="center" style="padding-bottom:32px;">
-          <h1 style="margin:0;font-size:28px;font-weight:800;color:#f0f0f5;letter-spacing:-0.5px;">FuturFeed</h1>
+          <h1 style="margin:0;font-size:28px;font-weight:800;color:#f0f0f5;letter-spacing:-0.5px;">Fowards</h1>
           <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.40);">Construis ton futur, jour après jour.</p>
         </td></tr>
         <tr><td style="padding-bottom:28px;">
@@ -3019,7 +3019,7 @@ function buildOtpEmailHtml(otpCode: string, title: string, subtitle: string): st
         </td></tr>
         <tr><td style="padding-bottom:20px;">
           <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.55);line-height:1.7;text-align:center;">
-            Retourne dans l'app <strong style="color:#f0f0f5;">FuturFeed</strong> et entre ce code pour continuer.
+            Retourne dans l'app <strong style="color:#f0f0f5;">Fowards</strong> et entre ce code pour continuer.
           </p>
         </td></tr>
         <tr><td>
@@ -3051,7 +3051,7 @@ function handleSupabaseOtpError(raw: string): { status: number; message: string 
 }
 
 // ── Resend via fetch REST (sans SDK, compatible Deno Edge) ────────────────────
-const FROM_ADDRESS = "FuturFeed <contact@notify.fowards.net>";
+const FROM_ADDRESS = "Fowards <contact@notify.fowards.net>";
 const RESEND_API_URL = "https://api.resend.com/emails";
 
 async function sendViaResend(to: string, subject: string, html: string): Promise<void> {
@@ -3091,11 +3091,9 @@ app.post("/make-server-218684af/auth/send-otp", async (c) => {
     const emailKey = email.trim().toLowerCase();
     console.log(`[send-otp] Début envoi OTP pour: ${emailKey}`);
 
-    // ── 1. Vérifier que le compte existe ─────────────────────────────────────
-    const { data: { users }, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    if (listErr) throw new Error(`Erreur liste utilisateurs: ${listErr.message}`);
-    const authUser = users.find((u: { email?: string }) => u.email?.toLowerCase() === emailKey);
-    if (!authUser) {
+    // ── 1. Vérifier que le compte existe (index KV O(1)) ─────────────────────
+    const existingUsername = await kv.get(`ff:email-to-username:${emailKey}`);
+    if (!existingUsername) {
       return c.json({ error: "Aucun compte trouvé avec cet email. Inscris-toi d'abord." }, 404);
     }
 
@@ -3106,7 +3104,7 @@ app.post("/make-server-218684af/auth/send-otp", async (c) => {
     // ── 3. Envoyer via Resend ─────────────────────────────────────────────────
     await sendViaResend(
       emailKey,
-      `${otpCode} — Ton code de connexion FuturFeed`,
+      `${otpCode} — Ton code de connexion Fowards`,
       buildOtpEmailHtml(otpCode, "Bonjour 👋", "Voici ton code de vérification à 8 chiffres.")
     );
 
@@ -3126,24 +3124,46 @@ app.post("/make-server-218684af/auth/verify-otp", async (c) => {
     if (!code?.trim())  return c.json({ error: "Code requis." }, 400);
 
     const emailKey = email.trim().toLowerCase();
+    const otpKey   = `ff:otp:${emailKey}`;
 
-    // ── 1. Vérifier le code custom stocké en KV ──────────────────────────────
-    const result = await verifyStoredOtp(emailKey, code);
-    if (!result.valid) {
-      console.error(`[verify-otp] Échec pour ${emailKey}: ${result.error}`);
-      return c.json({ error: result.error, blocked: false }, 400);
+    // ── 1. Vérifier le code KV — SANS supprimer (on supprime seulement après session créée) ─
+    const raw = await kv.get(otpKey);
+    if (!raw) {
+      return c.json({ error: "Code expiré ou introuvable. Clique sur « Renvoyer le code ».", blocked: false }, 400);
+    }
+    const entry = JSON.parse(raw);
+    if (Date.now() - entry.createdAt > OTP_TTL_MS) {
+      await kv.del(otpKey);
+      return c.json({ error: "Code expiré (10 min). Clique sur « Renvoyer le code ».", blocked: false }, 400);
+    }
+    if (entry.tries >= OTP_MAX_TRIES) {
+      await kv.del(otpKey);
+      return c.json({ error: "Trop de tentatives. Clique sur « Renvoyer le code ».", blocked: true }, 400);
+    }
+    if (entry.code !== code.trim()) {
+      entry.tries++;
+      await kv.set(otpKey, JSON.stringify(entry));
+      const left = OTP_MAX_TRIES - entry.tries;
+      console.log(`[verify-otp] Code incorrect pour ${emailKey} — ${left} essai(s) restant(s)`);
+      return c.json({ error: `Code incorrect. ${left} essai(s) restant(s).`, blocked: false }, 400);
     }
 
-    // ── 2. Code valide → générer un magic link Supabase pour créer la session ─
+    // ── 2. Code correct → créer une session Supabase via magic link ───────────
     const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
       email: emailKey,
     });
     if (linkErr || !linkData) {
       console.error("[verify-otp] generateLink error:", linkErr?.message);
-      return c.json({ error: "Erreur interne lors de la création de session." }, 500);
+      return c.json({ error: "Erreur interne lors de la création de session. Réessaie." }, 500);
     }
+
     const supabaseOtp = (linkData as any)?.properties?.email_otp;
+    if (!supabaseOtp) {
+      console.error("[verify-otp] email_otp absent de generateLink:", JSON.stringify(linkData));
+      return c.json({ error: "Erreur interne (token session manquant). Réessaie." }, 500);
+    }
+
     const { data, error: verifyErr } = await supabaseAdmin.auth.verifyOtp({
       email: emailKey,
       token: supabaseOtp,
@@ -3151,12 +3171,15 @@ app.post("/make-server-218684af/auth/verify-otp", async (c) => {
     });
 
     if (verifyErr || !data?.session) {
-      console.error("[verify-otp] verifyOtp error:", verifyErr?.message);
+      console.error("[verify-otp] verifyOtp error:", verifyErr?.message, "| session:", !!data?.session);
       return c.json({ error: "Erreur lors de la création de session. Réessaie." }, 500);
     }
 
+    // ── 3. Succès total — supprimer le code (consommé) ────────────────────────
+    await kv.del(otpKey);
+
     const { access_token, refresh_token } = data.session;
-    console.log(`[verify-otp] Succès pour ${emailKey}`);
+    console.log(`[verify-otp] ✅ Session créée pour ${emailKey}`);
     return c.json({ success: true, access_token, refresh_token, email: emailKey });
   } catch (err) {
     console.error("Erreur verify-otp:", err);
@@ -3172,11 +3195,13 @@ app.post("/make-server-218684af/auth/resend-otp", async (c) => {
 
     const emailKey = email.trim().toLowerCase();
 
-    // Vérifier que le compte existe
-    const { data: { users }, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    if (listErr) throw new Error(`Erreur liste utilisateurs: ${listErr.message}`);
-    const authUser = users.find((u: { email?: string }) => u.email?.toLowerCase() === emailKey);
-    if (!authUser) return c.json({ error: "Compte introuvable. Inscris-toi d'abord." }, 404);
+    // Vérifier que le compte existe via l'index KV (O(1), sans listUsers)
+    const existingUsername = await kv.get(`ff:email-to-username:${emailKey}`);
+    if (!existingUsername) {
+      // Fallback: si l'email n'est pas dans l'index (comptes très anciens), on accepte quand même
+      // pour ne pas bloquer les utilisateurs légitimes — l'email sera simplement envoyé
+      console.log(`[resend-otp] email ${emailKey} absent de l'index KV — envoi quand même`);
+    }
 
     // Générer un nouveau code 8 chiffres et écraser l'ancien en KV
     const otpCode = genOtp();
@@ -3184,7 +3209,7 @@ app.post("/make-server-218684af/auth/resend-otp", async (c) => {
 
     await sendViaResend(
       emailKey,
-      `${otpCode} — Ton nouveau code FuturFeed`,
+      `${otpCode} — Ton nouveau code Fowards`,
       buildOtpEmailHtml(otpCode, "Nouveau code 🔄", "Voici ton nouveau code de vérification à 8 chiffres.")
     );
 
