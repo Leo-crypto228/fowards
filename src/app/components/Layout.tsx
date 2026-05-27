@@ -203,7 +203,7 @@ export function Layout() {
                   whileTap={{ scale: 0.88 }}
                   transition={{ type: "spring", stiffness: 500, damping: 28 }}
                   style={{
-                    width: 42, height: 42, borderRadius: 10,
+                    width: 38, height: 38, borderRadius: 9,
                     background: isActive("/ai") ? "#ffffff" : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     transition: "background 0.15s",
@@ -213,7 +213,7 @@ export function Layout() {
                     src={logoImage}
                     alt="IA"
                     style={{
-                      width: 26, height: 26,
+                      width: 34, height: 34,
                       objectFit: "contain",
                       mixBlendMode: isActive("/ai") ? "normal" : "screen",
                       filter: isActive("/ai") ? "invert(1)" : "none",

@@ -78,7 +78,7 @@ export function AIHomePage() {
 
   return (
     <div style={{ minHeight: "100dvh", background: "#000", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, padding: "24px 16px 16px", display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, padding: "24px 16px 16px", display: "flex", flexDirection: "column", maxWidth: 520, width: "100%", margin: "0 auto", alignSelf: "stretch" }}>
 
         {/* Quota — plain text, left-aligned */}
         {quota && (
@@ -109,7 +109,7 @@ export function AIHomePage() {
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             placeholder='Écris "GO"'
-            rows={3}
+            rows={1}
             style={{
               width: "100%",
               background: "transparent",
@@ -118,11 +118,11 @@ export function AIHomePage() {
               resize: "none",
               color: "rgba(235,235,245,0.92)",
               fontSize: 15,
-              lineHeight: 1.6,
+              lineHeight: 1.5,
               padding: 0,
               fontFamily: "inherit",
-              minHeight: 72,
-              maxHeight: 140,
+              minHeight: 36,
+              maxHeight: 120,
               overflowY: "auto",
               display: "block",
             }}
