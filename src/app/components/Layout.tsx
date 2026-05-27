@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { Home, Users, Target, Loader2, Bell, Sparkles } from "lucide-react";
+import { Home, Users, Target, Loader2, Bell } from "lucide-react";
 import logoImage from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 import { useNotifications } from "../context/NotificationContext";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
@@ -200,12 +200,26 @@ export function Layout() {
               <Link to="/ai" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
                 <motion.div
                   className="fw-nav-ai-btn"
-                  whileTap={{ scale: 0.90 }}
+                  whileTap={{ scale: 0.88 }}
                   transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                  style={{ height: 38, paddingLeft: 18, paddingRight: 18, borderRadius: 999, background: isActive("/ai") ? "#7c3aed" : "#4c1d95", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                  style={{
+                    width: 42, height: 42, borderRadius: 10,
+                    background: isActive("/ai") ? "#ffffff" : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "background 0.15s",
+                  }}
                 >
-                  <Sparkles style={{ width: 18, height: 18, color: "#fff", strokeWidth: 2 }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: 0.2 }}>IA</span>
+                  <img
+                    src={logoImage}
+                    alt="IA"
+                    style={{
+                      width: 26, height: 26,
+                      objectFit: "contain",
+                      mixBlendMode: isActive("/ai") ? "normal" : "screen",
+                      filter: isActive("/ai") ? "invert(1)" : "none",
+                      display: "block",
+                    } as React.CSSProperties}
+                  />
                 </motion.div>
               </Link>
             </div>
