@@ -80,6 +80,7 @@ export interface CreatePostPayload {
   videoDuration?: number;
   videoTitle?: string;
   videoSubtitle?: string;
+  userId?: string;  // Supabase UUID — pour le déblocage diagnostic IA
 }
 
 // Crée un nouveau post

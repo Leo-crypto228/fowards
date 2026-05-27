@@ -7,7 +7,7 @@ import { createWays } from "../api/waysApi";
 import { compressImage } from "../utils/compressImage";
 import { linkPostReply } from "../api/sharesApi";
 import { postCheckin } from "../api/progressionApi";
-import { MY_USER_ID, MY_USER_NAME, MY_USER_AVATAR, MY_USER_OBJECTIVE, MY_USER_STREAK } from "../api/authStore";
+import { MY_USER_ID, MY_USER_NAME, MY_USER_AVATAR, MY_USER_OBJECTIVE, MY_USER_STREAK, getAuthUser } from "../api/authStore";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { VoicePlayer } from "../components/VoicePlayer";
 import { VideoRecorder } from "../components/VideoRecorder";
@@ -395,6 +395,7 @@ export function CreateProgress() {
             videoTitle: videoTitle.trim(),
             videoSubtitle: videoSub.trim() || undefined,
             isAnonymous: isAnonymous && selectedType === "Blocage" ? true : undefined,
+            userId: getAuthUser()?.supabaseId,
           });
           window.dispatchEvent(new CustomEvent("fowards:post-created"));
           if (quotedPost?.postId) {
@@ -427,6 +428,7 @@ export function CreateProgress() {
             voiceDuration,
             voiceSubtitle: voiceSubtitle.trim() || undefined,
             isAnonymous: isAnonymous && selectedType === "Blocage" ? true : undefined,
+            userId: getAuthUser()?.supabaseId,
           });
           window.dispatchEvent(new CustomEvent("fowards:post-created"));
           if (quotedPost?.postId) {
@@ -458,6 +460,7 @@ export function CreateProgress() {
           images: uploadedUrls.length > 0 ? uploadedUrls : undefined,
           image: uploadedUrls[0] ?? undefined,
           isAnonymous: isAnonymous && selectedType === "Blocage" ? true : undefined,
+          userId: getAuthUser()?.supabaseId,
         });
 
         window.dispatchEvent(new CustomEvent("fowards:post-created"));
