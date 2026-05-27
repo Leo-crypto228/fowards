@@ -1001,6 +1001,44 @@ app.post("/make-server-218684af/posts", async (c) => {
     if (userIds.length === 1) awardImpact(resolvedUsername, "first_post").catch(() => {});
     incrementDailyStat("posts").catch(() => {});
 
+    // ── Déblocage diagnostic IA : post normal ≥50 chars → +1 diagnostic/jour ──
+    // (fire-and-forget — n'impacte pas la création du post)
+    if (!isAnonymous && !voiceUrl && !videoUrl && progress.description.trim().length >= 50) {
+      const today = new Date().toISOString().split("T")[0];
+      // Récupérer l'userId de l'user via l'index KV email→username (on utilise l'user.id passé en body si disponible)
+      const authorUserId: string | undefined = body.userId;
+      if (authorUserId) {
+        supabaseAdmin
+          .from("user_quotas")
+          .select("id, diagnostics_unlocked_via_post")
+          .eq("user_id", authorUserId)
+          .eq("quota_date", today)
+          .maybeSingle()
+          .then(async ({ data: quotaRow }) => {
+            if (quotaRow && quotaRow.diagnostics_unlocked_via_post === 0) {
+              await supabaseAdmin
+                .from("user_quotas")
+                .update({ diagnostics_unlocked_via_post: 1 })
+                .eq("id", quotaRow.id);
+              console.log(`[posts] Diagnostic IA débloqué pour ${authorUserId}`);
+            } else if (!quotaRow) {
+              // Créer la ligne du jour avec l'unlock déjà à 1
+              await supabaseAdmin
+                .from("user_quotas")
+                .upsert({
+                  user_id: authorUserId,
+                  quota_date: today,
+                  normal_messages_used: 0,
+                  diagnostics_used: 0,
+                  diagnostics_unlocked_via_post: 1,
+                }, { onConflict: "user_id,quota_date" });
+              console.log(`[posts] Quota IA créé + diagnostic débloqué pour ${authorUserId}`);
+            }
+          })
+          .catch((err: unknown) => console.error("[posts] Erreur unlock diagnostic IA:", err));
+      }
+    };
+
     // ── Analyse IA du post → micro-progression de l'objectif actif ───────────
     try {
       const gRaw2 = await kv.get(`ff:goals:${resolvedUsername}`);

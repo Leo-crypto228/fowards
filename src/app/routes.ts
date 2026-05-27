@@ -38,6 +38,8 @@ const CreateWays        = lazy(() => import("./pages/CreateWays").then(m => ({ d
 const WaysViewer        = lazy(() => import("./pages/WaysViewer").then(m => ({ default: m.WaysViewer })));
 const WaysComments      = lazy(() => import("./pages/WaysComments").then(m => ({ default: m.WaysComments })));
 const NewMembersPage    = lazy(() => import("./pages/NewMembersPage").then(m => ({ default: m.NewMembersPage })));
+const AIHomePage        = lazy(() => import("./pages/AIHomePage").then(m => ({ default: m.AIHomePage })));
+const AIConversationPage = lazy(() => import("./pages/AIConversationPage").then(m => ({ default: m.AIConversationPage })));
 
 export const router = createBrowserRouter([
   // ── Auth pages (hors Layout, hors guard) ─────────────────────────────────
@@ -82,6 +84,8 @@ export const router = createBrowserRouter([
       { path: "ways/:id/comments",  Component: WaysComments },
       { path: "ways/:id",           Component: WaysViewer },
       { path: "new-members",        Component: NewMembersPage },
+      { path: "ai",                 Component: AIHomePage },
+      { path: "ai/:conversationId", Component: AIConversationPage },
     ],
   },
 ]);

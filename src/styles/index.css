@@ -38,3 +38,56 @@
     height: 31px !important;
   }
 }
+
+/* ── IA Fowards — markdown rendering ────────────────────────────────────── */
+.ai-markdown p          { margin: 0 0 8px; }
+.ai-markdown p:last-child { margin-bottom: 0; }
+.ai-markdown h1, .ai-markdown h2, .ai-markdown h3 {
+  font-weight: 700; color: #fff; margin: 12px 0 6px;
+}
+.ai-markdown h1 { font-size: 17px; }
+.ai-markdown h2 { font-size: 15px; }
+.ai-markdown h3 { font-size: 14px; }
+.ai-markdown ul, .ai-markdown ol { padding-left: 18px; margin: 6px 0; }
+.ai-markdown li { margin-bottom: 4px; }
+.ai-markdown strong { color: rgba(235,235,245,0.95); font-weight: 700; }
+.ai-markdown em { color: rgba(235,235,245,0.75); font-style: italic; }
+.ai-markdown code {
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px; padding: 1px 5px;
+  font-size: 13px; font-family: ui-monospace, monospace;
+  color: #a5b4fc;
+}
+.ai-markdown pre {
+  background: rgba(255,255,255,0.06);
+  border: 0.5px solid rgba(255,255,255,0.10);
+  border-radius: 8px; padding: 12px; overflow-x: auto;
+  margin: 8px 0;
+}
+.ai-markdown pre code {
+  background: transparent; padding: 0;
+  font-size: 13px; color: rgba(235,235,245,0.85);
+}
+.ai-markdown blockquote {
+  border-left: 3px solid #7c3aed;
+  padding-left: 12px; margin: 8px 0;
+  color: rgba(235,235,245,0.65); font-style: italic;
+}
+.ai-markdown table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+.ai-markdown th, .ai-markdown td {
+  border: 0.5px solid rgba(255,255,255,0.12);
+  padding: 6px 10px; text-align: left;
+}
+.ai-markdown th { background: rgba(255,255,255,0.05); font-weight: 700; }
+.ai-markdown a { color: #818cf8; text-decoration: underline; }
+.ai-markdown hr { border: none; border-top: 0.5px solid rgba(255,255,255,0.10); margin: 12px 0; }
+
+/* ── Nav IA button — desktop ─────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+  .fw-nav-ai-btn {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 48px !important;
+    height: 48px !important;
+  }
+}

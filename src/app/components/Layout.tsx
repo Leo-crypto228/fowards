@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { Home, Users, Target, Loader2, Plus, Bell } from "lucide-react";
+import { Home, Users, Target, Loader2, Bell, Sparkles } from "lucide-react";
 import logoImage from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 import { useNotifications } from "../context/NotificationContext";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
@@ -52,7 +52,9 @@ export function Layout() {
   const isPostDetail = location.pathname.startsWith("/post/");
   const isWaysViewer = location.pathname.startsWith("/ways/") && !location.pathname.endsWith("/create");
   const isCreatePage = location.pathname === "/create";
-  const hideNav = isPostDetail || isWaysViewer || isCreatePage;
+  // /ai/new or /ai/:conversationId (but not /ai itself — that shows the list)
+  const isAiConversation = location.pathname.startsWith("/ai/");
+  const hideNav = isPostDetail || isWaysViewer || isCreatePage || isAiConversation;
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const { unreadCount } = useNotifications();
 
@@ -195,14 +197,15 @@ export function Layout() {
             </Link>
 
             <div className="flex-[1.4] h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full">
-              <Link to="/create" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
+              <Link to="/ai" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
                 <motion.div
-                  className="fw-nav-create-btn"
+                  className="fw-nav-ai-btn"
                   whileTap={{ scale: 0.90 }}
                   transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                  style={{ height: 38, paddingLeft: 22, paddingRight: 22, borderRadius: 999, background: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ height: 38, paddingLeft: 18, paddingRight: 18, borderRadius: 999, background: isActive("/ai") ? "#7c3aed" : "#4c1d95", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                 >
-                  <Plus style={{ width: 22, height: 22, color: "#fff", strokeWidth: 2.4 }} />
+                  <Sparkles style={{ width: 18, height: 18, color: "#fff", strokeWidth: 2 }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: 0.2 }}>IA</span>
                 </motion.div>
               </Link>
             </div>
