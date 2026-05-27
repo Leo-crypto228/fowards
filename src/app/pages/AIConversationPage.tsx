@@ -1,39 +1,40 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import {
   getConversation,
   sendMessage,
   type AiMessage,
-  type AiConversation,
   type QuotaStatus,
   type ChatMode,
 } from "../api/aiApi";
 import { MessageBubble } from "../components/MessageBubble";
 import { ChatInput } from "../components/ChatInput";
-import { QuotaBar } from "../components/QuotaBar";
 import { toast } from "sonner";
 
 export function AIConversationPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { session } = useAuth();
   const token = session?.access_token ?? "";
 
   const isNew = !conversationId || conversationId === "new";
 
-  const [conversation, setConversation] = useState<AiConversation | null>(null);
+  // Initial message passed from home page
+  const locationState = location.state as { initialMessage?: string; initialMode?: ChatMode } | null;
+
   const [messages, setMessages] = useState<AiMessage[]>([]);
   const [quota, setQuota] = useState<QuotaStatus | null>(null);
-  const [loading, setLoading] = useState(!isNew);
   const [sending, setSending] = useState(false);
   const [activeConvId, setActiveConvId] = useState<string | undefined>(
     isNew ? undefined : conversationId,
   );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const autoSentRef = useRef(false);
 
   const scrollToBottom = useCallback((smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
@@ -42,21 +43,25 @@ export function AIConversationPage() {
   // Load existing conversation
   useEffect(() => {
     if (isNew || !conversationId || !token) return;
-    setLoading(true);
     getConversation(token, conversationId)
-      .then(({ conversation: conv, messages: msgs }) => {
-        setConversation(conv);
+      .then(({ messages: msgs }) => {
         setMessages(msgs);
-        setActiveConvId(conv.id);
-        scrollToBottom(false);
+        setActiveConvId(conversationId);
+        setTimeout(() => scrollToBottom(false), 50);
       })
-      .catch((err) => {
-        console.error("[AIConversationPage] load error:", err);
-        toast.error("Erreur lors du chargement");
+      .catch(() => {
+        toast.error("Conversation introuvable");
         navigate("/ai");
-      })
-      .finally(() => setLoading(false));
+      });
   }, [conversationId, token, isNew, navigate, scrollToBottom]);
+
+  // Auto-send initial message from home page (new conversation)
+  useEffect(() => {
+    if (!isNew || autoSentRef.current || !token || !locationState?.initialMessage) return;
+    autoSentRef.current = true;
+    handleSend(locationState.initialMessage, locationState.initialMode ?? "normal");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   useEffect(() => {
     if (messages.length > 0) scrollToBottom();
@@ -66,7 +71,6 @@ export function AIConversationPage() {
     if (sending) return;
     setSending(true);
 
-    // Optimistic user message
     const tempUserMsg: AiMessage = {
       id: `temp-${Date.now()}`,
       role: "user",
@@ -75,10 +79,7 @@ export function AIConversationPage() {
       fowards_data: null,
       created_at: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, tempUserMsg]);
-
-    // Typing indicator
-    const tempAiMsg: AiMessage = {
+    const typingMsg: AiMessage = {
       id: "typing",
       role: "assistant",
       content: "…",
@@ -86,7 +87,7 @@ export function AIConversationPage() {
       fowards_data: null,
       created_at: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, tempAiMsg]);
+    setMessages((prev) => [...prev, tempUserMsg, typingMsg]);
 
     try {
       const response = await sendMessage(token, {
@@ -95,142 +96,97 @@ export function AIConversationPage() {
         mode,
       });
 
-      // Replace optimistic messages with real ones
       setMessages((prev) => {
-        const withoutTemp = prev.filter((m) => m.id !== "typing" && m.id !== tempUserMsg.id);
+        const base = prev.filter((m) => m.id !== "typing" && m.id !== tempUserMsg.id);
         return [
-          ...withoutTemp,
-          {
-            id: `user-${Date.now()}`,
-            role: "user" as const,
-            content: text,
-            mode,
-            fowards_data: null,
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: `ai-${Date.now()}`,
-            role: "assistant" as const,
-            content: response.message,
-            mode: response.mode,
-            fowards_data: response.forwardsData,
-            created_at: new Date().toISOString(),
-          },
+          ...base,
+          { id: `u-${Date.now()}`, role: "user" as const, content: text, mode, fowards_data: null, created_at: new Date().toISOString() },
+          { id: `a-${Date.now()}`, role: "assistant" as const, content: response.message, mode: response.mode, fowards_data: response.forwardsData, created_at: new Date(Date.now() + 1).toISOString() },
         ];
       });
 
       setQuota(response.quota);
 
-      // Update conversation ID if new
       if (!activeConvId) {
         setActiveConvId(response.conversationId);
-        // Replace URL without navigation (no re-render)
         window.history.replaceState(null, "", `/ai/${response.conversationId}`);
       }
     } catch (err: unknown) {
-      // Remove optimistic messages
       setMessages((prev) => prev.filter((m) => m.id !== "typing" && m.id !== tempUserMsg.id));
-
       const error = err as Error & { quotaExceeded?: boolean; quota?: QuotaStatus };
-      if (error.quotaExceeded) {
-        toast.error(error.message, { duration: 5000 });
-        if (error.quota) setQuota(error.quota);
-      } else {
-        toast.error(error.message ?? "Erreur lors de l'envoi");
-      }
+      toast.error(error.message ?? "Erreur lors de l'envoi", { duration: 4000 });
+      if (error.quota) setQuota(error.quota);
     } finally {
       setSending(false);
     }
   }
 
   const canDiagnostic = !quota || quota.canSendDiagnostic;
+  const inputDisabled = sending || (!!quota && !quota.canSendNormal && !quota.canSendDiagnostic);
 
   return (
     <div style={{
       display: "flex", flexDirection: "column",
       height: "calc(100dvh - env(safe-area-inset-top, 0px))",
-      background: "#050510",
+      background: "#000",
       overflow: "hidden",
+      position: "relative",
     }}>
-      {/* Header */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 12,
-        padding: "14px 16px",
-        borderBottom: "0.5px solid rgba(255,255,255,0.08)",
-        background: "#050510",
-        flexShrink: 0,
-      }}>
-        <motion.button
-          whileTap={{ scale: 0.88 }}
-          onClick={() => navigate("/ai")}
-          style={{
-            width: 36, height: 36, borderRadius: "50%",
-            border: "0.5px solid rgba(255,255,255,0.12)",
-            background: "transparent", color: "rgba(235,235,245,0.7)",
-            cursor: "pointer", display: "flex",
-            alignItems: "center", justifyContent: "center",
-          }}
-        >
-          <ArrowLeft style={{ width: 18, height: 18 }} />
-        </motion.button>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: "50%",
-            background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0, fontSize: 14,
-          }}>
-            ✨
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <p style={{
-              margin: 0, fontSize: 14, fontWeight: 700,
-              color: "#fff",
-              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-            }}>
-              {isNew ? "Nouveau coaching" : (conversation?.title ?? "Fowards IA")}
-            </p>
-            <p style={{ margin: 0, fontSize: 11, color: "rgba(235,235,245,0.4)" }}>
-              {sending ? "En train de répondre…" : "Coach business IA"}
-            </p>
-          </div>
-        </div>
-
-        {quota && (
-          <QuotaBar quota={quota} compact />
-        )}
-      </div>
+      {/* Floating back button */}
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        whileTap={{ scale: 0.88 }}
+        onClick={() => navigate("/ai")}
+        style={{
+          position: "absolute",
+          top: 14,
+          left: 14,
+          zIndex: 20,
+          width: 36, height: 36,
+          borderRadius: "50%",
+          border: "0.5px solid rgba(255,255,255,0.15)",
+          background: "rgba(0,0,0,0.7)",
+          backdropFilter: "blur(8px)",
+          color: "rgba(235,235,245,0.8)",
+          cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}
+      >
+        <ArrowLeft style={{ width: 17, height: 17 }} />
+      </motion.button>
 
       {/* Messages */}
       <div style={{
-        flex: 1, overflowY: "auto", padding: "16px 16px 8px",
+        flex: 1, overflowY: "auto",
+        padding: "60px 16px 8px",
         WebkitOverflowScrolling: "touch",
       } as React.CSSProperties}>
-        {loading ? (
-          <div style={{ display: "flex", justifyContent: "center", paddingTop: 60 }}>
-            <Loader2 style={{ width: 24, height: 24, color: "#6366f1", animation: "spin 1s linear infinite" }} />
+        {messages.length === 0 && !sending && (
+          <div style={{
+            textAlign: "center", paddingTop: 80,
+            color: "rgba(235,235,245,0.25)", fontSize: 14,
+          }}>
+            En attente de réponse…
           </div>
-        ) : messages.length === 0 ? (
-          <WelcomeHint />
-        ) : (
-          <AnimatePresence initial={false}>
-            {messages.map((msg) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                {msg.id === "typing" ? (
-                  <TypingIndicator />
-                ) : (
-                  <MessageBubble message={msg} />
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
         )}
+
+        <AnimatePresence initial={false}>
+          {messages.map((msg) => (
+            <motion.div
+              key={msg.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18 }}
+            >
+              {msg.id === "typing" ? (
+                <TypingIndicator />
+              ) : (
+                <MessageBubble message={msg} />
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
         <div ref={messagesEndRef} />
       </div>
 
@@ -238,7 +194,7 @@ export function AIConversationPage() {
       <div style={{ flexShrink: 0 }}>
         <ChatInput
           onSend={handleSend}
-          disabled={sending || (!quota ? false : !quota.canSendNormal && !quota.canSendDiagnostic)}
+          disabled={inputDisabled}
           canDiagnostic={canDiagnostic}
         />
       </div>
@@ -251,48 +207,30 @@ function TypingIndicator() {
     <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
       <div style={{
         width: 32, height: 32, borderRadius: "50%",
-        background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+        background: "rgba(255,255,255,0.08)",
+        border: "0.5px solid rgba(255,255,255,0.15)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0, marginTop: 2, fontSize: 14,
+        flexShrink: 0, marginTop: 2,
+        fontSize: 11, color: "rgba(235,235,245,0.7)", fontWeight: 700,
       }}>
-        ✨
+        IA
       </div>
       <div style={{
-        background: "rgba(255,255,255,0.06)",
+        background: "rgba(255,255,255,0.05)",
         borderRadius: "4px 18px 18px 18px",
         padding: "12px 16px",
-        border: "0.5px solid rgba(255,255,255,0.10)",
-        display: "flex", alignItems: "center", gap: 4,
+        border: "0.5px solid rgba(255,255,255,0.08)",
+        display: "flex", alignItems: "center", gap: 5,
       }}>
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            style={{ width: 6, height: 6, borderRadius: "50%", background: "#818cf8" }}
+            style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(235,235,245,0.4)" }}
             animate={{ opacity: [0.3, 1, 0.3] }}
             transition={{ duration: 1.2, delay: i * 0.2, repeat: Infinity }}
           />
         ))}
       </div>
     </div>
-  );
-}
-
-function WelcomeHint() {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      style={{
-        textAlign: "center",
-        paddingTop: 40,
-        paddingBottom: 20,
-        color: "rgba(235,235,245,0.45)",
-      }}
-    >
-      <div style={{ fontSize: 40, marginBottom: 12 }}>✨</div>
-      <p style={{ fontSize: 14, lineHeight: 1.6, maxWidth: 260, margin: "0 auto" }}>
-        Dis <strong style={{ color: "rgba(235,235,245,0.7)" }}>GO</strong> pour commencer, ou pose directement ta question.
-      </p>
-    </motion.div>
   );
 }

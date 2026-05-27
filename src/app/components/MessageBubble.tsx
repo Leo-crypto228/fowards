@@ -50,15 +50,18 @@ export function MessageBubble({ message }: Props) {
         width: 32,
         height: 32,
         borderRadius: "50%",
-        background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+        background: "rgba(255,255,255,0.08)",
+        border: "0.5px solid rgba(255,255,255,0.15)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0,
         marginTop: 2,
-        fontSize: 14,
+        fontSize: 13,
+        color: "rgba(235,235,245,0.7)",
+        fontWeight: 700,
       }}>
-        ✨
+        IA
       </div>
 
       <div style={{ maxWidth: "84%", minWidth: 0 }}>
@@ -68,10 +71,10 @@ export function MessageBubble({ message }: Props) {
           </div>
         )}
         <div style={{
-          background: "rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.05)",
           borderRadius: "4px 18px 18px 18px",
           padding: "10px 14px",
-          border: "0.5px solid rgba(255,255,255,0.10)",
+          border: "0.5px solid rgba(255,255,255,0.08)",
         }}>
           <div className="ai-markdown" style={{
             color: "rgba(235,235,245,0.92)",
