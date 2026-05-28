@@ -1,4 +1,4 @@
-// ai-fowards — Edge Function Fowards IA (Gemini 2.5 Flash)
+// ai-fowards — Edge Function Fowards IA V6 (Gemini 2.5 Flash)
 // Toutes les routes commencent par /ai-fowards/
 // La clé Gemini n'est JAMAIS exposée côté client — elle est lue via Deno.env
 
@@ -9,12 +9,16 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { FOWARDS_SYSTEM_PROMPT } from "./prompts.ts";
 import type {
   ChatMode,
+  ChoicesBlock,
   DbConversation,
   DbMessage,
+  DbUserProfilePage,
   DbUserQuota,
   GeminiContent,
   GeminiRequest,
   GeminiResponse,
+  ProfilePage,
+  ProfileUpdateBlock,
   QuotaStatus,
 } from "./types.ts";
 
@@ -32,18 +36,18 @@ app.use(
   cors({
     origin: "*",
     allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     maxAge: 600,
   }),
 );
 app.use("/*", logger());
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const NORMAL_DAILY_LIMIT     = 30;
-const DIAGNOSTIC_BASE_LIMIT  = 1;
-const DIAGNOSTIC_MAX_LIMIT   = 2;
-const GEMINI_MODEL           = "gemini-2.5-flash";
-const GEMINI_URL             = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const NORMAL_DAILY_LIMIT    = 30;
+const DIAGNOSTIC_BASE_LIMIT = 1;
+const DIAGNOSTIC_MAX_LIMIT  = 2;
+const GEMINI_MODEL          = "gemini-2.5-flash";
+const GEMINI_URL            = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // ── Auth helper — vérifie le JWT et retourne l'userId ────────────────────────
 async function getUserId(authHeader: string | undefined): Promise<string | null> {
@@ -57,7 +61,7 @@ async function getUserId(authHeader: string | undefined): Promise<string | null>
 // ── Quota helpers ─────────────────────────────────────────────────────────────
 
 async function getOrCreateQuota(userId: string): Promise<DbUserQuota> {
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
 
   const { data: existing } = await supabaseAdmin
     .from("user_quotas")
@@ -68,7 +72,6 @@ async function getOrCreateQuota(userId: string): Promise<DbUserQuota> {
 
   if (existing) return existing as DbUserQuota;
 
-  // Créer la ligne du jour
   const { data: created, error } = await supabaseAdmin
     .from("user_quotas")
     .insert({
@@ -82,7 +85,7 @@ async function getOrCreateQuota(userId: string): Promise<DbUserQuota> {
     .single();
 
   if (error) {
-    // Peut arriver en race condition (2 requêtes simultanées)
+    // Race condition : la ligne a été créée entre les deux requêtes
     const { data: retry } = await supabaseAdmin
       .from("user_quotas")
       .select("*")
@@ -95,7 +98,7 @@ async function getOrCreateQuota(userId: string): Promise<DbUserQuota> {
   return created as DbUserQuota;
 }
 
-function buildQuotaStatus(quota: DbUserQuota): QuotaStatus {
+function buildQuotaStatus(quota: DbUserQuota, isPhase1Complete: boolean): QuotaStatus {
   const diagnosticsLimit = Math.min(
     DIAGNOSTIC_BASE_LIMIT + quota.diagnostics_unlocked_via_post,
     DIAGNOSTIC_MAX_LIMIT,
@@ -109,20 +112,96 @@ function buildQuotaStatus(quota: DbUserQuota): QuotaStatus {
     diagnosticsRemaining: Math.max(0, diagnosticsLimit - quota.diagnostics_used),
     diagnosticsUnlockedViaPost: quota.diagnostics_unlocked_via_post > 0,
     canSendNormal: quota.normal_messages_used < NORMAL_DAILY_LIMIT,
-    canSendDiagnostic: quota.diagnostics_used < diagnosticsLimit,
+    canSendDiagnostic: isPhase1Complete && quota.diagnostics_used < diagnosticsLimit,
+    isPhase1Complete,
   };
+}
+
+// ── Profile helpers ───────────────────────────────────────────────────────────
+
+async function getOrCreateProfile(userId: string): Promise<DbUserProfilePage> {
+  const { data: existing } = await supabaseAdmin
+    .from("user_profile_page")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existing) return existing as DbUserProfilePage;
+
+  const { data: created, error } = await supabaseAdmin
+    .from("user_profile_page")
+    .insert({
+      user_id: userId,
+      content_markdown: "",
+      is_phase1_complete: false,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    // Race condition
+    const { data: retry } = await supabaseAdmin
+      .from("user_profile_page")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+    return retry as DbUserProfilePage;
+  }
+
+  return created as DbUserProfilePage;
+}
+
+function profileToPublic(profile: DbUserProfilePage): ProfilePage {
+  return {
+    contentMarkdown: profile.content_markdown,
+    isPhase1Complete: profile.is_phase1_complete,
+    phase1CompletedAt: profile.phase1_completed_at,
+    lastUpdatedAt: profile.last_updated_at,
+    aiUpdateCount: profile.ai_update_count,
+    userUpdateCount: profile.user_update_count,
+  };
+}
+
+// ── Appliquer un <profile-update> en BDD ──────────────────────────────────────
+
+async function applyProfileUpdate(
+  userId: string,
+  update: ProfileUpdateBlock,
+  currentProfile: DbUserProfilePage,
+): Promise<{ isPhase1JustCompleted: boolean }> {
+  const now = new Date().toISOString();
+  const isPhase1JustCompleted =
+    update.type === "initial_profile_complete" && !currentProfile.is_phase1_complete;
+
+  const patch: Partial<DbUserProfilePage> = {
+    content_markdown: update.content_markdown,
+    last_updated_by: "ai",
+    last_updated_at: now,
+    ai_update_count: (currentProfile.ai_update_count ?? 0) + 1,
+  };
+
+  if (isPhase1JustCompleted) {
+    patch.is_phase1_complete = true;
+    patch.phase1_completed_at = now;
+  }
+
+  await supabaseAdmin
+    .from("user_profile_page")
+    .update(patch)
+    .eq("user_id", userId);
+
+  return { isPhase1JustCompleted };
 }
 
 // ── Gemini call ───────────────────────────────────────────────────────────────
 
-async function callGemini(history: GeminiContent[], userMessageWithMode: string): Promise<string> {
+async function callGemini(history: GeminiContent[], userMessageWithContext: string): Promise<string> {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY manquante côté serveur");
 
-  // Construire le tableau contents : historique + message courant
   const contents: GeminiContent[] = [
     ...history,
-    { role: "user", parts: [{ text: userMessageWithMode }] },
+    { role: "user", parts: [{ text: userMessageWithContext }] },
   ];
 
   const body: GeminiRequest = {
@@ -164,28 +243,76 @@ async function callGemini(history: GeminiContent[], userMessageWithMode: string)
   return text;
 }
 
-// ── Parse <fowards-data> depuis la réponse Gemini ────────────────────────────
+// ── Triple parsing — extrait les 3 types de blocs de la réponse Gemini ────────
+// AUCUN de ces blocs ne doit être visible par l'utilisateur
 
-const FOWARDS_DATA_RE = /<fowards-data>([\s\S]*?)<\/fowards-data>/;
+const RE_FOWARDS_DATA   = /<fowards-data>([\s\S]*?)<\/fowards-data>/g;
+const RE_PROFILE_UPDATE = /<profile-update>([\s\S]*?)<\/profile-update>/g;
+const RE_CHOICES        = /<choices>([\s\S]*?)<\/choices>/g;
 
-function extractForwardsData(rawResponse: string): {
+interface ParsedResponse {
   cleanContent: string;
   forwardsData: Record<string, unknown> | null;
-} {
-  const match = FOWARDS_DATA_RE.exec(rawResponse);
-  if (!match) {
-    return { cleanContent: rawResponse.trim(), forwardsData: null };
+  profileUpdate: ProfileUpdateBlock | null;
+  choices: ChoicesBlock | null;
+}
+
+function parseGeminiResponse(raw: string): ParsedResponse {
+  let cleanContent = raw;
+  let forwardsData: Record<string, unknown> | null = null;
+  let profileUpdate: ProfileUpdateBlock | null = null;
+  let choices: ChoicesBlock | null = null;
+
+  // 1. <fowards-data>
+  const fdMatches = [...raw.matchAll(RE_FOWARDS_DATA)];
+  if (fdMatches.length > 0) {
+    try { forwardsData = JSON.parse(fdMatches[0][1].trim()); } catch (e) {
+      console.error("[fowards-data] JSON parse error:", e);
+    }
+  }
+  cleanContent = cleanContent.replace(RE_FOWARDS_DATA, "");
+  RE_FOWARDS_DATA.lastIndex = 0;
+
+  // 2. <profile-update>
+  const puMatches = [...raw.matchAll(RE_PROFILE_UPDATE)];
+  if (puMatches.length > 0) {
+    try { profileUpdate = JSON.parse(puMatches[0][1].trim()) as ProfileUpdateBlock; } catch (e) {
+      console.error("[profile-update] JSON parse error:", e);
+    }
+  }
+  cleanContent = cleanContent.replace(RE_PROFILE_UPDATE, "");
+  RE_PROFILE_UPDATE.lastIndex = 0;
+
+  // 3. <choices>
+  const choiceMatches = [...raw.matchAll(RE_CHOICES)];
+  if (choiceMatches.length > 0) {
+    try { choices = JSON.parse(choiceMatches[0][1].trim()) as ChoicesBlock; } catch (e) {
+      console.error("[choices] JSON parse error:", e);
+    }
+  }
+  cleanContent = cleanContent.replace(RE_CHOICES, "");
+  RE_CHOICES.lastIndex = 0;
+
+  return {
+    cleanContent: cleanContent.trim(),
+    forwardsData,
+    profileUpdate,
+    choices,
+  };
+}
+
+// ── Construire le contexte utilisateur injecté dans le message ────────────────
+
+function buildUserContext(profile: DbUserProfilePage, mode: ChatMode): string {
+  if (!profile.is_phase1_complete) {
+    return "[FIRST_TIME_USER]";
   }
 
-  try {
-    const forwardsData = JSON.parse(match[1].trim());
-    const cleanContent = rawResponse.replace(FOWARDS_DATA_RE, "").trim();
-    return { cleanContent, forwardsData };
-  } catch (e) {
-    console.error("[fowards-data] JSON parse error:", e);
-    const cleanContent = rawResponse.replace(FOWARDS_DATA_RE, "").trim();
-    return { cleanContent, forwardsData: null };
-  }
+  const profileSection = profile.content_markdown.trim()
+    ? `[RETURNING_USER]\n\n[USER_PROFILE_PAGE]\n${profile.content_markdown.trim()}\n[/USER_PROFILE_PAGE]`
+    : "[RETURNING_USER]";
+
+  return profileSection;
 }
 
 // ── Routes ────────────────────────────────────────────────────────────────────
@@ -193,21 +320,80 @@ function extractForwardsData(rawResponse: string): {
 // GET /ai-fowards/ping
 app.get("/ai-fowards/ping", (c) => c.json({ ok: true }));
 
-// ── GET /quota-status — retourne le statut de quota du jour ──────────────────
+// ── GET /quota-status ─────────────────────────────────────────────────────────
 app.get("/ai-fowards/quota-status", async (c) => {
   const userId = await getUserId(c.req.header("Authorization"));
   if (!userId) return c.json({ error: "Non authentifié" }, 401);
 
   try {
-    const quota = await getOrCreateQuota(userId);
-    return c.json(buildQuotaStatus(quota));
+    const [quota, profile] = await Promise.all([
+      getOrCreateQuota(userId),
+      getOrCreateProfile(userId),
+    ]);
+    return c.json(buildQuotaStatus(quota, profile.is_phase1_complete));
   } catch (err) {
     console.error("[quota-status] error:", err);
     return c.json({ error: "Erreur serveur" }, 500);
   }
 });
 
-// ── GET /conversations — liste des conversations de l'user ───────────────────
+// ── GET /ai-fowards/profile — retourne la page profil IA de l'user ────────────
+app.get("/ai-fowards/profile", async (c) => {
+  const userId = await getUserId(c.req.header("Authorization"));
+  if (!userId) return c.json({ error: "Non authentifié" }, 401);
+
+  try {
+    const profile = await getOrCreateProfile(userId);
+    return c.json(profileToPublic(profile));
+  } catch (err) {
+    console.error("[profile GET] error:", err);
+    return c.json({ error: "Erreur serveur" }, 500);
+  }
+});
+
+// ── PUT /ai-fowards/profile — l'user édite son profil manuellement ────────────
+app.put("/ai-fowards/profile", async (c) => {
+  const userId = await getUserId(c.req.header("Authorization"));
+  if (!userId) return c.json({ error: "Non authentifié" }, 401);
+
+  let body: { contentMarkdown: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Corps invalide" }, 400);
+  }
+
+  if (typeof body.contentMarkdown !== "string") {
+    return c.json({ error: "contentMarkdown requis" }, 400);
+  }
+
+  // Limite raisonnable pour éviter les abus
+  if (body.contentMarkdown.length > 20000) {
+    return c.json({ error: "Profil trop long (max 20 000 caractères)" }, 400);
+  }
+
+  try {
+    const existing = await getOrCreateProfile(userId);
+    const now = new Date().toISOString();
+
+    await supabaseAdmin
+      .from("user_profile_page")
+      .update({
+        content_markdown: body.contentMarkdown,
+        last_updated_by: "user",
+        last_updated_at: now,
+        user_update_count: (existing.user_update_count ?? 0) + 1,
+      })
+      .eq("user_id", userId);
+
+    return c.json({ success: true });
+  } catch (err) {
+    console.error("[profile PUT] error:", err);
+    return c.json({ error: "Erreur serveur" }, 500);
+  }
+});
+
+// ── GET /conversations ────────────────────────────────────────────────────────
 app.get("/ai-fowards/conversations", async (c) => {
   const userId = await getUserId(c.req.header("Authorization"));
   if (!userId) return c.json({ error: "Non authentifié" }, 401);
@@ -228,7 +414,7 @@ app.get("/ai-fowards/conversations", async (c) => {
   }
 });
 
-// ── GET /conversations/:id — messages d'une conversation ─────────────────────
+// ── GET /conversations/:id ────────────────────────────────────────────────────
 app.get("/ai-fowards/conversations/:id", async (c) => {
   const userId = await getUserId(c.req.header("Authorization"));
   if (!userId) return c.json({ error: "Non authentifié" }, 401);
@@ -236,7 +422,6 @@ app.get("/ai-fowards/conversations/:id", async (c) => {
   const conversationId = c.req.param("id");
 
   try {
-    // Vérifier que la conversation appartient à l'user
     const { data: conv, error: convErr } = await supabaseAdmin
       .from("conversations")
       .select("*")
@@ -284,7 +469,7 @@ app.delete("/ai-fowards/conversations/:id", async (c) => {
   }
 });
 
-// ── POST /chat — envoyer un message et obtenir une réponse IA ────────────────
+// ── POST /chat ────────────────────────────────────────────────────────────────
 app.post("/ai-fowards/chat", async (c) => {
   const userId = await getUserId(c.req.header("Authorization"));
   if (!userId) return c.json({ error: "Non authentifié" }, 401);
@@ -308,10 +493,14 @@ app.post("/ai-fowards/chat", async (c) => {
     return c.json({ error: "Mode invalide (normal | diagnostic)" }, 400);
   }
 
-  // ── Vérification quota ──────────────────────────────────────────────────────
-  const quota = await getOrCreateQuota(userId);
-  const quotaStatus = buildQuotaStatus(quota);
+  // ── Quota + profil en parallèle ────────────────────────────────────────────
+  const [quota, profile] = await Promise.all([
+    getOrCreateQuota(userId),
+    getOrCreateProfile(userId),
+  ]);
+  const quotaStatus = buildQuotaStatus(quota, profile.is_phase1_complete);
 
+  // ── Vérification quota ─────────────────────────────────────────────────────
   if (mode === "normal" && !quotaStatus.canSendNormal) {
     return c.json({
       error: `Quota atteint : ${NORMAL_DAILY_LIMIT} messages normaux/jour. Reviens demain !`,
@@ -320,23 +509,31 @@ app.post("/ai-fowards/chat", async (c) => {
     }, 429);
   }
 
-  if (mode === "diagnostic" && !quotaStatus.canSendDiagnostic) {
-    const hint = quotaStatus.diagnosticsUnlockedViaPost
-      ? "Tu as déjà utilisé tes 2 diagnostics aujourd'hui. Reviens demain !"
-      : "Publie un post de progression (≥50 caractères) pour débloquer un 2ème diagnostic.";
-    return c.json({
-      error: `Quota diagnostic atteint. ${hint}`,
-      quotaExceeded: true,
-      quota: quotaStatus,
-    }, 429);
+  if (mode === "diagnostic") {
+    if (!profile.is_phase1_complete) {
+      return c.json({
+        error: "Le diagnostic est disponible uniquement après avoir complété le bilan initial (Phase 1).",
+        quotaExceeded: false,
+        quota: quotaStatus,
+      }, 403);
+    }
+    if (!quotaStatus.canSendDiagnostic) {
+      const hint = quotaStatus.diagnosticsUnlockedViaPost
+        ? "Tu as déjà utilisé tes 2 diagnostics aujourd'hui. Reviens demain !"
+        : "Publie un post de progression (≥50 caractères) pour débloquer un 2ème diagnostic.";
+      return c.json({
+        error: `Quota diagnostic atteint. ${hint}`,
+        quotaExceeded: true,
+        quota: quotaStatus,
+      }, 429);
+    }
   }
 
   try {
-    // ── Créer ou récupérer la conversation ─────────────────────────────────────
+    // ── Créer ou récupérer la conversation ────────────────────────────────────
     let convId = conversationId;
 
     if (!convId) {
-      // Nouvelle conversation : créer
       const title = message.trim().slice(0, 60) + (message.trim().length > 60 ? "…" : "");
       const { data: newConv, error: createErr } = await supabaseAdmin
         .from("conversations")
@@ -347,7 +544,6 @@ app.post("/ai-fowards/chat", async (c) => {
       if (createErr) throw createErr;
       convId = newConv.id;
     } else {
-      // Vérifier que la conversation appartient à l'user
       const { data: existingConv } = await supabaseAdmin
         .from("conversations")
         .select("id")
@@ -358,7 +554,7 @@ app.post("/ai-fowards/chat", async (c) => {
       if (!existingConv) return c.json({ error: "Conversation introuvable" }, 404);
     }
 
-    // ── Récupérer l'historique pour Gemini (max 40 messages) ───────────────────
+    // ── Historique Gemini (max 40 messages) ───────────────────────────────────
     const { data: historyRows } = await supabaseAdmin
       .from("messages")
       .select("role, content")
@@ -366,22 +562,33 @@ app.post("/ai-fowards/chat", async (c) => {
       .order("created_at", { ascending: true })
       .limit(40);
 
-    const geminiHistory: GeminiContent[] = (historyRows ?? []).map((row: Pick<DbMessage, "role" | "content">) => ({
-      role: row.role === "user" ? "user" : "model",
-      parts: [{ text: row.content }],
-    }));
+    const geminiHistory: GeminiContent[] = (historyRows ?? []).map(
+      (row: Pick<DbMessage, "role" | "content">) => ({
+        role: row.role === "user" ? "user" : "model",
+        parts: [{ text: row.content }],
+      }),
+    );
 
-    // ── Injection du préfixe de mode côté serveur ─────────────────────────────
+    // ── Injection contexte V6 (profil + mode) dans le message ─────────────────
+    const userContext = buildUserContext(profile, mode);
     const modePrefix = mode === "diagnostic" ? "[MODE: DIAGNOSTIC]" : "[MODE: NORMAL]";
-    const messageWithMode = `${modePrefix} ${message.trim()}`;
+    const messageWithContext = `${userContext}\n\n${modePrefix} ${message.trim()}`;
 
     // ── Appel Gemini ──────────────────────────────────────────────────────────
-    const rawAiResponse = await callGemini(geminiHistory, messageWithMode);
+    const rawAiResponse = await callGemini(geminiHistory, messageWithContext);
 
-    // ── Parser les données <fowards-data> (jamais envoyées brutes au client) ───
-    const { cleanContent, forwardsData } = extractForwardsData(rawAiResponse);
+    // ── Triple parsing (fowards-data, profile-update, choices) ────────────────
+    const { cleanContent, forwardsData, profileUpdate, choices } = parseGeminiResponse(rawAiResponse);
 
-    // ── Sauvegarder les messages en BDD (transaction simulée en 2 inserts) ─────
+    // ── Appliquer le <profile-update> si présent ──────────────────────────────
+    let isPhase1JustCompleted = false;
+    if (profileUpdate) {
+      const result = await applyProfileUpdate(userId, profileUpdate, profile);
+      isPhase1JustCompleted = result.isPhase1JustCompleted;
+      console.log(`[profile-update] type=${profileUpdate.type}, phase1JustCompleted=${isPhase1JustCompleted}`);
+    }
+
+    // ── Sauvegarder les messages ───────────────────────────────────────────────
     const now = new Date().toISOString();
 
     await supabaseAdmin.from("messages").insert([
@@ -389,7 +596,7 @@ app.post("/ai-fowards/chat", async (c) => {
         conversation_id: convId,
         user_id: userId,
         role: "user",
-        content: message.trim(),
+        content: message.trim(), // On sauvegarde le message brut (sans le contexte injecté)
         mode,
         fowards_data: null,
         created_at: now,
@@ -401,7 +608,7 @@ app.post("/ai-fowards/chat", async (c) => {
         content: cleanContent,
         mode,
         fowards_data: forwardsData,
-        created_at: new Date(Date.now() + 1).toISOString(), // +1ms pour conserver l'ordre
+        created_at: new Date(Date.now() + 1).toISOString(),
       },
     ]);
 
@@ -427,15 +634,18 @@ app.post("/ai-fowards/chat", async (c) => {
         .eq("quota_date", today);
     }
 
-    // ── Quota mis à jour ──────────────────────────────────────────────────────
+    // ── Quota final mis à jour ────────────────────────────────────────────────
+    const finalPhase1Complete = isPhase1JustCompleted || profile.is_phase1_complete;
     const updatedQuota = await getOrCreateQuota(userId);
 
     return c.json({
       conversationId: convId,
       message: cleanContent,
       forwardsData: forwardsData ?? null,
+      choices: choices ?? null,
       mode,
-      quota: buildQuotaStatus(updatedQuota),
+      isPhase1JustCompleted,
+      quota: buildQuotaStatus(updatedQuota, finalPhase1Complete),
     });
   } catch (err) {
     console.error("[chat] error:", err);

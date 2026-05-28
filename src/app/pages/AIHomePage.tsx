@@ -35,6 +35,8 @@ export function AIHomePage() {
       ]);
       setConversations(convs);
       setQuota(q);
+      // Si Phase 1 pas complète, forcer le mode normal
+      if (!q.isPhase1Complete) setMode("normal");
     } catch (err) {
       console.error("[AIHomePage] load error:", err);
     } finally {
@@ -74,23 +76,78 @@ export function AIHomePage() {
     }
   }
 
-  const canDiagnostic = !quota || quota.canSendDiagnostic;
+  const isPhase1Complete = quota?.isPhase1Complete ?? true; // défaut true pour éviter flash
+  const canDiagnostic = isPhase1Complete && (!quota || quota.canSendDiagnostic);
 
   return (
     <div style={{ minHeight: "100dvh", background: "#000", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, padding: "24px 16px 16px", display: "flex", flexDirection: "column", maxWidth: 520, width: "100%", margin: "0 auto", alignSelf: "stretch" }}>
+      <div style={{
+        flex: 1,
+        padding: "24px 16px 16px",
+        display: "flex",
+        flexDirection: "column",
+        maxWidth: 520,
+        width: "100%",
+        margin: "0 auto",
+        alignSelf: "stretch",
+      }}>
 
-        {/* Quota — plain text, left-aligned */}
-        {quota && (
-          <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
-            <span style={{ fontSize: 13, color: "rgba(235,235,245,0.4)" }}>
-              Messages normaux {quota.normalUsed}/{quota.normalLimit}
-            </span>
-            <span style={{ fontSize: 13, color: "rgba(235,235,245,0.4)" }}>
-              Diagnostic {quota.diagnosticsUsed}/{quota.diagnosticsLimit}
-              {quota.diagnosticsUnlockedViaPost && (
-                <span style={{ color: "rgba(235,235,245,0.6)", marginLeft: 4 }}>🔓</span>
+        {/* Top row — quota + profil */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          {quota && (
+            <div style={{ display: "flex", gap: 14 }}>
+              <span style={{ fontSize: 12, color: "rgba(235,235,245,0.35)" }}>
+                Messages {quota.normalUsed}/{quota.normalLimit}
+              </span>
+              {isPhase1Complete && (
+                <span style={{ fontSize: 12, color: "rgba(235,235,245,0.35)" }}>
+                  Diagnostic {quota.diagnosticsUsed}/{quota.diagnosticsLimit}
+                  {quota.diagnosticsUnlockedViaPost && (
+                    <span style={{ marginLeft: 4 }}>🔓</span>
+                  )}
+                </span>
               )}
+            </div>
+          )}
+          {/* Mon Profil IA */}
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={() => navigate("/ai/profile")}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "0.5px solid rgba(255,255,255,0.12)",
+              borderRadius: 8,
+              color: "rgba(235,235,245,0.6)",
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: "pointer",
+              padding: "6px 10px",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              flexShrink: 0,
+            }}
+          >
+            <span>👤</span>
+            <span>Mon Profil IA</span>
+          </motion.button>
+        </div>
+
+        {/* Bandeau Phase 1 — visible uniquement si profil incomplet */}
+        {!loading && quota && !isPhase1Complete && (
+          <div style={{
+            background: "rgba(99,102,241,0.08)",
+            border: "0.5px solid rgba(99,102,241,0.22)",
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: 14,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}>
+            <span style={{ fontSize: 14 }}>🎯</span>
+            <span style={{ fontSize: 12, color: "rgba(235,235,245,0.55)", lineHeight: 1.4 }}>
+              Réponds aux questions de l'IA pour débloquer le Diagnostic personnalisé.
             </span>
           </div>
         )}
@@ -165,25 +222,35 @@ export function AIHomePage() {
             Discussion normale
           </button>
           <button
-            onClick={() => canDiagnostic ? setMode("diagnostic") : undefined}
+            onClick={() => {
+              if (!isPhase1Complete) {
+                toast("Termine le profilage d'abord pour débloquer le Diagnostic.", {
+                  icon: "🔒",
+                  duration: 2500,
+                });
+                return;
+              }
+              if (canDiagnostic) setMode("diagnostic");
+            }}
             style={{
               flex: 1, height: 36, borderRadius: 8,
-              border: `1px solid ${mode === "diagnostic" ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.22)"}`,
-              background: mode === "diagnostic" ? "rgba(255,255,255,0.10)" : "transparent",
-              color: !canDiagnostic ? "rgba(255,255,255,0.2)"
+              border: `1px solid ${mode === "diagnostic" && isPhase1Complete ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.22)"}`,
+              background: mode === "diagnostic" && isPhase1Complete ? "rgba(255,255,255,0.10)" : "transparent",
+              color: !isPhase1Complete ? "rgba(255,255,255,0.2)"
                 : mode === "diagnostic" ? "#fff" : "rgba(255,255,255,0.4)",
-              fontSize: 13, fontWeight: mode === "diagnostic" ? 600 : 400,
-              cursor: canDiagnostic ? "pointer" : "not-allowed",
-              opacity: canDiagnostic ? 1 : 0.5,
+              fontSize: 13, fontWeight: mode === "diagnostic" && isPhase1Complete ? 600 : 400,
+              cursor: isPhase1Complete && canDiagnostic ? "pointer" : "not-allowed",
+              opacity: isPhase1Complete ? 1 : 0.45,
               transition: "all 0.15s",
-            }}
+              position: "relative",
+            } as React.CSSProperties}
           >
-            Diagnostic
+            {!isPhase1Complete ? "🔒 Diagnostic" : "Diagnostic"}
           </button>
         </div>
 
-        {/* Conversation history */}
-        {!loading && conversations.length > 0 && (
+        {/* Conversation history — visible uniquement si Phase 1 complète */}
+        {!loading && isPhase1Complete && conversations.length > 0 && (
           <div style={{ flex: 1, overflowY: "auto" }}>
             {conversations.map((conv, i) => (
               <motion.div

@@ -52,7 +52,7 @@ export function Layout() {
   const isPostDetail = location.pathname.startsWith("/post/");
   const isWaysViewer = location.pathname.startsWith("/ways/") && !location.pathname.endsWith("/create");
   const isCreatePage = location.pathname === "/create";
-  // /ai/new or /ai/:conversationId (but not /ai itself — that shows the list)
+  // /ai/new, /ai/:conversationId, /ai/profile — tout sauf /ai (liste)
   const isAiConversation = location.pathname.startsWith("/ai/");
   const hideNav = isPostDetail || isWaysViewer || isCreatePage || isAiConversation;
   const [createPostOpen, setCreatePostOpen] = useState(false);

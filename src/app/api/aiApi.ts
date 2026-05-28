@@ -23,6 +23,8 @@ export interface QuotaStatus {
   diagnosticsUnlockedViaPost: boolean;
   canSendNormal: boolean;
   canSendDiagnostic: boolean;
+  // V6
+  isPhase1Complete: boolean;
 }
 
 export interface AiConversation {
@@ -41,11 +43,27 @@ export interface AiMessage {
   created_at: string;
 }
 
+export interface ChoicesBlock {
+  type: "single" | "multi";
+  choices: string[];
+}
+
+export interface ProfilePage {
+  contentMarkdown: string;
+  isPhase1Complete: boolean;
+  phase1CompletedAt: string | null;
+  lastUpdatedAt: string;
+  aiUpdateCount: number;
+  userUpdateCount: number;
+}
+
 export interface ChatResponse {
   conversationId: string;
   message: string;
   forwardsData: Record<string, unknown> | null;
+  choices: ChoicesBlock | null;
   mode: ChatMode;
+  isPhase1JustCompleted: boolean;
   quota: QuotaStatus;
 }
 
@@ -114,4 +132,24 @@ export async function deleteConversation(
     headers: makeHeaders(accessToken),
   });
   if (!res.ok) throw new Error(`delete conversation ${res.status}`);
+}
+
+export async function getProfile(accessToken: string): Promise<ProfilePage> {
+  const res = await fetch(`${BASE}/profile`, {
+    headers: makeHeaders(accessToken),
+  });
+  if (!res.ok) throw new Error(`profile GET ${res.status}`);
+  return res.json();
+}
+
+export async function updateProfile(
+  accessToken: string,
+  contentMarkdown: string,
+): Promise<void> {
+  const res = await fetch(`${BASE}/profile`, {
+    method: "PUT",
+    headers: makeHeaders(accessToken),
+    body: JSON.stringify({ contentMarkdown }),
+  });
+  if (!res.ok) throw new Error(`profile PUT ${res.status}`);
 }

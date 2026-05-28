@@ -43,6 +43,50 @@ export interface QuotaStatus {
   diagnosticsUnlockedViaPost: boolean;
   canSendNormal: boolean;
   canSendDiagnostic: boolean;
+  // V6 — état Phase 1
+  isPhase1Complete: boolean;
+}
+
+// ── V6 — user_profile_page ────────────────────────────────────────────────────
+
+export interface DbUserProfilePage {
+  id: string;
+  user_id: string;
+  content_markdown: string;
+  is_phase1_complete: boolean;
+  phase1_completed_at: string | null;
+  last_updated_by: "ai" | "user" | "system" | null;
+  last_updated_at: string;
+  ai_update_count: number;
+  user_update_count: number;
+  created_at: string;
+}
+
+/** Shape retournée au client */
+export interface ProfilePage {
+  contentMarkdown: string;
+  isPhase1Complete: boolean;
+  phase1CompletedAt: string | null;
+  lastUpdatedAt: string;
+  aiUpdateCount: number;
+  userUpdateCount: number;
+}
+
+/** <choices> block parsé depuis la réponse Gemini */
+export interface ChoicesBlock {
+  type: "single" | "multi";
+  choices: string[];
+}
+
+/** <profile-update> block parsé depuis la réponse Gemini */
+export interface ProfileUpdateBlock {
+  type:
+    | "initial_profile_complete"
+    | "diagnostic_completed"
+    | "action_status_update"
+    | "section_correction";
+  content_markdown: string; // Contenu complet remplaçant le profil
+  notes?: string;
 }
 
 // Gemini API types
