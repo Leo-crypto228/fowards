@@ -61,11 +61,7 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true }: Pr
           onChange={handleTextChange}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          placeholder={
-            mode === "diagnostic"
-              ? "Demande un diagnostic complet…"
-              : "Ton message…"
-          }
+          placeholder="Entame la conversation…"
           rows={1}
           style={{
             flex: 1,

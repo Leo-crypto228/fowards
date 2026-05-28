@@ -227,7 +227,13 @@ async function callGemini(history: GeminiContent[], userMessageWithContext: stri
   if (!res.ok) {
     const errText = await res.text();
     console.error("[Gemini] Error response:", res.status, errText);
-    throw new Error(`Gemini API erreur ${res.status}`);
+    // On remonte le vrai message Gemini pour faciliter le debug
+    let geminiMsg = `Gemini ${res.status}`;
+    try {
+      const errJson = JSON.parse(errText);
+      geminiMsg = errJson?.error?.message ?? errJson?.error ?? geminiMsg;
+    } catch { geminiMsg = errText.slice(0, 300) || geminiMsg; }
+    throw new Error(geminiMsg);
   }
 
   const data = (await res.json()) as GeminiResponse;
