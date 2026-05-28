@@ -1,5 +1,5 @@
-import { createBrowserRouter } from "react-router";
-import { lazy } from "react";
+import { createBrowserRouter, Navigate } from "react-router";
+import { lazy, createElement } from "react";
 import { Layout } from "./components/Layout";
 import { RootError } from "./components/RootError";
 
@@ -64,7 +64,8 @@ export const router = createBrowserRouter([
     Component: Layout,
     ErrorBoundary: RootError,
     children: [
-      { index: true,                Component: Feed },
+      { index: true,                element: createElement(Navigate, { to: "/ai", replace: true }) },
+      { path: "feed",               Component: Feed },
       { path: "profile",            Component: Profile },
       { path: "profile/edit",       Component: EditProfilePage },
       { path: "profile/settings",   Component: ProfileSettings },

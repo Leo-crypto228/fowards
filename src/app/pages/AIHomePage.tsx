@@ -21,7 +21,6 @@ export function AIHomePage() {
   const [quota, setQuota] = useState<QuotaStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Input state
   const [text, setText] = useState("");
   const [mode, setMode] = useState<ChatMode>("normal");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -35,7 +34,6 @@ export function AIHomePage() {
       ]);
       setConversations(convs);
       setQuota(q);
-      // Si Phase 1 pas complète, forcer le mode normal
       if (!q.isPhase1Complete) setMode("normal");
     } catch (err) {
       console.error("[AIHomePage] load error:", err);
@@ -76,7 +74,7 @@ export function AIHomePage() {
     }
   }
 
-  const isPhase1Complete = quota?.isPhase1Complete ?? true; // défaut true pour éviter flash
+  const isPhase1Complete = quota?.isPhase1Complete ?? true;
   const canDiagnostic = isPhase1Complete && (!quota || quota.canSendDiagnostic);
 
   return (
@@ -93,72 +91,52 @@ export function AIHomePage() {
       }}>
 
         {/* Top row — quota + profil */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           {quota && (
             <div style={{ display: "flex", gap: 14 }}>
-              <span style={{ fontSize: 12, color: "rgba(235,235,245,0.35)" }}>
-                Messages {quota.normalUsed}/{quota.normalLimit}
+              <span style={{ fontSize: 12, color: "rgba(235,235,245,0.3)" }}>
+                {quota.normalUsed}/{quota.normalLimit} messages
               </span>
               {isPhase1Complete && (
-                <span style={{ fontSize: 12, color: "rgba(235,235,245,0.35)" }}>
-                  Diagnostic {quota.diagnosticsUsed}/{quota.diagnosticsLimit}
-                  {quota.diagnosticsUnlockedViaPost && (
-                    <span style={{ marginLeft: 4 }}>🔓</span>
-                  )}
+                <span style={{ fontSize: 12, color: "rgba(235,235,245,0.3)" }}>
+                  {quota.diagnosticsUsed}/{quota.diagnosticsLimit} diag
+                  {quota.diagnosticsUnlockedViaPost && " 🔓"}
                 </span>
               )}
             </div>
           )}
-          {/* Mon Profil IA */}
           <motion.button
             whileTap={{ scale: 0.88 }}
             onClick={() => navigate("/ai/profile")}
             style={{
               background: "rgba(255,255,255,0.06)",
-              border: "0.5px solid rgba(255,255,255,0.12)",
-              borderRadius: 8,
-              color: "rgba(235,235,245,0.6)",
+              border: "0.5px solid rgba(255,255,255,0.10)",
+              borderRadius: 999,
+              color: "rgba(235,235,245,0.55)",
               fontSize: 12,
               fontWeight: 500,
               cursor: "pointer",
-              padding: "6px 10px",
+              padding: "6px 12px",
               display: "flex",
               alignItems: "center",
               gap: 5,
               flexShrink: 0,
             }}
           >
-            <span>👤</span>
-            <span>Mon Profil IA</span>
+            👤 Mon Profil IA
           </motion.button>
         </div>
 
-        {/* Bandeau Phase 1 — visible uniquement si profil incomplet */}
-        {!loading && quota && !isPhase1Complete && (
-          <div style={{
-            background: "rgba(99,102,241,0.08)",
-            border: "0.5px solid rgba(99,102,241,0.22)",
-            borderRadius: 10,
-            padding: "10px 14px",
-            marginBottom: 14,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}>
-            <span style={{ fontSize: 14 }}>🎯</span>
-            <span style={{ fontSize: 12, color: "rgba(235,235,245,0.55)", lineHeight: 1.4 }}>
-              Réponds aux questions de l'IA pour débloquer le Diagnostic personnalisé.
-            </span>
-          </div>
-        )}
-
-        {/* Input box */}
+        {/* Input box — pill shape */}
         <div style={{
-          background: "rgba(255,255,255,0.05)",
-          borderRadius: 14,
-          border: "0.5px solid rgba(255,255,255,0.10)",
-          padding: "12px 14px",
+          background: "rgba(255,255,255,0.08)",
+          borderRadius: 999,
+          border: "0.5px solid rgba(255,255,255,0.12)",
+          padding: "10px 14px",
           marginBottom: 10,
+          display: "flex",
+          alignItems: "flex-end",
+          gap: 8,
         }}>
           <textarea
             ref={textareaRef}
@@ -168,7 +146,7 @@ export function AIHomePage() {
             placeholder='Écris "GO"'
             rows={1}
             style={{
-              width: "100%",
+              flex: 1,
               background: "transparent",
               border: "none",
               outline: "none",
@@ -178,43 +156,42 @@ export function AIHomePage() {
               lineHeight: 1.5,
               padding: 0,
               fontFamily: "inherit",
-              minHeight: 36,
+              minHeight: 24,
               maxHeight: 120,
               overflowY: "auto",
               display: "block",
             }}
           />
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-            <motion.button
-              whileTap={{ scale: 0.88 }}
-              onClick={handleSend}
-              disabled={!text.trim()}
-              style={{
-                width: 34, height: 34,
-                borderRadius: "50%",
-                border: "none",
-                background: text.trim() ? "#fff" : "rgba(255,255,255,0.08)",
-                color: text.trim() ? "#000" : "rgba(255,255,255,0.3)",
-                fontSize: 16, fontWeight: 700,
-                cursor: text.trim() ? "pointer" : "not-allowed",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "background 0.15s",
-              }}
-            >
-              ↑
-            </motion.button>
-          </div>
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={handleSend}
+            disabled={!text.trim()}
+            style={{
+              width: 32, height: 32,
+              borderRadius: "50%",
+              border: "none",
+              background: text.trim() ? "#7C3AED" : "rgba(124,58,237,0.18)",
+              color: "#fff",
+              fontSize: 15, fontWeight: 700,
+              cursor: text.trim() ? "pointer" : "not-allowed",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 0.15s",
+              flexShrink: 0,
+            }}
+          >
+            ↑
+          </motion.button>
         </div>
 
-        {/* Mode buttons */}
+        {/* Mode buttons — pill shape, moins prononcé */}
         <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
           <button
             onClick={() => setMode("normal")}
             style={{
-              flex: 1, height: 36, borderRadius: 8,
-              border: `1px solid ${mode === "normal" ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.22)"}`,
-              background: mode === "normal" ? "rgba(255,255,255,0.10)" : "transparent",
-              color: mode === "normal" ? "#fff" : "rgba(255,255,255,0.4)",
+              flex: 1, height: 36, borderRadius: 999,
+              border: `1px solid ${mode === "normal" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
+              background: mode === "normal" ? "rgba(255,255,255,0.12)" : "transparent",
+              color: mode === "normal" ? "rgba(235,235,245,0.88)" : "rgba(255,255,255,0.3)",
               fontSize: 13, fontWeight: mode === "normal" ? 600 : 400,
               cursor: "pointer", transition: "all 0.15s",
             }}
@@ -233,23 +210,22 @@ export function AIHomePage() {
               if (canDiagnostic) setMode("diagnostic");
             }}
             style={{
-              flex: 1, height: 36, borderRadius: 8,
-              border: `1px solid ${mode === "diagnostic" && isPhase1Complete ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.22)"}`,
-              background: mode === "diagnostic" && isPhase1Complete ? "rgba(255,255,255,0.10)" : "transparent",
-              color: !isPhase1Complete ? "rgba(255,255,255,0.2)"
-                : mode === "diagnostic" ? "#fff" : "rgba(255,255,255,0.4)",
+              flex: 1, height: 36, borderRadius: 999,
+              border: `1px solid ${mode === "diagnostic" && isPhase1Complete ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
+              background: mode === "diagnostic" && isPhase1Complete ? "rgba(255,255,255,0.12)" : "transparent",
+              color: !isPhase1Complete ? "rgba(255,255,255,0.18)"
+                : mode === "diagnostic" ? "rgba(235,235,245,0.88)" : "rgba(255,255,255,0.3)",
               fontSize: 13, fontWeight: mode === "diagnostic" && isPhase1Complete ? 600 : 400,
               cursor: isPhase1Complete && canDiagnostic ? "pointer" : "not-allowed",
               opacity: isPhase1Complete ? 1 : 0.45,
               transition: "all 0.15s",
-              position: "relative",
-            } as React.CSSProperties}
+            }}
           >
             {!isPhase1Complete ? "🔒 Diagnostic" : "Diagnostic"}
           </button>
         </div>
 
-        {/* Conversation history — visible uniquement si Phase 1 complète */}
+        {/* Conversation history */}
         {!loading && isPhase1Complete && conversations.length > 0 && (
           <div style={{ flex: 1, overflowY: "auto" }}>
             {conversations.map((conv, i) => (
@@ -268,14 +244,14 @@ export function AIHomePage() {
                   justifyContent: "space-between",
                 }}
               >
-                <span style={{ fontSize: 14, color: "rgba(235,235,245,0.75)", fontWeight: 500 }}>
+                <span style={{ fontSize: 14, color: "rgba(235,235,245,0.7)", fontWeight: 500 }}>
                   Discussion {conversations.length - i}
                 </span>
                 <button
                   onClick={(e) => handleDeleteConv(conv.id, e)}
                   style={{
                     background: "transparent", border: "none",
-                    color: "rgba(235,235,245,0.2)", cursor: "pointer",
+                    color: "rgba(235,235,245,0.18)", cursor: "pointer",
                     fontSize: 16, padding: "0 4px",
                     lineHeight: 1,
                   }}
@@ -291,8 +267,8 @@ export function AIHomePage() {
           <div style={{ display: "flex", justifyContent: "center", paddingTop: 20 }}>
             <div style={{
               width: 18, height: 18, borderRadius: "50%",
-              border: "2px solid rgba(255,255,255,0.08)",
-              borderTop: "2px solid rgba(255,255,255,0.4)",
+              border: "2px solid rgba(255,255,255,0.06)",
+              borderTop: "2px solid rgba(255,255,255,0.35)",
               animation: "spin 0.7s linear infinite",
             }} />
           </div>

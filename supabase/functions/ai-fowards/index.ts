@@ -211,9 +211,7 @@ async function callGemini(history: GeminiContent[], userMessageWithContext: stri
     contents,
     generationConfig: {
       temperature: 0.7,
-      topK: 40,
-      topP: 0.95,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 8192,
     },
   };
 
@@ -248,7 +246,8 @@ async function callGemini(history: GeminiContent[], userMessageWithContext: stri
 
 const RE_FOWARDS_DATA   = /<fowards-data>([\s\S]*?)<\/fowards-data>/g;
 const RE_PROFILE_UPDATE = /<profile-update>([\s\S]*?)<\/profile-update>/g;
-const RE_CHOICES        = /<choices>([\s\S]*?)<\/choices>/g;
+// Capture type="single" ou type="multi" + contenu pipe-séparé
+const RE_CHOICES        = /<choices\s+type="(single|multi)">([\s\S]*?)<\/choices>/g;
 
 interface ParsedResponse {
   cleanContent: string;
@@ -283,12 +282,13 @@ function parseGeminiResponse(raw: string): ParsedResponse {
   cleanContent = cleanContent.replace(RE_PROFILE_UPDATE, "");
   RE_PROFILE_UPDATE.lastIndex = 0;
 
-  // 3. <choices>
+  // 3. <choices type="single|multi">opt1 | opt2 | ...</choices>
   const choiceMatches = [...raw.matchAll(RE_CHOICES)];
   if (choiceMatches.length > 0) {
-    try { choices = JSON.parse(choiceMatches[0][1].trim()) as ChoicesBlock; } catch (e) {
-      console.error("[choices] JSON parse error:", e);
-    }
+    const choiceType = choiceMatches[0][1] as "single" | "multi";
+    const rawOptions = choiceMatches[0][2];
+    const options = rawOptions.split("|").map((o) => o.trim()).filter(Boolean);
+    if (options.length > 0) choices = { type: choiceType, choices: options };
   }
   cleanContent = cleanContent.replace(RE_CHOICES, "");
   RE_CHOICES.lastIndex = 0;

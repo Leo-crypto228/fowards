@@ -100,8 +100,6 @@ export interface GeminiRequest {
   contents: GeminiContent[];
   generationConfig: {
     temperature: number;
-    topK: number;
-    topP: number;
     maxOutputTokens: number;
   };
 }

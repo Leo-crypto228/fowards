@@ -108,8 +108,7 @@ export function Layout() {
 
 
   const isActive = (path: string) => {
-    if (path === "/") return location.pathname === "/";
-    // Éviter que /tribes/create et /tribes/:id matchent /tribes comme actif pour le "+"
+    if (path === "/feed") return location.pathname === "/feed";
     if (path === "/tribes") return location.pathname === "/tribes";
     return location.pathname.startsWith(path);
   };
@@ -184,9 +183,9 @@ export function Layout() {
 
           <div className="w-full max-w-[672px] flex items-center lg:flex-col lg:max-w-none lg:gap-8 lg:flex-1 lg:justify-center">
 
-            <Link to="/" className="flex-1 h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full" style={{ textDecoration: "none" }}>
+            <Link to="/feed" className="flex-1 h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full" style={{ textDecoration: "none" }}>
               <motion.div whileTap={{ scale: 0.82 }}>
-                <Home style={{ width: 25, height: 25, color: isActive("/") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/") ? 2.2 : 1.7, transition: "color 0.18s" }} />
+                <Home style={{ width: 25, height: 25, color: isActive("/feed") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/feed") ? 2.2 : 1.7, transition: "color 0.18s" }} />
               </motion.div>
             </Link>
 
@@ -203,17 +202,18 @@ export function Layout() {
                   whileTap={{ scale: 0.88 }}
                   transition={{ type: "spring", stiffness: 500, damping: 28 }}
                   style={{
-                    width: 38, height: 38, borderRadius: 9,
+                    width: 30, height: 30, borderRadius: 8,
                     background: isActive("/ai") ? "#ffffff" : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     transition: "background 0.15s",
+                    overflow: "hidden",
                   }}
                 >
                   <img
                     src={logoImage}
                     alt="IA"
                     style={{
-                      width: 34, height: 34,
+                      width: 30, height: 30,
                       objectFit: "contain",
                       mixBlendMode: isActive("/ai") ? "normal" : "screen",
                       filter: isActive("/ai") ? "invert(1)" : "none",
