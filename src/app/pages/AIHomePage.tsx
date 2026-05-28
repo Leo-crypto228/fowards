@@ -141,7 +141,7 @@ export function AIHomePage() {
             value={text}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
-            placeholder='Écris "GO"'
+            placeholder="Entame la conversation…"
             rows={1}
             style={{
               flex: 1,
