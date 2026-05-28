@@ -49,10 +49,10 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true }: Pr
         display: "flex",
         gap: 8,
         alignItems: "flex-end",
-        background: "rgba(255,255,255,0.06)",
-        borderRadius: 14,
-        border: "0.5px solid rgba(255,255,255,0.10)",
-        padding: "8px 12px",
+        background: "rgba(255,255,255,0.08)",
+        borderRadius: 999,
+        border: "0.5px solid rgba(255,255,255,0.12)",
+        padding: "10px 14px",
         marginBottom: 10,
       }}>
         <textarea
@@ -84,27 +84,29 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true }: Pr
           }}
         />
         <motion.button
-          whileTap={{ scale: 0.88 }}
+          whileTap={!text.trim() || disabled ? {} : { scale: 0.88 }}
           onClick={handleSubmit}
           disabled={!text.trim() || disabled}
           style={{
-            width: 34,
-            height: 34,
+            width: 32,
+            height: 32,
             borderRadius: "50%",
             border: "none",
-            background: !text.trim() || disabled ? "rgba(255,255,255,0.08)" : "#fff",
-            color: !text.trim() || disabled ? "rgba(255,255,255,0.3)" : "#000",
-            fontSize: 16,
-            cursor: !text.trim() || disabled ? "not-allowed" : "pointer",
+            background: "#7C3AED",
+            color: "#fff",
+            fontSize: !text.trim() || disabled ? 13 : 15,
+            cursor: !text.trim() || disabled ? "default" : "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
-            transition: "background 0.15s",
             fontWeight: 700,
+            letterSpacing: !text.trim() || disabled ? "0.05em" : 0,
+            opacity: !text.trim() || disabled ? 0.45 : 1,
+            transition: "opacity 0.15s",
           }}
         >
-          ↑
+          {!text.trim() || disabled ? "···" : "↑"}
         </motion.button>
       </div>
 
@@ -114,11 +116,11 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true }: Pr
           onClick={() => setMode("normal")}
           style={{
             flex: 1,
-            height: 34,
-            borderRadius: 8,
-            border: `1px solid ${mode === "normal" ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)"}`,
-            background: mode === "normal" ? "rgba(255,255,255,0.10)" : "transparent",
-            color: mode === "normal" ? "#fff" : "rgba(255,255,255,0.45)",
+            height: 36,
+            borderRadius: 999,
+            border: `1px solid ${mode === "normal" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
+            background: mode === "normal" ? "rgba(255,255,255,0.12)" : "transparent",
+            color: mode === "normal" ? "rgba(235,235,245,0.88)" : "rgba(255,255,255,0.3)",
             fontSize: 13,
             fontWeight: mode === "normal" ? 600 : 400,
             cursor: "pointer",
@@ -128,24 +130,20 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true }: Pr
           Discussion normale
         </button>
         <button
-          onClick={() => setMode("diagnostic")}
+          onClick={() => { if (canDiagnostic) setMode("diagnostic"); }}
           disabled={!canDiagnostic}
           style={{
             flex: 1,
-            height: 34,
-            borderRadius: 8,
-            border: `1px solid ${mode === "diagnostic" ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)"}`,
-            background: mode === "diagnostic" ? "rgba(255,255,255,0.10)" : "transparent",
-            color: !canDiagnostic
-              ? "rgba(255,255,255,0.2)"
-              : mode === "diagnostic"
-              ? "#fff"
-              : "rgba(255,255,255,0.45)",
+            height: 36,
+            borderRadius: 999,
+            border: `1px solid ${!canDiagnostic ? "rgba(255,255,255,0.08)" : mode === "diagnostic" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
+            background: !canDiagnostic ? "transparent" : mode === "diagnostic" ? "rgba(255,255,255,0.12)" : "transparent",
+            color: !canDiagnostic ? "rgba(255,255,255,0.18)" : mode === "diagnostic" ? "rgba(235,235,245,0.88)" : "rgba(255,255,255,0.3)",
             fontSize: 13,
-            fontWeight: mode === "diagnostic" ? 600 : 400,
-            cursor: canDiagnostic ? "pointer" : "not-allowed",
+            fontWeight: mode === "diagnostic" && canDiagnostic ? 600 : 400,
+            cursor: canDiagnostic ? "pointer" : "default",
             transition: "all 0.15s",
-            opacity: canDiagnostic ? 1 : 0.5,
+            opacity: canDiagnostic ? 1 : 0.4,
           }}
         >
           Diagnostic

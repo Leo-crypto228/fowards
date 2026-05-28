@@ -210,7 +210,7 @@ async function callGemini(history: GeminiContent[], userMessageWithContext: stri
     },
     contents,
     generationConfig: {
-      temperature: 0.7,
+      temperature: 1,    // Obligatoire pour Gemini 2.5 Flash (thinking mode)
       maxOutputTokens: 8192,
     },
   };

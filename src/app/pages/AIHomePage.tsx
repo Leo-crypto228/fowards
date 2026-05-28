@@ -76,6 +76,7 @@ export function AIHomePage() {
 
   const isPhase1Complete = quota?.isPhase1Complete ?? true;
   const canDiagnostic = isPhase1Complete && (!quota || quota.canSendDiagnostic);
+  const hasText = text.trim().length > 0;
 
   return (
     <div style={{ minHeight: "100dvh", background: "#000", display: "flex", flexDirection: "column" }}>
@@ -117,13 +118,10 @@ export function AIHomePage() {
               fontWeight: 500,
               cursor: "pointer",
               padding: "6px 12px",
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
               flexShrink: 0,
             }}
           >
-            👤 Mon Profil IA
+            Mon Profil IA
           </motion.button>
         </div>
 
@@ -162,70 +160,74 @@ export function AIHomePage() {
               display: "block",
             }}
           />
+          {/* Bouton envoi : 3 points sans texte, flèche avec texte */}
           <motion.button
-            whileTap={{ scale: 0.88 }}
+            whileTap={hasText ? { scale: 0.88 } : {}}
             onClick={handleSend}
-            disabled={!text.trim()}
+            disabled={!hasText}
             style={{
               width: 32, height: 32,
               borderRadius: "50%",
               border: "none",
-              background: text.trim() ? "#7C3AED" : "rgba(124,58,237,0.18)",
+              background: "#7C3AED",
               color: "#fff",
-              fontSize: 15, fontWeight: 700,
-              cursor: text.trim() ? "pointer" : "not-allowed",
+              fontSize: hasText ? 15 : 13,
+              fontWeight: 700,
+              cursor: hasText ? "pointer" : "default",
               display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "background 0.15s",
               flexShrink: 0,
+              letterSpacing: hasText ? 0 : "0.05em",
+              transition: "opacity 0.15s",
+              opacity: hasText ? 1 : 0.45,
             }}
           >
-            ↑
+            {hasText ? "↑" : "···"}
           </motion.button>
         </div>
 
-        {/* Mode buttons — pill shape, moins prononcé */}
+        {/* Mode buttons — pill, tous disabled si Phase 1 pas complète */}
         <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
+          {/* Discussion normale */}
           <button
-            onClick={() => setMode("normal")}
+            onClick={() => { if (isPhase1Complete) setMode("normal"); }}
+            disabled={!isPhase1Complete}
             style={{
               flex: 1, height: 36, borderRadius: 999,
-              border: `1px solid ${mode === "normal" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
-              background: mode === "normal" ? "rgba(255,255,255,0.12)" : "transparent",
-              color: mode === "normal" ? "rgba(235,235,245,0.88)" : "rgba(255,255,255,0.3)",
-              fontSize: 13, fontWeight: mode === "normal" ? 600 : 400,
-              cursor: "pointer", transition: "all 0.15s",
+              border: `1px solid ${!isPhase1Complete ? "rgba(255,255,255,0.08)" : mode === "normal" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
+              background: !isPhase1Complete ? "transparent" : mode === "normal" ? "rgba(255,255,255,0.12)" : "transparent",
+              color: !isPhase1Complete ? "rgba(255,255,255,0.18)" : mode === "normal" ? "rgba(235,235,245,0.88)" : "rgba(255,255,255,0.3)",
+              fontSize: 13, fontWeight: !isPhase1Complete ? 400 : mode === "normal" ? 600 : 400,
+              cursor: isPhase1Complete ? "pointer" : "default",
+              transition: "all 0.15s",
+              opacity: isPhase1Complete ? 1 : 0.4,
             }}
           >
             Discussion normale
           </button>
+
+          {/* Diagnostic */}
           <button
             onClick={() => {
-              if (!isPhase1Complete) {
-                toast("Termine le profilage d'abord pour débloquer le Diagnostic.", {
-                  icon: "🔒",
-                  duration: 2500,
-                });
-                return;
-              }
-              if (canDiagnostic) setMode("diagnostic");
+              if (!isPhase1Complete || !canDiagnostic) return;
+              setMode("diagnostic");
             }}
+            disabled={!isPhase1Complete || !canDiagnostic}
             style={{
               flex: 1, height: 36, borderRadius: 999,
-              border: `1px solid ${mode === "diagnostic" && isPhase1Complete ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
-              background: mode === "diagnostic" && isPhase1Complete ? "rgba(255,255,255,0.12)" : "transparent",
-              color: !isPhase1Complete ? "rgba(255,255,255,0.18)"
-                : mode === "diagnostic" ? "rgba(235,235,245,0.88)" : "rgba(255,255,255,0.3)",
+              border: `1px solid ${!isPhase1Complete || !canDiagnostic ? "rgba(255,255,255,0.08)" : mode === "diagnostic" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
+              background: !isPhase1Complete || !canDiagnostic ? "transparent" : mode === "diagnostic" ? "rgba(255,255,255,0.12)" : "transparent",
+              color: !isPhase1Complete || !canDiagnostic ? "rgba(255,255,255,0.18)" : mode === "diagnostic" ? "rgba(235,235,245,0.88)" : "rgba(255,255,255,0.3)",
               fontSize: 13, fontWeight: mode === "diagnostic" && isPhase1Complete ? 600 : 400,
-              cursor: isPhase1Complete && canDiagnostic ? "pointer" : "not-allowed",
-              opacity: isPhase1Complete ? 1 : 0.45,
+              cursor: isPhase1Complete && canDiagnostic ? "pointer" : "default",
               transition: "all 0.15s",
+              opacity: isPhase1Complete ? canDiagnostic ? 1 : 0.4 : 0.4,
             }}
           >
-            {!isPhase1Complete ? "🔒 Diagnostic" : "Diagnostic"}
+            Diagnostic
           </button>
         </div>
 
-        {/* Conversation history */}
+        {/* Conversation history — uniquement après Phase 1 */}
         {!loading && isPhase1Complete && conversations.length > 0 && (
           <div style={{ flex: 1, overflowY: "auto" }}>
             {conversations.map((conv, i) => (
@@ -252,8 +254,7 @@ export function AIHomePage() {
                   style={{
                     background: "transparent", border: "none",
                     color: "rgba(235,235,245,0.18)", cursor: "pointer",
-                    fontSize: 16, padding: "0 4px",
-                    lineHeight: 1,
+                    fontSize: 16, padding: "0 4px", lineHeight: 1,
                   }}
                 >
                   ×
