@@ -31,8 +31,6 @@ export function OnboardingIAPage() {
   const [activeConvId, setActiveConvId]   = useState<string | undefined>(undefined);
   const [currentChoices, setCurrentChoices] = useState<ChoicesBlock | null>(null);
   const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set());
-  const [showSkipDialog, setShowSkipDialog] = useState(false);
-  const [skipping, setSkipping]           = useState(false);
 
   const messagesEndRef    = useRef<HTMLDivElement>(null);
   const hasTriggeredRef   = useRef(false);
@@ -167,7 +165,9 @@ export function OnboardingIAPage() {
       }
 
       // Phase 1 terminée → onboarding_complete
-      if (response.isPhase1JustCompleted) {
+      // Fallback : on vérifie aussi quota.isPhase1Complete au cas où le bloc
+      // <profile-update> n'aurait pas été émis exactement au bon message
+      if (response.isPhase1JustCompleted || response.quota.isPhase1Complete) {
         await completeOnboarding();
       }
     } catch (err: unknown) {
@@ -205,23 +205,6 @@ export function OnboardingIAPage() {
     });
 
     setTimeout(() => navigate("/ai", { replace: true }), 1500);
-  }
-
-  // ── "Passer" : passer Phase 1 (sans profil IA complet) ───────────────────────
-
-  async function handleSkip() {
-    setSkipping(true);
-    try {
-      if (user?.username) {
-        await upsertProfile(user.username, { onboardingComplete: true, onboardingStep: "done" });
-      }
-      updateLocalUser({ onboarding_complete: true, onboarding_step: "done" });
-    } catch (e) {
-      console.error("[OnboardingIA] skip error:", e);
-    } finally {
-      setSkipping(false);
-      navigate("/ai", { replace: true });
-    }
   }
 
   // ── Choix Phase 1 ─────────────────────────────────────────────────────────────
@@ -265,7 +248,7 @@ export function OnboardingIAPage() {
       <div style={{
         position: "absolute", top: "env(safe-area-inset-top, 0px)", left: 0, right: 0, zIndex: 20,
         height: 52,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        display: "flex", alignItems: "center", justifyContent: "center",
         padding: "0 16px",
         background: "rgba(0,0,0,0.85)",
         backdropFilter: "blur(12px)",
@@ -274,17 +257,6 @@ export function OnboardingIAPage() {
         <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(235,235,245,0.55)" }}>
           Configuration du profil IA
         </span>
-        <motion.button
-          whileTap={{ scale: 0.88 }}
-          onClick={() => setShowSkipDialog(true)}
-          style={{
-            background: "transparent", border: "none",
-            color: "rgba(235,235,245,0.35)", fontSize: 14,
-            cursor: "pointer", padding: "6px 0",
-          }}
-        >
-          Passer
-        </motion.button>
       </div>
 
       {/* ── Messages ──────────────────────────────────────────────────────── */}
@@ -303,31 +275,17 @@ export function OnboardingIAPage() {
                 }}>
                   {triggerError}
                 </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleRetry}
-                    style={{
-                      padding: "10px 24px", borderRadius: 10, border: "none",
-                      background: "rgba(255,255,255,0.9)", color: "#000",
-                      fontSize: 14, fontWeight: 700, cursor: "pointer",
-                    }}
-                  >
-                    Réessayer
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowSkipDialog(true)}
-                    style={{
-                      padding: "8px 20px", borderRadius: 10,
-                      border: "0.5px solid rgba(255,255,255,0.15)",
-                      background: "transparent", color: "rgba(235,235,245,0.4)",
-                      fontSize: 13, cursor: "pointer",
-                    }}
-                  >
-                    Passer pour l'instant
-                  </motion.button>
-                </div>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleRetry}
+                  style={{
+                    padding: "10px 24px", borderRadius: 10, border: "none",
+                    background: "rgba(255,255,255,0.9)", color: "#000",
+                    fontSize: 14, fontWeight: 700, cursor: "pointer",
+                  }}
+                >
+                  Réessayer
+                </motion.button>
               </div>
             ) : (
               <div style={{ color: "rgba(235,235,245,0.25)", fontSize: 14 }}>
@@ -464,75 +422,6 @@ export function OnboardingIAPage() {
         )}
       </div>
 
-      {/* ── Dialog "Passer" ───────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showSkipDialog && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: "fixed", inset: 0, zIndex: 100,
-              background: "rgba(0,0,0,0.7)",
-              display: "flex", alignItems: "flex-end", justifyContent: "center",
-              padding: "0 16px",
-            }}
-            onClick={() => setShowSkipDialog(false)}
-          >
-            <motion.div
-              initial={{ y: 80 }}
-              animate={{ y: 0 }}
-              exit={{ y: 80 }}
-              transition={{ type: "spring", damping: 26, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: "100%", maxWidth: 480,
-                background: "rgba(18,18,22,0.98)",
-                border: "0.5px solid rgba(255,255,255,0.1)",
-                borderRadius: "20px 20px 0 0",
-                padding: "24px 20px",
-                paddingBottom: "max(24px, env(safe-area-inset-bottom, 24px))",
-              }}
-            >
-              <h3 style={{ fontSize: 17, fontWeight: 700, color: "#fff", margin: "0 0 10px" }}>
-                Passer la configuration ?
-              </h3>
-              <p style={{ fontSize: 14, color: "rgba(235,235,245,0.45)", margin: "0 0 24px", lineHeight: 1.5 }}>
-                Tu peux revenir plus tard dans "Mon Profil IA". Le profil IA te permet d'obtenir
-                des diagnostics personnalisés — sans lui, les fonctionnalités avancées ne seront
-                pas disponibles.
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setShowSkipDialog(false)}
-                  style={{
-                    width: "100%", height: 48, borderRadius: 12,
-                    border: "none", background: "rgba(255,255,255,0.9)",
-                    color: "#000", fontSize: 15, fontWeight: 700, cursor: "pointer",
-                  }}
-                >
-                  Continuer la configuration
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleSkip}
-                  disabled={skipping}
-                  style={{
-                    width: "100%", height: 48, borderRadius: 12,
-                    border: "0.5px solid rgba(255,255,255,0.1)",
-                    background: "transparent",
-                    color: "rgba(255,255,255,0.4)", fontSize: 15, cursor: "pointer",
-                    opacity: skipping ? 0.6 : 1,
-                  }}
-                >
-                  {skipping ? "Redirection…" : "Passer pour l'instant"}
-                </motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
