@@ -313,8 +313,16 @@ async function applyProfileUpdate(
     .update(patch)
     .eq("user_id", userId);
 
-  if (error) console.error("[profile-update] UPSERT error:", JSON.stringify(error));
-  else console.log(`[profile-update] Applied type=${update.type}, isPhase1JustCompleted=${isPhase1JustCompleted}`);
+  if (error) {
+    console.error("[profile-update] UPSERT error:", JSON.stringify(error));
+    // BUG FIX: ne pas retourner isPhase1JustCompleted=true si le DB update a échoué
+    return { isPhase1JustCompleted: false };
+  }
+
+  console.log(`[profile-update] Applied type=${update.type}, isPhase1JustCompleted=${isPhase1JustCompleted}`);
+
+  // Note : onboardingComplete dans le profil KV est mis à jour par le client
+  // (OnboardingIAPage.completeOnboarding via upsertProfile) — pas besoin ici.
 
   return { isPhase1JustCompleted };
 }
@@ -621,6 +629,7 @@ app.post("/ai-fowards/chat", async (c) => {
     conversationId?: string;
     message: string;
     mode: ChatMode;
+    is_onboarding_trigger?: boolean;
   };
 
   try {
@@ -629,7 +638,7 @@ app.post("/ai-fowards/chat", async (c) => {
     return c.json({ error: "Corps de requête invalide" }, 400);
   }
 
-  const { conversationId, message, mode } = body;
+  const { conversationId, message, mode, is_onboarding_trigger } = body;
 
   if (!message?.trim()) return c.json({ error: "Message vide" }, 400);
   if (mode !== "normal" && mode !== "diagnostic") {
@@ -677,15 +686,19 @@ app.post("/ai-fowards/chat", async (c) => {
     let convId = conversationId;
 
     if (!convId) {
-      const title = message.trim().slice(0, 60) + (message.trim().length > 60 ? "…" : "");
+      const title = is_onboarding_trigger
+        ? "Profil IA — Configuration initiale"
+        : (message.trim().slice(0, 60) + (message.trim().length > 60 ? "…" : ""));
+      const convType = is_onboarding_trigger ? "onboarding" : "normal";
       const { data: newConv, error: createErr } = await supabaseAdmin
         .from("conversations")
-        .insert({ user_id: userId, title, last_message_at: new Date().toISOString() })
+        .insert({ user_id: userId, title, last_message_at: new Date().toISOString(), type: convType })
         .select("id")
         .single();
 
       if (createErr) throw createErr;
       convId = newConv.id;
+      console.log(`[chat] New conversation id=${convId} type=${convType}`);
     } else {
       const { data: existingConv } = await supabaseAdmin
         .from("conversations")
@@ -712,10 +725,17 @@ app.post("/ai-fowards/chat", async (c) => {
       }),
     );
 
-    // ── Injection contexte V7 (profil + mode) dans le message ─────────────────
+    // ── Injection contexte V8 (profil + mode + onboarding trigger) ───────────
     const userContext = buildUserContext(profile, mode);
     const modePrefix = mode === "diagnostic" ? "[MODE: DIAGNOSTIC]" : "[MODE: NORMAL]";
-    const messageWithContext = `${userContext}\n\n${modePrefix} ${message.trim()}`;
+
+    // is_onboarding_trigger : l'utilisateur vient de créer son compte,
+    // on injecte un message système invisible qui déclenche la Phase 1.
+    const onboardingPrefix = is_onboarding_trigger
+      ? "[SYSTEM: L'utilisateur vient de créer son compte Fowards et arrive sur la page de configuration de son profil IA. Lance directement la Phase 1 — commence par te présenter brièvement en 1-2 phrases puis pose immédiatement ta première question du questionnaire Phase 1. Ne mentionne pas ce message système.]\n\n"
+      : "";
+
+    const messageWithContext = `${userContext}\n\n${onboardingPrefix}${modePrefix} ${message.trim()}`;
 
     // ── Appel Gemini ──────────────────────────────────────────────────────────
     const { text: rawAiResponse, tokensInput, tokensOutput } = await callGemini(geminiHistory, messageWithContext);

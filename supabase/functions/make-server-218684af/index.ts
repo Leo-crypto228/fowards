@@ -3697,6 +3697,93 @@ app.get("/make-server-218684af/members/history", async (c) => {
   }
 });
 
+// GET /profiles/suggested?limit=10&offset=0 — Utilisateurs réels triés par abonnés (onboarding)
+app.get("/make-server-218684af/profiles/suggested", async (c) => {
+  try {
+    const limit  = Math.min(50, Math.max(1, parseInt(c.req.query("limit")  || "10", 10)));
+    const offset = Math.max(0,             parseInt(c.req.query("offset") || "0",  10));
+    const excludeUsername = (c.req.query("exclude") || "").toLowerCase().trim();
+
+    const CACHE_KEY = "ff:profiles:suggested-v1";
+    const CACHE_TS  = "ff:profiles:suggested-v1-ts";
+    const TTL_MS    = 30 * 60 * 1000; // 30 min
+
+    const [cachedRaw, builtAtRaw] = await Promise.all([kv.get(CACHE_KEY), kv.get(CACHE_TS)]);
+    const age = builtAtRaw ? Date.now() - new Date(builtAtRaw as string).getTime() : Infinity;
+
+    type SuggestedUser = { username: string; name: string; avatar: string; objective: string; grade: string; followersCount: number };
+    let all: SuggestedUser[] = [];
+
+    if (age <= TTL_MS && cachedRaw) {
+      all = JSON.parse(cachedRaw);
+    } else {
+      // 1. Vrais utilisateurs depuis Supabase Auth
+      const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
+      const users = authData?.users ?? [];
+
+      const usernamesFromMeta: string[] = [];
+      const usersNeedingLookup: string[] = [];
+      for (const u of users) {
+        const uname = ((u.user_metadata?.username as string) || "").toLowerCase().trim();
+        if (uname) usernamesFromMeta.push(uname);
+        else usersNeedingLookup.push(u.id);
+      }
+
+      const uidMappings = usersNeedingLookup.length > 0
+        ? await kv.mget(usersNeedingLookup.map((uid) => `ff:uid-to-user:${uid}`))
+        : [];
+
+      const realUsernames = new Set<string>(usernamesFromMeta);
+      for (const mapped of uidMappings) {
+        if (mapped) realUsernames.add((mapped as string).toLowerCase().trim());
+      }
+
+      const usernameList = Array.from(realUsernames);
+
+      // 2. Batch fetch profils + follower lists en parallèle
+      const [profileRaws, followerRaws] = await Promise.all([
+        usernameList.length > 0 ? kv.mget(usernameList.map((u) => `ff:profile:${u}`)) : [],
+        usernameList.length > 0 ? kv.mget(usernameList.map((u) => `ff:followers:${u}`)) : [],
+      ]);
+
+      all = [];
+      for (let i = 0; i < usernameList.length; i++) {
+        const raw = profileRaws[i];
+        if (!raw) continue;
+        try {
+          const p = JSON.parse(raw);
+          const followers: string[] = JSON.parse((followerRaws[i] as string | null) || "[]");
+          all.push({
+            username: usernameList[i],
+            name: p.name || usernameList[i],
+            avatar: p.avatar || "",
+            objective: p.objective || "",
+            grade: p.grade || "Membre",
+            followersCount: followers.length,
+          });
+        } catch { /* skip */ }
+      }
+
+      // 3. Trier par abonnés décroissant
+      all.sort((a, b) => b.followersCount - a.followersCount);
+
+      await Promise.all([
+        kv.set(CACHE_KEY, JSON.stringify(all)),
+        kv.set(CACHE_TS, new Date().toISOString()),
+      ]);
+      console.log(`profiles/suggested rebuild: ${all.length} utilisateurs`);
+    }
+
+    // Exclure l'utilisateur courant
+    const filtered = excludeUsername ? all.filter((u) => u.username !== excludeUsername) : all;
+    const page = filtered.slice(offset, offset + limit);
+
+    return c.json({ users: page, total: filtered.length, hasMore: offset + limit < filtered.length });
+  } catch (err) {
+    return c.json({ error: `Échec profiles/suggested: ${err}` }, 500);
+  }
+});
+
 // ════════════════════════════════════════════════════════════════════════════
 // MEMBRES DE COMMUNAUTE (Abonnements aux communautes)
 // ════════════════════════════════════════════════════════════════════════════
