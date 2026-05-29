@@ -145,6 +145,7 @@ export function OnboardingIAPage() {
         conversationId: activeConvId,
         message: text,
         mode: "normal",
+        is_onboarding_trigger: true, // bypass quota sur tous les messages d'onboarding
       });
 
       setMessages((prev) => {
@@ -246,7 +247,8 @@ export function OnboardingIAPage() {
     setCurrentChoices(null);
   }
 
-  const inputDisabled = sending || (!!quota && !quota.canSendNormal);
+  // En onboarding : on ne bloque jamais sur le quota (is_onboarding_trigger bypass côté serveur)
+  const inputDisabled = sending;
 
   // ── Rendu ─────────────────────────────────────────────────────────────────────
 
@@ -457,6 +459,7 @@ export function OnboardingIAPage() {
             onSend={(text) => handleSend(text)}
             disabled={inputDisabled}
             canDiagnostic={false}
+            showModeButtons={false}
           />
         )}
       </div>

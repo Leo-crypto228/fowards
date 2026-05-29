@@ -6,9 +6,10 @@ interface Props {
   onSend: (message: string, mode: ChatMode) => void;
   disabled?: boolean;
   canDiagnostic?: boolean;
+  showModeButtons?: boolean;
 }
 
-export function ChatInput({ onSend, disabled = false, canDiagnostic = true }: Props) {
+export function ChatInput({ onSend, disabled = false, canDiagnostic = true, showModeButtons = true }: Props) {
   const [text, setText] = useState("");
   const [mode, setMode] = useState<ChatMode>("normal");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -53,7 +54,7 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true }: Pr
         borderRadius: 999,
         border: "0.5px solid rgba(255,255,255,0.12)",
         padding: "10px 14px",
-        marginBottom: 10,
+        marginBottom: showModeButtons ? 10 : 0,
       }}>
         <textarea
           ref={textareaRef}
@@ -107,7 +108,7 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true }: Pr
       </div>
 
       {/* Mode buttons */}
-      <div style={{ display: "flex", gap: 8 }}>
+      {showModeButtons && <div style={{ display: "flex", gap: 8 }}>
         <button
           onClick={() => setMode("normal")}
           style={{
@@ -144,7 +145,7 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true }: Pr
         >
           Diagnostic
         </button>
-      </div>
+      </div>}
     </div>
   );
 }
