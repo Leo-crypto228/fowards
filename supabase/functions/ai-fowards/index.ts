@@ -1,4 +1,4 @@
-// ai-fowards — Edge Function Fowards IA V6 (Gemini 2.5 Flash)
+// ai-fowards — Edge Function Fowards IA V7 (Gemini 2.5 Flash)
 // Toutes les routes commencent par /ai-fowards/
 // La clé Gemini n'est JAMAIS exposée côté client — elle est lue via Deno.env
 
@@ -48,6 +48,9 @@ const DIAGNOSTIC_BASE_LIMIT = 1;
 const DIAGNOSTIC_MAX_LIMIT  = 2;
 const GEMINI_MODEL          = "gemini-2.5-flash";
 const GEMINI_URL            = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+// ── V7 startup log ────────────────────────────────────────────────────────────
+console.log(`[V7] Prompt loaded: ${FOWARDS_SYSTEM_PROMPT.length} chars`);
 
 // ── Auth helper — vérifie le JWT et retourne l'userId ────────────────────────
 async function getUserId(authHeader: string | undefined): Promise<string | null> {
@@ -195,7 +198,10 @@ async function applyProfileUpdate(
 
 // ── Gemini call ───────────────────────────────────────────────────────────────
 
-async function callGemini(history: GeminiContent[], userMessageWithContext: string): Promise<string> {
+async function callGemini(
+  history: GeminiContent[],
+  userMessageWithContext: string,
+): Promise<{ text: string; tokensInput: number; tokensOutput: number }> {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY manquante côté serveur");
 
@@ -240,11 +246,11 @@ async function callGemini(history: GeminiContent[], userMessageWithContext: stri
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error("Gemini: réponse vide");
 
-  console.log(
-    `[Gemini] tokens: prompt=${data.usageMetadata?.promptTokenCount ?? "?"}, output=${data.usageMetadata?.candidatesTokenCount ?? "?"}`,
-  );
+  const tokensInput  = data.usageMetadata?.promptTokenCount     ?? 0;
+  const tokensOutput = data.usageMetadata?.candidatesTokenCount ?? 0;
+  console.log(`[Gemini] tokens: prompt=${tokensInput}, output=${tokensOutput}`);
 
-  return text;
+  return { text, tokensInput, tokensOutput };
 }
 
 // ── Triple parsing — extrait les 3 types de blocs de la réponse Gemini ────────
@@ -575,13 +581,13 @@ app.post("/ai-fowards/chat", async (c) => {
       }),
     );
 
-    // ── Injection contexte V6 (profil + mode) dans le message ─────────────────
+    // ── Injection contexte V7 (profil + mode) dans le message ─────────────────
     const userContext = buildUserContext(profile, mode);
     const modePrefix = mode === "diagnostic" ? "[MODE: DIAGNOSTIC]" : "[MODE: NORMAL]";
     const messageWithContext = `${userContext}\n\n${modePrefix} ${message.trim()}`;
 
     // ── Appel Gemini ──────────────────────────────────────────────────────────
-    const rawAiResponse = await callGemini(geminiHistory, messageWithContext);
+    const { text: rawAiResponse, tokensInput, tokensOutput } = await callGemini(geminiHistory, messageWithContext);
 
     // ── Triple parsing (fowards-data, profile-update, choices) ────────────────
     const { cleanContent, forwardsData, profileUpdate, choices } = parseGeminiResponse(rawAiResponse);
@@ -597,7 +603,8 @@ app.post("/ai-fowards/chat", async (c) => {
     // ── Sauvegarder les messages ───────────────────────────────────────────────
     const now = new Date().toISOString();
 
-    await supabaseAdmin.from("messages").insert([
+    console.log("[Bug1] Inserting messages — convId:", convId, "userId:", userId, "mode:", mode);
+    const { error: msgInsertErr } = await supabaseAdmin.from("messages").insert([
       {
         conversation_id: convId,
         user_id: userId,
@@ -605,6 +612,8 @@ app.post("/ai-fowards/chat", async (c) => {
         content: message.trim(), // On sauvegarde le message brut (sans le contexte injecté)
         mode,
         fowards_data: null,
+        tokens_input: null,
+        tokens_output: null,
         created_at: now,
       },
       {
@@ -614,15 +623,31 @@ app.post("/ai-fowards/chat", async (c) => {
         content: cleanContent,
         mode,
         fowards_data: forwardsData,
+        tokens_input: tokensInput,
+        tokens_output: tokensOutput,
         created_at: new Date(Date.now() + 1).toISOString(),
       },
     ]);
+    if (msgInsertErr) console.error("[Bug1] Messages insert ERROR:", JSON.stringify(msgInsertErr));
+    else console.log("[Bug1] Messages inserted OK");
 
-    // ── Mettre à jour last_message_at ──────────────────────────────────────────
-    await supabaseAdmin
+    // ── Mettre à jour la conversation ──────────────────────────────────────────
+    const lastPreview = cleanContent.replace(/\n+/g, " ").slice(0, 120);
+    const newMsgCount = (historyRows?.length ?? 0) + 2;
+    const convUpdate: Record<string, unknown> = {
+      last_message_at: now,
+      message_count: newMsgCount,
+      last_message_preview: lastPreview,
+    };
+    if (mode === "diagnostic") convUpdate.has_final_diagnostic = true;
+
+    console.log("[Bug1] Updating conversation — convId:", convId, "fields:", JSON.stringify(convUpdate));
+    const { error: convUpdateErr } = await supabaseAdmin
       .from("conversations")
-      .update({ last_message_at: now })
+      .update(convUpdate)
       .eq("id", convId);
+    if (convUpdateErr) console.error("[Bug1] Conversation update ERROR:", JSON.stringify(convUpdateErr));
+    else console.log("[Bug1] Conversation updated OK");
 
     // ── Incrémenter quota ──────────────────────────────────────────────────────
     const today = new Date().toISOString().split("T")[0];

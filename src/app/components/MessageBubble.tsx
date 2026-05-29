@@ -77,7 +77,21 @@ export function MessageBubble({ message }: Props) {
           fontSize: 15,
           lineHeight: 1.65,
         }}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              hr: () => (
+                <hr style={{
+                  border: "none",
+                  borderTop: "0.5px solid rgba(255,255,255,0.15)",
+                  margin: "16px 0",
+                }} />
+              ),
+              p: ({ children }) => (
+                <p style={{ margin: "6px 0" }}>{children}</p>
+              ),
+            }}
+          >
             {message.content}
           </ReactMarkdown>
         </div>

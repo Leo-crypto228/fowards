@@ -121,7 +121,7 @@ export function AIConversationPage() {
 
       // V6 — Phase 1 vient de se terminer
       if (response.isPhase1JustCompleted) {
-        toast("🎉 Profil créé ! Le Diagnostic est maintenant disponible.", {
+        toast("Profil créé ! Le Diagnostic est maintenant disponible.", {
           duration: 4000,
           style: {
             background: "rgba(99,102,241,0.15)",
@@ -272,7 +272,7 @@ export function AIConversationPage() {
                       key={choice}
                       whileTap={{ scale: 0.97 }}
                       onClick={() => {
-                        if (choice === "Autre") {
+                        if (choice === "Autre" || choice === "Personnaliser") {
                           handleOtherChoice();
                         } else {
                           handleSingleChoice(choice, currentMode);
@@ -308,9 +308,8 @@ export function AIConversationPage() {
                           key={choice}
                           whileTap={{ scale: 0.97 }}
                           onClick={() => {
-                            if (choice === "Autre") {
+                            if (choice === "Autre" || choice === "Personnaliser") {
                               if (multiSelected.size > 0) {
-                                // Valider d'abord les sélectionnés + ouvrir input pour "Autre"
                                 handleMultiValidate(currentMode);
                               } else {
                                 handleOtherChoice();
