@@ -31,6 +31,7 @@ export function OnboardingIAPage() {
   const [activeConvId, setActiveConvId]   = useState<string | undefined>(undefined);
   const [currentChoices, setCurrentChoices] = useState<ChoicesBlock | null>(null);
   const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set());
+  const [phase1Complete, setPhase1Complete] = useState(false);
 
   const messagesEndRef    = useRef<HTMLDivElement>(null);
   const hasTriggeredRef   = useRef(false);
@@ -91,9 +92,9 @@ export function OnboardingIAPage() {
       setActiveConvId(response.conversationId);
       setQuota(response.quota);
 
-      // Phase 1 déjà complète (session précédente interrompue)
+      // Phase 1 déjà complète (session précédente interrompue) → afficher le bouton
       if (response.quota.isPhase1Complete) {
-        await completeOnboarding();
+        setPhase1Complete(true);
         return;
       }
 
@@ -164,11 +165,11 @@ export function OnboardingIAPage() {
         setMultiSelected(new Set());
       }
 
-      // Phase 1 terminée → onboarding_complete
-      // Fallback : on vérifie aussi quota.isPhase1Complete au cas où le bloc
-      // <profile-update> n'aurait pas été émis exactement au bon message
+      // Phase 1 terminée → afficher le bouton de validation
+      // Fallback : quota.isPhase1Complete si le bloc <profile-update> a manqué
       if (response.isPhase1JustCompleted || response.quota.isPhase1Complete) {
-        await completeOnboarding();
+        setCurrentChoices(null);
+        setPhase1Complete(true);
       }
     } catch (err: unknown) {
       setMessages((prev) => prev.filter((m) => m.id !== "typing" && m.id !== tempUser.id));
@@ -180,30 +181,19 @@ export function OnboardingIAPage() {
     }
   }
 
-  // ── Marquer onboarding_complete = true + navigate ─────────────────────────────
+  // ── Valider le récap et rejoindre Fowards ────────────────────────────────────
 
-  function completeOnboarding() {
-    // 1. Mettre à jour l'état LOCAL EN PREMIER — avant tout await réseau.
-    //    Protège contre la race condition AuthContext background-refresh qui
-    //    pourrait écraser onboarding_complete si on attendait le fetch KV.
+  function handleValidate() {
+    // 1. État local EN PREMIER (protège contre race condition background-refresh)
     updateLocalUser({ onboarding_complete: true, onboarding_step: "done", onboardingDone: true });
 
-    toast("Profil IA créé ! Bienvenue sur Fowards 🎉", {
-      duration: 4000,
-      style: {
-        background: "rgba(99,102,241,0.15)",
-        border: "0.5px solid rgba(99,102,241,0.35)",
-        color: "rgba(235,235,245,0.92)",
-      },
-    });
+    // 2. Navigation immédiate vers la page IA
+    navigate("/ai", { replace: true });
 
-    // 2. Navigation rapide (500ms pour laisser le toast apparaître)
-    setTimeout(() => navigate("/feed", { replace: true }), 500);
-
-    // 3. KV en fire-and-forget — si ça échoue l'état local reste correct
+    // 3. KV en fire-and-forget
     if (user?.username) {
       upsertProfile(user.username, { onboardingComplete: true, onboardingStep: "done" })
-        .catch((e) => console.error("[OnboardingIA] completeOnboarding KV error:", e));
+        .catch((e) => console.error("[OnboardingIA] handleValidate KV error:", e));
     }
   }
 
@@ -411,8 +401,43 @@ export function OnboardingIAPage() {
           )}
         </AnimatePresence>
 
-        {/* Input texte */}
-        {!currentChoices && (
+        {/* Bouton "Valider et accéder à Fowards" — affiché quand Phase 1 terminée */}
+        <AnimatePresence>
+          {phase1Complete && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, ease: "easeOut" }}
+              style={{
+                padding: "12px 16px",
+                borderTop: "0.5px solid rgba(255,255,255,0.08)",
+                background: "#000",
+              }}
+            >
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={handleValidate}
+                style={{
+                  width: "100%",
+                  height: 52,
+                  borderRadius: 14,
+                  border: "none",
+                  background: "#fff",
+                  color: "#000",
+                  fontSize: 16,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Valider et accéder à Fowards →
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Input texte — masqué une fois Phase 1 terminée */}
+        {!currentChoices && !phase1Complete && (
           <ChatInput
             onSend={(text) => handleSend(text)}
             disabled={inputDisabled}
