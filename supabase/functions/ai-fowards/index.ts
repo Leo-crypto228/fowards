@@ -418,8 +418,13 @@ function parseGeminiResponse(raw: string): ParsedResponse {
   // 2. <profile-update>
   const puMatches = [...raw.matchAll(RE_PROFILE_UPDATE)];
   if (puMatches.length > 0) {
-    try { profileUpdate = JSON.parse(puMatches[0][1].trim()) as ProfileUpdateBlock; } catch (e) {
-      console.error("[profile-update] JSON parse error:", e);
+    try {
+      // L'IA peut entourer le JSON de backticks markdown (```json ... ```) — on les strip
+      let jsonStr = puMatches[0][1].trim();
+      jsonStr = jsonStr.replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "").trim();
+      profileUpdate = JSON.parse(jsonStr) as ProfileUpdateBlock;
+    } catch (e) {
+      console.error("[profile-update] JSON parse error:", e, "raw:", puMatches[0][1].slice(0, 200));
     }
   }
   cleanContent = cleanContent.replace(RE_PROFILE_UPDATE, "");

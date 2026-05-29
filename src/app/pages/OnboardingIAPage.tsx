@@ -223,6 +223,15 @@ export function OnboardingIAPage() {
   // En onboarding : on ne bloque jamais sur le quota (is_onboarding_trigger bypass côté serveur)
   const inputDisabled = sending;
 
+  // Le bouton "Valider" apparaît dès que :
+  //   a) le serveur confirme Phase 1 complete (isPhase1JustCompleted ou quota.isPhase1Complete)
+  //   b) OU l'IA a envoyé ≥ 8 messages (fin du questionnaire 12 questions), comme fallback
+  //      au cas où le bloc <profile-update> ne serait pas détecté côté serveur
+  const aiMessageCount = messages.filter(
+    (m) => m.role === "assistant" && m.id !== "typing"
+  ).length;
+  const showValidateButton = phase1Complete || aiMessageCount >= 8;
+
   // ── Rendu ─────────────────────────────────────────────────────────────────────
 
   return (
@@ -403,7 +412,7 @@ export function OnboardingIAPage() {
 
         {/* Bouton "Valider et accéder à Fowards" — affiché quand Phase 1 terminée */}
         <AnimatePresence>
-          {phase1Complete && (
+          {showValidateButton && (
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -437,7 +446,7 @@ export function OnboardingIAPage() {
         </AnimatePresence>
 
         {/* Input texte — masqué une fois Phase 1 terminée */}
-        {!currentChoices && !phase1Complete && (
+        {!currentChoices && !showValidateButton && (
           <ChatInput
             onSend={(text) => handleSend(text)}
             disabled={inputDisabled}
