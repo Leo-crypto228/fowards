@@ -48,11 +48,6 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
   const recognitionRef   = useRef<SpeechRecognitionInstance | null>(null);
   const finalTextRef     = useRef(""); // texte confirmé (non-intermédiaire)
 
-  // ── Nettoyage si le composant est démonté pendant un enregistrement ──────────
-  useEffect(() => {
-    return () => { recognitionRef.current?.abort(); };
-  }, []);
-
   // ── Resize textarea helper ────────────────────────────────────────────────────
   function resizeTextarea(target?: HTMLTextAreaElement | null) {
     const ta = target ?? textareaRef.current;
@@ -93,79 +88,95 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
 
   // ── Microphone ────────────────────────────────────────────────────────────────
 
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset complet — appelé depuis stopRecording ET les handlers onerror/onend
+  const resetRecording = useCallback(() => {
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+    try { recognitionRef.current?.abort(); } catch {}
+    recognitionRef.current = null;
+    finalTextRef.current = "";
+    setIsRecording(false);
+  }, []);
+
+  // Nettoyage du timeout également au démontage
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      recognitionRef.current?.abort();
+    };
+  }, []);
+
   const startRecording = useCallback(() => {
     if (!SpeechRecognitionAPI || disabled) return;
 
-    // On part du texte déjà saisi comme base
     finalTextRef.current = text;
 
     const rec = new SpeechRecognitionAPI();
-    rec.lang             = "fr-FR";
-    rec.continuous       = false;   // s'arrête automatiquement après silence
-    rec.interimResults   = true;    // affiche les mots en temps réel
-    rec.maxAlternatives  = 1;
+    rec.lang            = "fr-FR";
+    rec.continuous      = false;
+    rec.interimResults  = true;
+    rec.maxAlternatives = 1;
 
     rec.onresult = (e) => {
+      // Reset le timeout de sécurité à chaque résultat reçu
+      if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
         if (e.results[i].isFinal) {
-          // Ajouter un espace entre le texte existant et la nouvelle phrase
           const base = finalTextRef.current;
-          finalTextRef.current = base
-            ? base.trimEnd() + " " + t
-            : t;
+          finalTextRef.current = base ? base.trimEnd() + " " + t : t;
         } else {
           interim = t;
         }
       }
-      // Afficher : texte final + résultat intermédiaire
       const displayed = finalTextRef.current
-        ? (interim
-          ? finalTextRef.current.trimEnd() + " " + interim
-          : finalTextRef.current)
+        ? (interim ? finalTextRef.current.trimEnd() + " " + interim : finalTextRef.current)
         : interim;
       setText(displayed);
       resizeTextarea();
     };
 
     rec.onerror = (e) => {
-      // "no-speech" n'est pas une vraie erreur — l'user n'a juste rien dit
-      if (e.error !== "no-speech") {
-        console.warn("[Mic] erreur recognition:", e.error);
-      }
-      recognitionRef.current = null;
-      setIsRecording(false);
-      finalTextRef.current = "";
+      if (e.error !== "no-speech") console.warn("[Mic] erreur:", e.error);
+      // Préserver le texte final déjà transcrit même en cas d'erreur
+      const finalSoFar = finalTextRef.current;
+      resetRecording();
+      if (finalSoFar) setText(finalSoFar);
     };
 
     rec.onend = () => {
-      recognitionRef.current = null;
-      setIsRecording(false);
-      // S'assurer que le texte affiché = texte final (sans partie intermédiaire fantôme)
-      setText(finalTextRef.current);
-      finalTextRef.current = "";
-      resizeTextarea();
+      const finalSoFar = finalTextRef.current;
+      resetRecording();
+      if (finalSoFar) { setText(finalSoFar); resizeTextarea(); }
     };
 
     recognitionRef.current = rec;
     try {
       rec.start();
       setIsRecording(true);
+      // Timeout de sécurité : si rien ne se passe dans 10s, on annule
+      timeoutRef.current = setTimeout(() => {
+        console.warn("[Mic] timeout — aucun résultat en 10s");
+        resetRecording();
+      }, 10_000);
     } catch {
-      // Déjà en cours dans un autre onglet, etc.
       recognitionRef.current = null;
     }
-  }, [text, disabled]);
-
-  const stopRecording = useCallback(() => {
-    recognitionRef.current?.stop(); // déclenche onend → reset propre
-  }, []);
+  }, [text, disabled, resetRecording]);
 
   function handleMicClick() {
     if (disabled) return;
-    if (isRecording) stopRecording();
-    else startRecording();
+    if (isRecording) {
+      // Force-reset immédiat — ne pas attendre onend qui peut ne jamais arriver
+      const finalSoFar = finalTextRef.current;
+      resetRecording();
+      if (finalSoFar) { setText(finalSoFar); resizeTextarea(); }
+    } else {
+      startRecording();
+    }
   }
 
   // ── Rendu ─────────────────────────────────────────────────────────────────────
