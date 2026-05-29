@@ -254,6 +254,7 @@ export function OnboardingProfilePage() {
       background: "#000",
       color: "rgba(235,235,245,0.92)",
       fontFamily: "inherit",
+      paddingTop: "env(safe-area-inset-top, 0px)",
       paddingBottom: 120,
     }}>
 

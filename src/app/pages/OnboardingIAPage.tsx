@@ -261,7 +261,7 @@ export function OnboardingIAPage() {
 
       {/* ── Header fixe ───────────────────────────────────────────────────── */}
       <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, zIndex: 20,
+        position: "absolute", top: "env(safe-area-inset-top, 0px)", left: 0, right: 0, zIndex: 20,
         height: 52,
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 16px",
@@ -299,19 +299,33 @@ export function OnboardingIAPage() {
                   fontSize: 14, color: "rgba(239,68,68,0.75)",
                   marginBottom: 16, lineHeight: 1.5,
                 }}>
-                  Connexion à l'IA échouée.{"\n"}Vérifie ta connexion internet.
+                  {triggerError}
                 </p>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleRetry}
-                  style={{
-                    padding: "10px 24px", borderRadius: 10, border: "none",
-                    background: "rgba(255,255,255,0.9)", color: "#000",
-                    fontSize: 14, fontWeight: 700, cursor: "pointer",
-                  }}
-                >
-                  Réessayer
-                </motion.button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleRetry}
+                    style={{
+                      padding: "10px 24px", borderRadius: 10, border: "none",
+                      background: "rgba(255,255,255,0.9)", color: "#000",
+                      fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    }}
+                  >
+                    Réessayer
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowSkipDialog(true)}
+                    style={{
+                      padding: "8px 20px", borderRadius: 10,
+                      border: "0.5px solid rgba(255,255,255,0.15)",
+                      background: "transparent", color: "rgba(235,235,245,0.4)",
+                      fontSize: 13, cursor: "pointer",
+                    }}
+                  >
+                    Passer pour l'instant
+                  </motion.button>
+                </div>
               </div>
             ) : (
               <div style={{ color: "rgba(235,235,245,0.25)", fontSize: 14 }}>

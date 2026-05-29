@@ -653,7 +653,7 @@ app.post("/ai-fowards/chat", async (c) => {
   const quotaStatus = buildQuotaStatus(quota, profile.is_phase1_complete);
 
   // ── Vérification quota ─────────────────────────────────────────────────────
-  if (mode === "normal" && !quotaStatus.canSendNormal) {
+  if (mode === "normal" && !is_onboarding_trigger && !quotaStatus.canSendNormal) {
     return c.json({
       error: `Quota atteint : ${NORMAL_DAILY_LIMIT} messages normaux/jour. Reviens demain !`,
       quotaExceeded: true,

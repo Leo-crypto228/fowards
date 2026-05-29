@@ -68,6 +68,15 @@ function AuthenticatedProviders({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <>
+      {/* Bande safe-area globale — couvre Dynamic Island / encoche sur TOUTES les pages */}
+      <div aria-hidden style={{
+        position: "fixed", top: 0, left: 0, right: 0,
+        height: "env(safe-area-inset-top, 0px)",
+        background: "#000",
+        zIndex: 9999,
+        pointerEvents: "none",
+      }} />
+
       {/* 1. Providers GLOBAUX (toujours actifs) */}
       <GlobalProviders>
         {/* 2. AuthProvider (gestion de l'utilisateur) */}
