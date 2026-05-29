@@ -253,9 +253,9 @@ export function OnboardingIAPage() {
   return (
     <div style={{
       display: "flex", flexDirection: "column",
-      height: "calc(100dvh - env(safe-area-inset-top, 0px))",
+      height: "100dvh",
+      paddingTop: "env(safe-area-inset-top, 0px)",
       background: "#000",
-      overflow: "hidden",
       position: "relative",
     }}>
 
@@ -337,7 +337,7 @@ export function OnboardingIAPage() {
       </div>
 
       {/* ── Zone basse ────────────────────────────────────────────────────── */}
-      <div style={{ flexShrink: 0 }}>
+      <div style={{ flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         {/* Boutons choix Phase 1 */}
         <AnimatePresence>
           {currentChoices && !sending && (

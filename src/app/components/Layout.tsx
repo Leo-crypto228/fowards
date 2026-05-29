@@ -100,10 +100,15 @@ export function Layout() {
       const onboardingRoutes = ["/onboarding/profile", "/onboarding/ia"];
       const alreadyOnOnboarding = onboardingRoutes.some((r) => location.pathname.startsWith(r));
       if (!alreadyOnOnboarding) {
-        // Rétrocompat cache ancien : onboarding_step peut être undefined si le cache
-        // date d'avant la refonte → utiliser onboardingDone comme fallback
-        const effectiveStep = user.onboarding_step || (user.onboardingDone ? "ia" : "profile");
-        const target = effectiveStep === "ia" ? "/onboarding/ia" : "/onboarding/profile";
+        // Règle de priorité :
+        //   1. Si onboardingDone=true (compte existant avec profil déjà créé)
+        //      → toujours /onboarding/ia, JAMAIS /onboarding/profile
+        //      Évite qu'un reload avec un mauvais onboarding_step en cache
+        //      renvoie un utilisateur existant vers la page profil.
+        //   2. Sinon : nouveau compte → utiliser onboarding_step ou "profile" par défaut
+        const target = user.onboardingDone
+          ? "/onboarding/ia"
+          : (user.onboarding_step === "ia" ? "/onboarding/ia" : "/onboarding/profile");
         navigate(target, { replace: true });
       }
     }
@@ -150,12 +155,13 @@ export function Layout() {
       />
       <FcoinNotificationWatcher />
 
-      {/* ── Global status bar band — always covers Dynamic Island / notch on ALL pages ── */}
+      {/* ── Global status bar band — covers Dynamic Island / notch on ALL pages ── */}
+      {/* Pas de borderBottom : sur les appareils sans encoche env(safe-area-inset-top)=0
+          donc la div a une hauteur de 0 mais la bordure se verrait quand même. */}
       <div aria-hidden style={{
         position: "fixed", top: 0, left: 0, right: 0,
         height: "env(safe-area-inset-top, 0px)",
         background: "#000",
-        borderBottom: "0.5px solid #1a1a1a",
         zIndex: 200,
         pointerEvents: "none",
       }} />
@@ -259,6 +265,37 @@ export function Layout() {
             </Link>
 
           </div>
+
+          {/* ── Desktop only : bouton "Pose ta situation" en bas de la sidebar ── */}
+          <div className="hidden lg:flex w-full flex-col"
+            style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))", padding: "0 10px", paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
+            <Link
+              to="/create"
+              onClick={() => navigator.vibrate?.(12)}
+              style={{ textDecoration: "none", width: "100%" }}
+            >
+              <motion.div
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 500, damping: 28 }}
+                style={{
+                  background: "#6366f1",
+                  borderRadius: 18,
+                  padding: "11px 6px",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: "#fff",
+                  lineHeight: 1.35,
+                  letterSpacing: "0.01em",
+                  boxShadow: "0 4px 16px rgba(99,102,241,0.35)",
+                }}
+              >
+                Pose ta<br />situation
+              </motion.div>
+            </Link>
+          </div>
+
         </motion.nav>
       )}
 
