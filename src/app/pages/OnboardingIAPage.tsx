@@ -182,18 +182,11 @@ export function OnboardingIAPage() {
 
   // ── Marquer onboarding_complete = true + navigate ─────────────────────────────
 
-  async function completeOnboarding() {
-    console.log("[OnboardingIA] Phase 1 terminée → SET onboardingComplete=true dans KV");
-    try {
-      if (user?.username) {
-        await upsertProfile(user.username, { onboardingComplete: true, onboardingStep: "done" });
-        console.log("[OnboardingIA] onboardingComplete=true KV OK");
-      }
-    } catch (e) {
-      console.error("[OnboardingIA] completeOnboarding exception:", e);
-    }
-
-    updateLocalUser({ onboarding_complete: true, onboarding_step: "done" });
+  function completeOnboarding() {
+    // 1. Mettre à jour l'état LOCAL EN PREMIER — avant tout await réseau.
+    //    Protège contre la race condition AuthContext background-refresh qui
+    //    pourrait écraser onboarding_complete si on attendait le fetch KV.
+    updateLocalUser({ onboarding_complete: true, onboarding_step: "done", onboardingDone: true });
 
     toast("Profil IA créé ! Bienvenue sur Fowards 🎉", {
       duration: 4000,
@@ -204,7 +197,14 @@ export function OnboardingIAPage() {
       },
     });
 
-    setTimeout(() => navigate("/ai", { replace: true }), 1500);
+    // 2. Navigation rapide (500ms pour laisser le toast apparaître)
+    setTimeout(() => navigate("/feed", { replace: true }), 500);
+
+    // 3. KV en fire-and-forget — si ça échoue l'état local reste correct
+    if (user?.username) {
+      upsertProfile(user.username, { onboardingComplete: true, onboardingStep: "done" })
+        .catch((e) => console.error("[OnboardingIA] completeOnboarding KV error:", e));
+    }
   }
 
   // ── Choix Phase 1 ─────────────────────────────────────────────────────────────

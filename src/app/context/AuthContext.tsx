@@ -198,12 +198,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // On fusionne avec le cache : jamais downgrader onboardingDone/firstPostCreated
           // (protège contre un KV lent qui retournerait false pour un user existant).
           buildStoredUser(supabaseUser).then((refreshed) => {
+            // Relire le localStorage au moment du merge pour capturer les mises à jour
+            // survenues PENDANT le fetch KV (ex: completeOnboarding → updateLocalUser).
+            // Sans ça, la closure capture l'ancienne valeur de `cached` et peut écraser
+            // onboarding_complete=true fraîchement écrit par completeOnboarding.
+            let latest = cached;
+            try {
+              const latestRaw = localStorage.getItem(LS_KEY);
+              if (latestRaw) {
+                const parsed = JSON.parse(latestRaw) as StoredAuthUser;
+                if (parsed.supabaseId === supabaseUser.id) latest = parsed;
+              }
+            } catch { /* garde le cached si localStorage corrompu */ }
+
             const merged: StoredAuthUser = {
               ...refreshed,
-              onboardingDone:      cached.onboardingDone      || refreshed.onboardingDone,
-              firstPostCreated:    cached.firstPostCreated    || refreshed.firstPostCreated,
-              onboarding_complete: cached.onboarding_complete || refreshed.onboarding_complete,
-              onboarding_step:     refreshed.onboarding_step  || cached.onboarding_step || "profile",
+              onboardingDone:      latest.onboardingDone      || refreshed.onboardingDone,
+              firstPostCreated:    latest.firstPostCreated    || refreshed.firstPostCreated,
+              onboarding_complete: latest.onboarding_complete || refreshed.onboarding_complete,
+              onboarding_step:     refreshed.onboarding_step  || latest.onboarding_step || "profile",
             };
             setAuthUser(merged);
             setUser(merged);
