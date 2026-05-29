@@ -165,7 +165,110 @@ function profileToPublic(profile: DbUserProfilePage): ProfilePage {
   };
 }
 
-// ── Appliquer un <profile-update> en BDD ──────────────────────────────────────
+// ── Helpers markdown profil (V8) ─────────────────────────────────────────────
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const SECTION_HEADERS: Record<string, string> = {
+  identite:          "# 👤 Identité",
+  business:          "# 💼 Business actuel",
+  temps_dispo:       "# ⏰ Temps dispo",
+  reve:              "# 🎯 Rêve",
+  blocage_principal: "# 🧱 Blocage principal actuel",
+  points_a_creuser:  "# 📌 Points à creuser plus tard",
+  historique:        "# 📅 Historique des diagnostics & actions",
+};
+
+function generateInitialProfileMarkdown(sections: {
+  identite: string;
+  business: string;
+  temps_dispo: string;
+  reve: string;
+  blocage_principal: string;
+  points_a_creuser: string[];
+}): string {
+  const parts: string[] = [];
+  if (sections.identite)          parts.push(`${SECTION_HEADERS.identite}\n${sections.identite}`);
+  if (sections.business)          parts.push(`${SECTION_HEADERS.business}\n${sections.business}`);
+  if (sections.temps_dispo)       parts.push(`${SECTION_HEADERS.temps_dispo}\n${sections.temps_dispo}`);
+  if (sections.reve)              parts.push(`${SECTION_HEADERS.reve}\n${sections.reve}`);
+  if (sections.blocage_principal) parts.push(`${SECTION_HEADERS.blocage_principal}\n${sections.blocage_principal}`);
+
+  const pts = Array.isArray(sections.points_a_creuser) ? sections.points_a_creuser : [];
+  if (pts.length > 0) {
+    parts.push(`${SECTION_HEADERS.points_a_creuser}\n${pts.map((p) => `- ${p}`).join("\n")}`);
+  }
+  // Section historique vide mais présente pour les futurs diagnostics
+  parts.push(`${SECTION_HEADERS.historique}\n`);
+  return parts.join("\n\n");
+}
+
+function appendDiagnosticEntry(
+  currentMarkdown: string,
+  entry: { date: string; sujet: string; diagnostic_resume: string; action_decidee: string; status: string },
+): string {
+  const statusMap: Record<string, string> = { en_cours: "⏳ En cours", fait: "✅ Fait", abandonne: "❌ Abandonné" };
+  const newEntry = [
+    `## ${entry.date} — ${entry.sujet}`,
+    `- Diagnostic : ${entry.diagnostic_resume}`,
+    `- Action décidée : ${entry.action_decidee}`,
+    `- Status : ${statusMap[entry.status] ?? entry.status}`,
+  ].join("\n");
+
+  const histoHeader = SECTION_HEADERS.historique;
+  if (currentMarkdown.includes(histoHeader)) {
+    return currentMarkdown.replace(histoHeader, `${histoHeader}\n${newEntry}`);
+  }
+  return currentMarkdown + `\n\n${histoHeader}\n${newEntry}`;
+}
+
+function updateActionStatus(
+  currentMarkdown: string,
+  actionDate: string,
+  newStatus: string,
+  resultatReporte?: string,
+): string {
+  const statusMap: Record<string, string> = { en_cours: "⏳ En cours", fait: "✅ Fait", abandonne: "❌ Abandonné" };
+  const displayStatus = statusMap[newStatus] ?? newStatus;
+  const resultatLine = resultatReporte ? `\n- Résultat : ${resultatReporte}` : "";
+  // Remplace le status dans l'entrée identifiée par la date
+  const entryRegex = new RegExp(
+    `(## ${escapeRegex(actionDate)} —[^\\n]*\\n(?:-[^\\n]*\\n)*?)-\\s*Status\\s*:[^\\n]*`,
+    "m",
+  );
+  const updated = currentMarkdown.replace(entryRegex, `$1- Status : ${displayStatus}${resultatLine}`);
+  if (updated === currentMarkdown) {
+    console.warn(`[profile-update] action_status_update: entry for ${actionDate} not found`);
+  }
+  return updated;
+}
+
+function replaceSection(currentMarkdown: string, sectionName: string, newContent: string): string {
+  const header = SECTION_HEADERS[sectionName];
+  if (!header) {
+    console.warn(`[profile-update] replaceSection: unknown section "${sectionName}"`);
+    return currentMarkdown;
+  }
+  // Remplace tout le contenu entre ce header et le prochain header "# ..."
+  const regex = new RegExp(`${escapeRegex(header)}\\n[\\s\\S]*?(?=\\n# |$)`, "m");
+  if (regex.test(currentMarkdown)) {
+    return currentMarkdown.replace(regex, `${header}\n${newContent}`);
+  }
+  // Section absente → ajouter avant l'historique ou en fin de document
+  const histoPos = currentMarkdown.indexOf(SECTION_HEADERS.historique);
+  if (histoPos !== -1) {
+    return (
+      currentMarkdown.slice(0, histoPos) +
+      `${header}\n${newContent}\n\n` +
+      currentMarkdown.slice(histoPos)
+    );
+  }
+  return currentMarkdown + `\n\n${header}\n${newContent}`;
+}
+
+// ── Appliquer un <profile-update> en BDD — V8 ────────────────────────────────
 
 async function applyProfileUpdate(
   userId: string,
@@ -176,8 +279,25 @@ async function applyProfileUpdate(
   const isPhase1JustCompleted =
     update.type === "initial_profile_complete" && !currentProfile.is_phase1_complete;
 
+  let newMarkdown = currentProfile.content_markdown ?? "";
+
+  switch (update.type) {
+    case "initial_profile_complete":
+      newMarkdown = generateInitialProfileMarkdown(update.sections);
+      break;
+    case "diagnostic_completed":
+      newMarkdown = appendDiagnosticEntry(newMarkdown, update.diagnostic_entry);
+      break;
+    case "action_status_update":
+      newMarkdown = updateActionStatus(newMarkdown, update.action_date, update.new_status, update.resultat_reporte);
+      break;
+    case "section_correction":
+      newMarkdown = replaceSection(newMarkdown, update.section, update.new_content);
+      break;
+  }
+
   const patch: Partial<DbUserProfilePage> = {
-    content_markdown: update.content_markdown,
+    content_markdown: newMarkdown,
     last_updated_by: "ai",
     last_updated_at: now,
     ai_update_count: (currentProfile.ai_update_count ?? 0) + 1,
@@ -188,10 +308,13 @@ async function applyProfileUpdate(
     patch.phase1_completed_at = now;
   }
 
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from("user_profile_page")
     .update(patch)
     .eq("user_id", userId);
+
+  if (error) console.error("[profile-update] UPSERT error:", JSON.stringify(error));
+  else console.log(`[profile-update] Applied type=${update.type}, isPhase1JustCompleted=${isPhase1JustCompleted}`);
 
   return { isPhase1JustCompleted };
 }
@@ -313,18 +436,26 @@ function parseGeminiResponse(raw: string): ParsedResponse {
   };
 }
 
-// ── Construire le contexte utilisateur injecté dans le message ────────────────
+// ── Construire le contexte utilisateur injecté dans le message — V8 ──────────
 
-function buildUserContext(profile: DbUserProfilePage, mode: ChatMode): string {
+function buildUserContext(profile: DbUserProfilePage, _mode: ChatMode): string {
   if (!profile.is_phase1_complete) {
-    return "[FIRST_TIME_USER]";
+    const partialContent = profile.content_markdown.trim();
+    if (!partialContent) {
+      // Toute première fois — aucune info collectée
+      return "[FIRST_TIME_USER]";
+    }
+    // Phase 1 en cours — profil partiellement rempli
+    return (
+      `[FIRST_TIME_USER]\n[PHASE_1_IN_PROGRESS]\n` +
+      `[USER_PROFILE_PAGE - WORK IN PROGRESS]\n${partialContent}\n[/USER_PROFILE_PAGE]`
+    );
   }
 
-  const profileSection = profile.content_markdown.trim()
-    ? `[RETURNING_USER]\n\n[USER_PROFILE_PAGE]\n${profile.content_markdown.trim()}\n[/USER_PROFILE_PAGE]`
-    : "[RETURNING_USER]";
-
-  return profileSection;
+  // Returning user avec profil Phase 1 complet
+  const profileContent = profile.content_markdown.trim();
+  if (!profileContent) return "[RETURNING_USER]";
+  return `[RETURNING_USER]\n[USER_PROFILE_PAGE]\n${profileContent}\n[/USER_PROFILE_PAGE]`;
 }
 
 // ── Routes ────────────────────────────────────────────────────────────────────

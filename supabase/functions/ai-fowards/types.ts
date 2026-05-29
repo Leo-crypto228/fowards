@@ -78,16 +78,40 @@ export interface ChoicesBlock {
   choices: string[];
 }
 
-/** <profile-update> block parsé depuis la réponse Gemini */
-export interface ProfileUpdateBlock {
-  type:
-    | "initial_profile_complete"
-    | "diagnostic_completed"
-    | "action_status_update"
-    | "section_correction";
-  content_markdown: string; // Contenu complet remplaçant le profil
-  notes?: string;
-}
+/** <profile-update> block parsé depuis la réponse Gemini — V8 union type */
+export type ProfileUpdateBlock =
+  | {
+      type: "initial_profile_complete";
+      sections: {
+        identite: string;
+        business: string;
+        temps_dispo: string;
+        reve: string;
+        blocage_principal: string;
+        points_a_creuser: string[];
+      };
+    }
+  | {
+      type: "diagnostic_completed";
+      diagnostic_entry: {
+        date: string;
+        sujet: string;
+        diagnostic_resume: string;
+        action_decidee: string;
+        status: string;
+      };
+    }
+  | {
+      type: "action_status_update";
+      action_date: string;
+      new_status: string;
+      resultat_reporte?: string;
+    }
+  | {
+      type: "section_correction";
+      section: string;
+      new_content: string;
+    };
 
 // Gemini API types
 export interface GeminiContent {
