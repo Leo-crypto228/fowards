@@ -46,14 +46,22 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
 
   const textareaRef      = useRef<HTMLTextAreaElement>(null);
   const recognitionRef   = useRef<SpeechRecognitionInstance | null>(null);
-  const finalTextRef     = useRef(""); // texte confirmé (non-intermédiaire)
+  const finalTextRef     = useRef(""); // texte confirmé (résultats isFinal)
+  const displayedRef     = useRef(""); // miroir du text state — toujours à jour
 
-  // ── Resize textarea helper ────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+
   function resizeTextarea(target?: HTMLTextAreaElement | null) {
     const ta = target ?? textareaRef.current;
     if (!ta) return;
     ta.style.height = "auto";
     ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+  }
+
+  // Toujours passer par setTextSynced pour garder displayedRef à jour
+  function setTextSynced(val: string) {
+    displayedRef.current = val;
+    setText(val);
   }
 
   // ── Envoi ─────────────────────────────────────────────────────────────────────
@@ -68,7 +76,7 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
       finalTextRef.current = "";
     }
     onSend(trimmed, mode);
-    setText("");
+    setTextSynced("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   }
 
@@ -80,9 +88,8 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
   }
 
   function handleTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    // Si l'user édite manuellement pendant un enregistrement, on garde le texte édité
     finalTextRef.current = e.target.value;
-    setText(e.target.value);
+    setTextSynced(e.target.value);
     resizeTextarea(e.target);
   }
 
@@ -119,7 +126,6 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
     rec.maxAlternatives = 1;
 
     rec.onresult = (e) => {
-      // Reset le timeout de sécurité à chaque résultat reçu
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
 
       let interim = "";
@@ -135,22 +141,24 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
       const displayed = finalTextRef.current
         ? (interim ? finalTextRef.current.trimEnd() + " " + interim : finalTextRef.current)
         : interim;
-      setText(displayed);
+      setTextSynced(displayed); // met aussi displayedRef à jour
       resizeTextarea();
     };
 
     rec.onerror = (e) => {
       if (e.error !== "no-speech") console.warn("[Mic] erreur:", e.error);
-      // Préserver le texte final déjà transcrit même en cas d'erreur
-      const finalSoFar = finalTextRef.current;
+      // Préserver ce qui était affiché (final ou intermédiaire)
+      const toPreserve = finalTextRef.current || displayedRef.current;
       resetRecording();
-      if (finalSoFar) setText(finalSoFar);
+      setTextSynced(toPreserve);
     };
 
     rec.onend = () => {
-      const finalSoFar = finalTextRef.current;
+      // Préserver ce qui était affiché — finalTextRef OU displayedRef (résultats intermédiaires)
+      const toPreserve = finalTextRef.current || displayedRef.current;
       resetRecording();
-      if (finalSoFar) { setText(finalSoFar); resizeTextarea(); }
+      setTextSynced(toPreserve);
+      resizeTextarea();
     };
 
     recognitionRef.current = rec;
@@ -170,10 +178,12 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
   function handleMicClick() {
     if (disabled) return;
     if (isRecording) {
-      // Force-reset immédiat — ne pas attendre onend qui peut ne jamais arriver
-      const finalSoFar = finalTextRef.current;
+      // Préserver ce qui était affiché avant le reset
+      const toPreserve = finalTextRef.current || displayedRef.current;
       resetRecording();
-      if (finalSoFar) { setText(finalSoFar); resizeTextarea(); }
+      // Toujours re-setter pour forcer le re-render avec le bon texte
+      setTextSynced(toPreserve);
+      resizeTextarea();
     } else {
       startRecording();
     }
