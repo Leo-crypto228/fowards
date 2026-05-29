@@ -37,7 +37,10 @@ export interface UserProfile {
   updatedAt?: string;
 }
 
-export type ProfileUpdatePayload = Partial<Omit<UserProfile, "postsCount" | "followersCount" | "followingCount" | "joinedAt">>;
+export type ProfileUpdatePayload = Partial<Omit<UserProfile, "postsCount" | "followersCount" | "followingCount" | "joinedAt">> & {
+  onboardingComplete?: boolean;
+  onboardingStep?: string;
+};
 
 // ── API ─────────────────────────────────────────────────────��────────────────
 

@@ -103,6 +103,7 @@ export async function sendMessage(
     conversationId?: string;
     message: string;
     mode: ChatMode;
+    is_onboarding_trigger?: boolean;
   },
 ): Promise<ChatResponse> {
   const res = await fetch(`${BASE}/chat`, {

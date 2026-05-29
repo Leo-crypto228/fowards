@@ -6,10 +6,10 @@ import { RootError } from "./components/RootError";
 // Auth pages — eager (small forms, entry points for unauthenticated users)
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
-import { OnboardingPage } from "./pages/OnboardingPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
+import { OnboardingProfilePage } from "./pages/OnboardingProfilePage";
+import { OnboardingIAPage } from "./pages/OnboardingIAPage";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
-import { FirstPostPage } from "./pages/FirstPostPage";
 import { AdminProtected } from "./pages/AdminProtected";
 import { MentionsLegales } from "./pages/MentionsLegales";
 import { ConditionsGenerales } from "./pages/ConditionsGenerales";
@@ -44,12 +44,12 @@ const AIProfilePage     = lazy(() => import("./pages/AIProfilePage").then(m => (
 
 export const router = createBrowserRouter([
   // ── Auth pages (hors Layout, hors guard) ─────────────────────────────────
-  { path: "/login",         Component: LoginPage },
-  { path: "/signup",        Component: SignupPage },
-  { path: "/onboarding",    Component: OnboardingPage },
-  { path: "/verify-email",  Component: VerifyEmailPage },
+  { path: "/login",              Component: LoginPage },
+  { path: "/signup",             Component: SignupPage },
+  { path: "/verify-email",       Component: VerifyEmailPage },
+  { path: "/onboarding/profile", Component: OnboardingProfilePage },
+  { path: "/onboarding/ia",      Component: OnboardingIAPage },
   { path: "/auth/callback", Component: AuthCallbackPage },
-  { path: "/first-post",       Component: FirstPostPage },
   { path: "/mentions-legales",           Component: MentionsLegales },
   { path: "/conditions",                 Component: ConditionsGenerales },
   { path: "/politique-confidentialite",  Component: PolitiqueConfidentialite },

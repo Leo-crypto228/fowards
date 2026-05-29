@@ -15,7 +15,11 @@ const LS_KEY  = "ff_auth_user_v1"; // localStorage cache key
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-type KVProfile = Partial<StoredAuthUser> & { _kvUsername?: string };
+type KVProfile = Partial<StoredAuthUser> & {
+  _kvUsername?: string;
+  onboardingComplete?: boolean;
+  onboardingStep?: string;
+};
 
 async function loadKVProfile(username: string, signal: AbortSignal): Promise<KVProfile> {
   try {
@@ -30,6 +34,8 @@ async function loadKVProfile(username: string, signal: AbortSignal): Promise<KVP
       avatar: p.avatar || "", objective: p.objective || "", streak: p.streak || 0,
       name: p.name || username, onboardingDone: Boolean(p.onboardingDone),
       firstPostCreated, _kvUsername: username,
+      onboardingComplete: Boolean(p.onboardingComplete),
+      onboardingStep: p.onboardingStep as string | undefined || undefined,
     };
   } catch { return {}; }
 }
@@ -48,6 +54,8 @@ async function loadKVProfileByUID(supabaseId: string, signal: AbortSignal): Prom
       avatar: p.avatar || "", objective: p.objective || "", streak: p.streak || 0,
       name: p.name || kvUsername, onboardingDone: Boolean(p.onboardingDone),
       firstPostCreated, _kvUsername: kvUsername,
+      onboardingComplete: Boolean(p.onboardingComplete),
+      onboardingStep: p.onboardingStep as string | undefined || undefined,
     };
   } catch { return {}; }
 }
@@ -85,11 +93,22 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
     }
 
     const firstPostCreated = kv.firstPostCreated !== undefined ? kv.firstPostCreated : Boolean(kv.onboardingDone);
+
+    // onboarding_complete / onboarding_step — stockés dans le profil KV (comme onboardingDone)
+    // Rétrocompat : comptes existants (onboardingDone=true mais onboardingComplete non défini)
+    //   → on les envoie direct au chat IA (step='ia'), pas à la page profil
+    const onboarding_complete: boolean = Boolean(kv.onboardingComplete);
+    const onboarding_step: StoredAuthUser["onboarding_step"] =
+      (kv.onboardingStep as StoredAuthUser["onboarding_step"] | undefined) ||
+      (kv.onboardingDone ? "ia" : "profile");
+
     return {
       supabaseId: supabaseUser.id, username: authUsername,
       name: kv.name || nameDefault, email: supabaseUser.email || "",
       avatar: kv.avatar || "", objective: kv.objective || "",
       streak: kv.streak || 0, onboardingDone: kv.onboardingDone || false, firstPostCreated,
+      onboarding_complete,
+      onboarding_step,
     };
   } catch {
     clearTimeout(timer);
@@ -98,17 +117,21 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
     let onboardingDone   = false;
     let firstPostCreated = false;
     let cachedAvatar = ""; let cachedObjective = ""; let cachedStreak = 0; let cachedName = nameDefault;
+    let onboarding_complete = false;
+    let onboarding_step: StoredAuthUser["onboarding_step"] = "profile";
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (raw) {
         const c = JSON.parse(raw) as Partial<StoredAuthUser>;
         if (c.supabaseId === supabaseUser.id) {
-          onboardingDone   = c.onboardingDone   || false;
-          firstPostCreated = c.firstPostCreated || false;
-          cachedAvatar     = c.avatar     || "";
-          cachedObjective  = c.objective  || "";
-          cachedStreak     = c.streak     || 0;
-          cachedName       = c.name       || nameDefault;
+          onboardingDone         = c.onboardingDone      || false;
+          firstPostCreated       = c.firstPostCreated    || false;
+          cachedAvatar           = c.avatar              || "";
+          cachedObjective        = c.objective           || "";
+          cachedStreak           = c.streak              || 0;
+          cachedName             = c.name                || nameDefault;
+          onboarding_complete = c.onboarding_complete || false;
+          onboarding_step     = c.onboarding_step     || (onboardingDone ? "ia" : "profile");
         }
       }
     } catch { /* cache corrompu, valeurs par défaut */ }
@@ -117,6 +140,8 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
       name: cachedName, email: supabaseUser.email || "",
       avatar: cachedAvatar, objective: cachedObjective, streak: cachedStreak,
       onboardingDone, firstPostCreated,
+      onboarding_complete,
+      onboarding_step,
     };
   }
 }
@@ -175,8 +200,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           buildStoredUser(supabaseUser).then((refreshed) => {
             const merged: StoredAuthUser = {
               ...refreshed,
-              onboardingDone:   cached.onboardingDone   || refreshed.onboardingDone,
-              firstPostCreated: cached.firstPostCreated || refreshed.firstPostCreated,
+              onboardingDone:      cached.onboardingDone      || refreshed.onboardingDone,
+              firstPostCreated:    cached.firstPostCreated    || refreshed.firstPostCreated,
+              onboarding_complete: cached.onboarding_complete || refreshed.onboarding_complete,
+              onboarding_step:     refreshed.onboarding_step  || cached.onboarding_step || "profile",
             };
             setAuthUser(merged);
             setUser(merged);
@@ -194,8 +221,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const stored = await buildStoredUser(supabaseUser);
     const safeStored: StoredAuthUser = {
       ...stored,
-      onboardingDone:   stored.onboardingDone   || false,
-      firstPostCreated: stored.firstPostCreated || false,
+      onboardingDone:      stored.onboardingDone      || false,
+      firstPostCreated:    stored.firstPostCreated    || false,
+      onboarding_complete: stored.onboarding_complete || false,
+      onboarding_step:     stored.onboarding_step     || "profile",
     };
     setAuthUser(safeStored);
     setUser(safeStored);
@@ -264,15 +293,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const p = data?.profile;
         if (p) {
           const leoUser: StoredAuthUser = {
-            supabaseId:     "leo-dev-bypass",
-            username:       "leo",
-            name:           p.name           || "Leo",
-            email:          p.email          || "leo@futurfeed.com",
-            avatar:         p.avatar         || "",
-            objective:      p.objective      || "",
-            streak:         p.streak         || 0,
-            onboardingDone: true,
-            firstPostCreated: p.firstPostCreated || false,
+            supabaseId:          "leo-dev-bypass",
+            username:            "leo",
+            name:                p.name              || "Leo",
+            email:               p.email             || "leo@futurfeed.com",
+            avatar:              p.avatar            || "",
+            objective:           p.objective         || "",
+            streak:              p.streak            || 0,
+            onboardingDone:      true,
+            firstPostCreated:    p.firstPostCreated  || false,
+            onboarding_complete: true,
+            onboarding_step:     "done",
           };
           setAuthUser(leoUser);
           setUser(leoUser);
@@ -282,15 +313,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch { /* fallback */ }
     // Fallback si KV inaccessible
     const leoUser: StoredAuthUser = {
-      supabaseId:     "leo-dev-bypass",
-      username:       "leo",
-      name:           "Leo",
-      email:          "leo@futurfeed.com",
-      avatar:         "",
-      objective:      "",
-      streak:         0,
-      onboardingDone: true,
-      firstPostCreated: false,
+      supabaseId:          "leo-dev-bypass",
+      username:            "leo",
+      name:                "Leo",
+      email:               "leo@futurfeed.com",
+      avatar:              "",
+      objective:           "",
+      streak:              0,
+      onboardingDone:      true,
+      firstPostCreated:    false,
+      onboarding_complete: true,
+      onboarding_step:     "done",
     };
     setAuthUser(leoUser);
     setUser(leoUser);

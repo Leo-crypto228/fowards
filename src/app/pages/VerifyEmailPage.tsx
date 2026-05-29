@@ -41,8 +41,8 @@ export function VerifyEmailPage() {
       if (redirectAfterAuth && redirectAfterAuth !== "/") {
         sessionStorage.removeItem("ff_redirect_after_auth");
         navigate(redirectAfterAuth, { replace: true });
-      } else if (isSignup && !user.onboardingDone) {
-        navigate("/onboarding", { replace: true });
+      } else if (isSignup && !user.onboarding_complete) {
+        navigate("/onboarding/profile", { replace: true });
       } else {
         try { localStorage.removeItem("ff_needs_onboarding"); } catch {}
         navigate("/", { replace: true });

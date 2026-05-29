@@ -5,14 +5,17 @@
 
 export interface StoredAuthUser {
   supabaseId: string;
-  username: string;      // username normalisé (clé KV, ex: "thomasdubois")
-  name: string;          // nom affiché (ex: "Thomas Dubois")
+  username: string;          // username normalisé (clé KV, ex: "thomasdubois")
+  name: string;              // nom affiché (ex: "Thomas Dubois")
   email: string;
   avatar: string;
   objective: string;
   streak: number;
   onboardingDone: boolean;
   firstPostCreated: boolean;
+  // Onboarding V2
+  onboarding_complete: boolean;
+  onboarding_step: "profile" | "ia" | "done";
 }
 
 // ── Valeurs mutable live-bindable ──────────────────────────────────────────────

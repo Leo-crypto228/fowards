@@ -82,17 +82,32 @@ export function Layout() {
   const communityMatch = location.pathname.match(/^\/tribes\/([^\/]+)$/);
   const isInCommunity = !!(communityMatch && communityMatch[1] !== "create");
 
-  // ── Auth guard ──────────────────────────────────────────────────────────────
+  // ── Auth guard + onboarding guard ──────────────────────────────────────────
   useEffect(() => {
     if (loading) return;
     if (!user) {
       const redirect = encodeURIComponent(location.pathname + location.search);
       navigate(`/login?redirect=${redirect}`, { replace: true });
-    } else {
-      // Comptes existants : on nettoie definitivement le flag d'onboarding
-      try { localStorage.removeItem("ff_needs_onboarding"); } catch {}
+      return;
     }
-  }, [user, loading, navigate]);
+
+    // Comptes existants : on nettoie definitivement le flag d'onboarding legacy
+    try { localStorage.removeItem("ff_needs_onboarding"); } catch {}
+
+    // Onboarding V2 : si l'onboarding n'est pas terminé,
+    // rediriger vers la bonne étape (profile ou ia)
+    if (!user.onboarding_complete) {
+      const onboardingRoutes = ["/onboarding/profile", "/onboarding/ia"];
+      const alreadyOnOnboarding = onboardingRoutes.some((r) => location.pathname.startsWith(r));
+      if (!alreadyOnOnboarding) {
+        // Rétrocompat cache ancien : onboarding_step peut être undefined si le cache
+        // date d'avant la refonte → utiliser onboardingDone comme fallback
+        const effectiveStep = user.onboarding_step || (user.onboardingDone ? "ia" : "profile");
+        const target = effectiveStep === "ia" ? "/onboarding/ia" : "/onboarding/profile";
+        navigate(target, { replace: true });
+      }
+    }
+  }, [user, loading, navigate, location.pathname]);
 
   // Pendant le chargement initial
   if (loading || !user) {
