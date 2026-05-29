@@ -225,12 +225,12 @@ export function OnboardingIAPage() {
 
   // Le bouton "Valider" apparaît dès que :
   //   a) le serveur confirme Phase 1 complete (isPhase1JustCompleted ou quota.isPhase1Complete)
-  //   b) OU l'IA a envoyé ≥ 8 messages (fin du questionnaire 12 questions), comme fallback
-  //      au cas où le bloc <profile-update> ne serait pas détecté côté serveur
+  //   b) OU l'IA a envoyé ≥ 14 messages (12 questions + récap + buffer), comme fallback
+  // Le bouton ET l'input coexistent — l'user peut toujours écrire même quand le bouton est visible
   const aiMessageCount = messages.filter(
     (m) => m.role === "assistant" && m.id !== "typing"
   ).length;
-  const showValidateButton = phase1Complete || aiMessageCount >= 8;
+  const showValidateButton = phase1Complete || aiMessageCount >= 14;
 
   // ── Rendu ─────────────────────────────────────────────────────────────────────
 
@@ -445,8 +445,8 @@ export function OnboardingIAPage() {
           )}
         </AnimatePresence>
 
-        {/* Input texte — masqué une fois Phase 1 terminée */}
-        {!currentChoices && !showValidateButton && (
+        {/* Input texte — toujours visible sauf si des choix sont affichés */}
+        {!currentChoices && (
           <ChatInput
             onSend={(text) => handleSend(text)}
             disabled={inputDisabled}
