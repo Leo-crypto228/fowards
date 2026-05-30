@@ -11,6 +11,13 @@ import { projectId, publicAnonKey } from "/utils/supabase/info";
 const BASE    = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
 const HEADERS = { "Content-Type": "application/json", Authorization: `Bearer ${publicAnonKey}` };
 
+// Fetch avec timeout — évite les blocages sur cold start ou réseau lent
+function fetchT(url: string, options: RequestInit, ms = 15_000): Promise<Response> {
+  const ctrl = new AbortController();
+  const id   = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 const RESEND_COOLDOWN = 60;
 const CODE_LENGTH = 8;
 
@@ -91,7 +98,7 @@ export function VerifyEmailPage() {
     setResendError(null);
 
     try {
-      const res = await fetch(`${BASE}/auth/verify-otp`, {
+      const res = await fetchT(`${BASE}/auth/verify-otp`, {
         method: "POST",
         headers: HEADERS,
         body: JSON.stringify({ email, code }),
@@ -113,7 +120,12 @@ export function VerifyEmailPage() {
       sessionStorage.removeItem("ff_verify_mode");
       // La redirection est gérée par le useEffect qui surveille `user`
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Une erreur est survenue.";
+      const raw = err instanceof Error ? err.message : "Une erreur est survenue.";
+      const low = raw.toLowerCase();
+      const msg =
+        low.includes("aborted") || low.includes("abort") || low.includes("load failed") || low.includes("failed to fetch")
+          ? "Connexion au serveur impossible. Vérifie ta connexion et réessaie."
+          : raw;
       setVerifyError(msg);
       // Vider les cases + refocus
       setDigits(Array(CODE_LENGTH).fill(""));
@@ -185,7 +197,7 @@ export function VerifyEmailPage() {
     setVerifyError(null);
 
     try {
-      const res = await fetch(`${BASE}/auth/resend-otp`, {
+      const res = await fetchT(`${BASE}/auth/resend-otp`, {
         method: "POST",
         headers: HEADERS,
         body: JSON.stringify({ email }),
@@ -208,7 +220,13 @@ export function VerifyEmailPage() {
         inputRefs.current[0]?.focus();
       }, 3000);
     } catch (err) {
-      setResendError(err instanceof Error ? err.message : "Impossible de renvoyer le code.");
+      const raw = err instanceof Error ? err.message : "Impossible de renvoyer le code.";
+      const low = raw.toLowerCase();
+      setResendError(
+        low.includes("aborted") || low.includes("abort") || low.includes("load failed") || low.includes("failed to fetch")
+          ? "Connexion au serveur impossible. Vérifie ta connexion et réessaie."
+          : raw,
+      );
     } finally {
       setResending(false);
     }

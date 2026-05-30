@@ -16,6 +16,13 @@ const HEADERS = { "Content-Type": "application/json", Authorization: `Bearer ${p
 const CODE_LENGTH     = 8;
 const RESEND_COOLDOWN = 60;
 
+// Fetch avec timeout — évite les blocages sur cold start ou réseau lent
+function fetchT(url: string, options: RequestInit, ms = 15_000): Promise<Response> {
+  const ctrl = new AbortController();
+  const id   = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Screen = "landing" | "signup" | "login" | "forgot-password" | "login-otp";
 
@@ -870,7 +877,7 @@ function LoginOtpPanel({ onBack }: { onBack: () => void }) {
 
     setPending(true);
     try {
-      const res = await fetch(`${BASE}/auth/resend-otp`, {
+      const res = await fetchT(`${BASE}/auth/resend-otp`, {
         method: "POST",
         headers: HEADERS,
         body: JSON.stringify({ email: trimmed }),
@@ -884,14 +891,15 @@ function LoginOtpPanel({ onBack }: { onBack: () => void }) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Une erreur est survenue.";
       const low = msg.toLowerCase();
-      if (low.includes("load failed") || low.includes("failed to fetch") || low.includes("network")) {
+      if (low.includes("load failed") || low.includes("failed to fetch") || low.includes("network") || low.includes("aborted") || low.includes("abort")) {
         setError("Connexion au serveur impossible. Vérifie ta connexion et réessaie.");
       } else if (low.includes("security purposes") || low.includes("seconds")) {
         setError("Patiente quelques secondes avant de renvoyer un code.");
       } else if (low.includes("rate limit") || low.includes("too many")) {
         setError("Trop de tentatives. Attends quelques secondes et réessaie.");
       } else {
-        setError("Une erreur est survenue. Réessaie.");
+        // Affiche le message réel du serveur pour aider au debug (ex: Resend API error)
+        setError(msg || "Une erreur est survenue. Réessaie.");
       }
     } finally {
       setPending(false);
