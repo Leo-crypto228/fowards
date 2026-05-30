@@ -991,10 +991,10 @@ app.post("/make-server-218684af/posts", async (c) => {
       }
     }
 
-    // Progression + activité journalière
-    await logActivity(resolvedUsername, "post", { postId: id });
-    await addProgressScore(resolvedUsername, 5);
-    await checkAndAwardFcoins(resolvedUsername);
+    // Progression + activité journalière (fire-and-forget — ne bloque pas la réponse)
+    logActivity(resolvedUsername, "post", { postId: id }).catch(() => {});
+    addProgressScore(resolvedUsername, 5).catch(() => {});
+    checkAndAwardFcoins(resolvedUsername).catch(() => {});
 
     // Impact Score
     awardImpact(resolvedUsername, "post").catch(() => {});
@@ -1380,12 +1380,14 @@ app.post("/make-server-218684af/comments", async (c) => {
     if (analytics.history.length > 7) analytics.history = analytics.history.slice(-7);
     await kv.set(`ff:analytics:${postId}`, JSON.stringify(analytics));
 
-    // Progression
-    await logActivity(userId, "comment", { postId });
-    await addProgressScore(userId, 2);
-    const cmtCnt = parseInt((await kv.get(`ff:comment-count:${userId}`)) || "0") + 1;
-    await kv.set(`ff:comment-count:${userId}`, String(cmtCnt));
-    await checkAndAwardFcoins(userId);
+    // Progression (fire-and-forget)
+    logActivity(userId, "comment", { postId }).catch(() => {});
+    addProgressScore(userId, 2).catch(() => {});
+    (async () => {
+      const cmtCnt = parseInt((await kv.get(`ff:comment-count:${userId}`)) || "0") + 1;
+      await kv.set(`ff:comment-count:${userId}`, String(cmtCnt));
+      await checkAndAwardFcoins(userId);
+    })().catch(() => {});
 
     // Impact Score
     if (videoUrl) awardImpact(userId, "comment_video").catch(() => {});
@@ -2393,12 +2395,14 @@ app.post("/make-server-218684af/community/:communityId/messages", async (c) => {
     if (msgIds.length > 500) msgIds.splice(0, msgIds.length - 500);
     await kv.set(`ff:cmsgs:${communityId}`, JSON.stringify(msgIds));
 
-    // Progression + Fcoins
-    await logActivity(userId, "community_message", { communityId });
-    await addProgressScore(userId, 2);
-    const cnt = parseInt((await kv.get(`ff:msg-count:${userId}`)) || "0") + 1;
-    await kv.set(`ff:msg-count:${userId}`, String(cnt));
-    await checkAndAwardFcoins(userId);
+    // Progression + Fcoins (fire-and-forget)
+    logActivity(userId, "community_message", { communityId }).catch(() => {});
+    (async () => {
+      await addProgressScore(userId, 2);
+      const cnt = parseInt((await kv.get(`ff:msg-count:${userId}`)) || "0") + 1;
+      await kv.set(`ff:msg-count:${userId}`, String(cnt));
+      await checkAndAwardFcoins(userId);
+    })().catch(() => {});
 
     console.log(`Message communauté: id=${id}, community=${communityId}, user=${userId}, parent=${parentId || "null"}`);
     return c.json({ success: true, message: { ...message, timestamp: "À l'instant" } });
@@ -2733,9 +2737,9 @@ app.post("/make-server-218684af/communities/:id/posts", async (c) => {
       }
     }
 
-    await logActivity(resolvedUsername, "post", { postId, communityId });
-    await addProgressScore(resolvedUsername, 5);
-    await checkAndAwardFcoins(resolvedUsername);
+    logActivity(resolvedUsername, "post", { postId, communityId }).catch(() => {});
+    addProgressScore(resolvedUsername, 5).catch(() => {});
+    checkAndAwardFcoins(resolvedUsername).catch(() => {});
 
     console.log(`Community actus post créé: id=${postId}, community=${communityId}, user=${resolvedUsername}`);
     return c.json({ success: true, post });
@@ -5776,9 +5780,9 @@ app.post("/make-server-218684af/communities/:id/channels/:channelId/posts", asyn
     if (ids.length > 300) ids.splice(300);
     await kv.set(idxKey, JSON.stringify(ids));
 
-    await logActivity(userId, "channel_post", { communityId, channelId, postId });
-    await addProgressScore(userId, 3);
-    await checkAndAwardFcoins(userId);
+    logActivity(userId, "channel_post", { communityId, channelId, postId }).catch(() => {});
+    addProgressScore(userId, 3).catch(() => {});
+    checkAndAwardFcoins(userId).catch(() => {});
 
     console.log(`Post canal créé: id=${postId}, community=${communityId}, channel=${channelId}, user=${userId}`);
     return c.json({ success: true, post: { ...post, timestamp: "À l'instant" } });
@@ -6129,12 +6133,14 @@ app.post("/make-server-218684af/community/:communityId/messages", async (c) => {
     if (ids.length > 1000) ids.splice(1000);
     await kv.set(idxKey, JSON.stringify(ids));
 
-    // Progression : compteur de messages pour Fcoins
+    // Progression : compteur de messages pour Fcoins (fire-and-forget)
     if (userId) {
-      const cnt = parseInt((await kv.get(`ff:msg-count:${userId}`)) || "0") + 1;
-      await kv.set(`ff:msg-count:${userId}`, String(cnt));
-      await addProgressScore(userId, 2);
-      await checkAndAwardFcoins(userId);
+      (async () => {
+        const cnt = parseInt((await kv.get(`ff:msg-count:${userId}`)) || "0") + 1;
+        await kv.set(`ff:msg-count:${userId}`, String(cnt));
+        await addProgressScore(userId, 2);
+        await checkAndAwardFcoins(userId);
+      })().catch(() => {});
     }
 
     console.log(`Message communauté créé: id=${id}, community=${communityId}, user=${userId}`);
