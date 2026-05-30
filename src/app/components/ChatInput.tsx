@@ -247,9 +247,9 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
             onClick={() => setMode("normal")}
             style={{
               flex: 1, height: 32, borderRadius: 999, cursor: "pointer",
-              border: `1px solid ${mode === "normal" ? "rgba(168,107,255,0.55)" : "rgba(255,255,255,0.09)"}`,
-              background: mode === "normal" ? "rgba(168,107,255,0.10)" : "#1c1c20",
-              color: mode === "normal" ? "rgba(235,235,245,0.90)" : "rgba(255,255,255,0.40)",
+              border: `1px solid ${mode === "normal" ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)"}`,
+              background: mode === "normal" ? "#1c1c20" : "rgba(255,255,255,0.05)",
+              color: mode === "normal" ? "rgba(255,255,255,0.80)" : "rgba(255,255,255,0.35)",
               fontSize: 12, fontWeight: mode === "normal" ? 600 : 400,
               transition: "all 0.15s",
             }}
@@ -263,21 +263,20 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
               flex: 1, height: 32, borderRadius: 999,
               border: `1px solid ${
                 !canDiagnostic
-                  ? "rgba(255,255,255,0.05)"
+                  ? "rgba(255,255,255,0.04)"
                   : mode === "diagnostic"
-                  ? "rgba(168,107,255,0.55)"
-                  : "rgba(255,255,255,0.09)"
+                  ? "rgba(255,255,255,0.14)"
+                  : "rgba(255,255,255,0.07)"
               }`,
-              background: (mode === "diagnostic" && canDiagnostic)
-                ? "rgba(168,107,255,0.10)" : "#1c1c20",
+              background: (mode === "diagnostic" && canDiagnostic) ? "#1c1c20" : "rgba(255,255,255,0.05)",
               color: !canDiagnostic
-                ? "rgba(255,255,255,0.18)"
+                ? "rgba(255,255,255,0.15)"
                 : mode === "diagnostic"
-                ? "rgba(235,235,245,0.90)"
-                : "rgba(255,255,255,0.40)",
+                ? "rgba(255,255,255,0.80)"
+                : "rgba(255,255,255,0.35)",
               fontSize: 12, fontWeight: (mode === "diagnostic" && canDiagnostic) ? 600 : 400,
               cursor: canDiagnostic ? "pointer" : "default",
-              opacity: canDiagnostic ? 1 : 0.45,
+              opacity: canDiagnostic ? 1 : 0.40,
               transition: "all 0.15s",
             }}
           >

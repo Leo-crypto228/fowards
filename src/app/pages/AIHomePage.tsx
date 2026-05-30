@@ -63,7 +63,7 @@ export function AIHomePage() {
   const [mode,          setMode]          = useState<ChatMode>("normal");
   const [photo,         setPhoto]         = useState<string | null>(null);
 
-  const inputRef   = useRef<HTMLInputElement>(null);
+  const inputRef    = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Data load ────────────────────────────────────────────────────────────────
@@ -119,31 +119,25 @@ export function AIHomePage() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image trop lourde (max 5 Mo)");
-      return;
-    }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image trop lourde (max 5 Mo)"); return; }
     const reader = new FileReader();
-    reader.onload = () => {
-      setPhoto(reader.result as string);
-      incrementPhotoQuota();
-    };
+    reader.onload = () => { setPhoto(reader.result as string); incrementPhotoQuota(); };
     reader.readAsDataURL(file);
     e.target.value = "";
   }
 
-  // ── Derived state ─────────────────────────────────────────────────────────────
+  // ── Derived ──────────────────────────────────────────────────────────────────
   const isPhase1Complete = quota?.isPhase1Complete ?? true;
   const canDiagnostic    = isPhase1Complete && (!quota || quota.canSendDiagnostic);
   const hasText          = text.trim().length > 0;
-  const hasConvs         = !loading && isPhase1Complete && conversations.length > 0;
   const canSend          = hasText || !!photo;
+  // Max 4 conversations affichées — pas de scroll sur la liste
+  const hasConvs  = !loading && isPhase1Complete && conversations.length > 0;
+  const shownConvs = conversations.slice(0, 4);
 
-  // ── Quota label ───────────────────────────────────────────────────────────────
-  function quotaLabel(): string | null {
+  function quotaLabel() {
     if (!quota) return null;
     if (!quota.canSendNormal) return "Quota atteint";
-    if (quota.normalRemaining <= 0) return "Quota atteint";
     return `${quota.normalRemaining} message${quota.normalRemaining > 1 ? "s" : ""} restant${quota.normalRemaining > 1 ? "s" : ""}`;
   }
 
@@ -153,9 +147,10 @@ export function AIHomePage() {
       height: "100dvh",
       background: "#0a0a10",
       display: "flex", flexDirection: "column",
-      position: "relative", overflow: "hidden",
+      position: "relative",
+      overflow: "hidden",   /* ← toute la page : jamais de scroll */
     }}>
-      {/* SVG filter — remove black pixels from mascot */}
+      {/* SVG filter */}
       <svg style={{ position: "absolute", width: 0, height: 0 }}>
         <defs>
           <filter id="ai-rm-black">
@@ -165,7 +160,7 @@ export function AIHomePage() {
         </defs>
       </svg>
 
-      {/* Halos */}
+      {/* Halos background */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
         background:
@@ -185,20 +180,18 @@ export function AIHomePage() {
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "calc(env(safe-area-inset-top, 0px) + 10px) 18px 4px",
       }}>
-        {/* Quota pill */}
         {quota ? (
           <div style={{
             fontSize: 11.5, fontWeight: 500,
-            color: quota.canSendNormal ? "rgba(255,255,255,0.45)" : "rgba(239,100,100,0.80)",
-            background: quota.canSendNormal ? "rgba(255,255,255,0.06)" : "rgba(239,68,68,0.10)",
-            border: `1px solid ${quota.canSendNormal ? "rgba(255,255,255,0.09)" : "rgba(239,68,68,0.25)"}`,
+            color: quota.canSendNormal ? "rgba(255,255,255,0.42)" : "rgba(239,100,100,0.80)",
+            background: quota.canSendNormal ? "rgba(255,255,255,0.05)" : "rgba(239,68,68,0.10)",
+            border: `1px solid ${quota.canSendNormal ? "rgba(255,255,255,0.08)" : "rgba(239,68,68,0.25)"}`,
             borderRadius: 999, padding: "4px 11px",
           }}>
             {quotaLabel()}
           </div>
         ) : <div/>}
 
-        {/* Robot → profil IA */}
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={() => navigate("/ai/profile")}
@@ -215,12 +208,11 @@ export function AIHomePage() {
         </motion.button>
       </div>
 
-      {/* ── Body (scrollable) ───────────────────────────────────────────────── */}
+      {/* ── Body — flex 1, NO scroll ────────────────────────────────────────── */}
       <div style={{
-        flex: 1, overflowY: "auto",
-        position: "relative", zIndex: 1,
+        flex: 1, position: "relative", zIndex: 1,
         display: "flex", flexDirection: "column",
-        WebkitOverflowScrolling: "touch" as any,
+        overflow: "hidden",   /* ← jamais de scroll ici non plus */
       }}>
         {/* Hero */}
         <div style={{
@@ -228,11 +220,10 @@ export function AIHomePage() {
           display: "flex", flexDirection: "column",
           alignItems: "center", justifyContent: "center",
           textAlign: "center",
-          padding: hasConvs ? "14px 22px 10px" : "0 22px 32px",
+          padding: hasConvs ? "16px 22px 10px" : "0 22px 32px",
         }}>
           <motion.img
-            src={mascot}
-            alt=""
+            src={mascot} alt=""
             animate={{ y: [0, -9, 0] }}
             transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
             style={{
@@ -264,14 +255,14 @@ export function AIHomePage() {
           </p>
         </div>
 
-        {/* Conversation history */}
+        {/* Conversations — max 4, pas de scroll */}
         {hasConvs && (
-          <div style={{ padding: "0 18px 12px", flex: 1 }}>
+          <div style={{ padding: "0 18px 0", flex: 1, overflow: "hidden" }}>
             <p style={{
               fontSize: 11, color: "rgba(255,255,255,0.22)",
-              margin: "0 0 10px", fontWeight: 600, letterSpacing: 0.8,
+              margin: "0 0 8px", fontWeight: 600, letterSpacing: 0.8,
             }}>CONVERSATIONS</p>
-            {conversations.map((conv, i) => (
+            {shownConvs.map((conv, i) => (
               <motion.div
                 key={conv.id}
                 initial={{ opacity: 0 }}
@@ -279,7 +270,7 @@ export function AIHomePage() {
                 transition={{ delay: i * 0.03 }}
                 onClick={() => navigate(`/ai/${conv.id}`)}
                 style={{
-                  padding: "13px 0",
+                  padding: "11px 0",
                   borderBottom: "0.5px solid rgba(255,255,255,0.07)",
                   cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -306,18 +297,28 @@ export function AIHomePage() {
         )}
 
         {loading && (
-          <div style={{ display: "flex", justifyContent: "center", paddingTop: 24 }}>
+          <div style={{ display: "flex", justifyContent: "center", paddingTop: 20, flexShrink: 0 }}>
             <div style={{
-              width: 18, height: 18, borderRadius: "50%",
+              width: 16, height: 16, borderRadius: "50%",
               border: "2px solid rgba(255,255,255,0.06)",
               borderTop: "2px solid rgba(255,255,255,0.35)",
               animation: "ai-spin 0.7s linear infinite",
             }}/>
           </div>
         )}
+
+        {/* Dégradé de transition vers le dock noir ↓ */}
+        <div style={{
+          position: "absolute",
+          bottom: 0, left: 0, right: 0,
+          height: 90,
+          background: "linear-gradient(to bottom, transparent 0%, #000 100%)",
+          pointerEvents: "none",
+          zIndex: 4,
+        }}/>
       </div>
 
-      {/* ── Dock ─────────────────────────────────────────────────────────────── */}
+      {/* ── Dock (fond noir) ─────────────────────────────────────────────────── */}
       <div style={{
         position: "relative", zIndex: 10, flexShrink: 0,
         background: "#000",
@@ -325,13 +326,18 @@ export function AIHomePage() {
       }}>
         {/* Mode pills */}
         <div style={{ display: "flex", gap: 8, padding: "10px 16px 10px" }}>
+          {/*
+            Inactif  : fond légèrement plus clair que la barre (#1c1c20)
+            Actif    : même couleur que la barre (#1c1c20)
+            Aucun violet.
+          */}
           <button
             onClick={() => setMode("normal")}
             style={{
               flex: 1, height: 32, borderRadius: 999, cursor: "pointer",
-              border: `1px solid ${mode === "normal" ? "rgba(168,107,255,0.55)" : "rgba(255,255,255,0.09)"}`,
-              background: mode === "normal" ? "rgba(168,107,255,0.10)" : "#1c1c20",
-              color: mode === "normal" ? "rgba(235,235,245,0.90)" : "rgba(255,255,255,0.40)",
+              border: `1px solid ${mode === "normal" ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)"}`,
+              background: mode === "normal" ? "#1c1c20" : "rgba(255,255,255,0.05)",
+              color: mode === "normal" ? "rgba(255,255,255,0.80)" : "rgba(255,255,255,0.35)",
               fontSize: 12, fontWeight: mode === "normal" ? 600 : 400,
               transition: "all 0.15s",
             }}
@@ -343,21 +349,23 @@ export function AIHomePage() {
               flex: 1, height: 32, borderRadius: 999,
               border: `1px solid ${
                 (!isPhase1Complete || !canDiagnostic)
-                  ? "rgba(255,255,255,0.05)"
+                  ? "rgba(255,255,255,0.04)"
                   : mode === "diagnostic"
-                  ? "rgba(168,107,255,0.55)"
-                  : "rgba(255,255,255,0.09)"
+                  ? "rgba(255,255,255,0.14)"
+                  : "rgba(255,255,255,0.07)"
               }`,
               background: (mode === "diagnostic" && isPhase1Complete && canDiagnostic)
-                ? "rgba(168,107,255,0.10)" : "#1c1c20",
+                ? "#1c1c20"
+                : "rgba(255,255,255,0.05)",
               color: (!isPhase1Complete || !canDiagnostic)
-                ? "rgba(255,255,255,0.18)"
+                ? "rgba(255,255,255,0.15)"
                 : mode === "diagnostic"
-                ? "rgba(235,235,245,0.90)"
-                : "rgba(255,255,255,0.40)",
-              fontSize: 12, fontWeight: (mode === "diagnostic" && isPhase1Complete) ? 600 : 400,
+                ? "rgba(255,255,255,0.80)"
+                : "rgba(255,255,255,0.35)",
+              fontSize: 12,
+              fontWeight: (mode === "diagnostic" && isPhase1Complete) ? 600 : 400,
               cursor: (isPhase1Complete && canDiagnostic) ? "pointer" : "default",
-              opacity: isPhase1Complete ? 1 : 0.45,
+              opacity: isPhase1Complete ? 1 : 0.40,
               transition: "all 0.15s",
             }}
           >Diagnostic</button>
@@ -365,15 +373,12 @@ export function AIHomePage() {
 
         {/* Composer */}
         <div style={{ padding: "0 16px" }}>
-          {/* Hidden file input */}
           <input
             ref={fileInputRef}
-            type="file"
-            accept="image/*"
+            type="file" accept="image/*"
             onChange={handleFileChange}
             style={{ display: "none" }}
           />
-
           <div style={{
             borderRadius: 30, padding: "6px 6px 6px 8px",
             background: "#1c1c20",
@@ -384,33 +389,26 @@ export function AIHomePage() {
             {/* + / photo thumbnail */}
             {photo ? (
               <div style={{ position: "relative", flexShrink: 0 }}>
-                <img
-                  src={photo}
-                  alt=""
-                  style={{ width: 42, height: 42, borderRadius: 12, objectFit: "cover", display: "block" }}
-                />
-                <button
-                  onClick={() => setPhoto(null)}
-                  style={{
-                    position: "absolute", top: -5, right: -5,
-                    width: 17, height: 17, borderRadius: "50%",
-                    background: "rgba(0,0,0,0.85)", border: "1px solid rgba(255,255,255,0.20)",
-                    color: "#fff", fontSize: 9, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    lineHeight: 1,
-                  }}
-                >×</button>
+                <img src={photo} alt="" style={{
+                  width: 42, height: 42, borderRadius: 12,
+                  objectFit: "cover", display: "block",
+                }}/>
+                <button onClick={() => setPhoto(null)} style={{
+                  position: "absolute", top: -5, right: -5,
+                  width: 17, height: 17, borderRadius: "50%",
+                  background: "rgba(0,0,0,0.85)", border: "1px solid rgba(255,255,255,0.20)",
+                  color: "#fff", fontSize: 9, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  lineHeight: 1,
+                }}>×</button>
               </div>
             ) : (
-              <button
-                onClick={handlePlusClick}
-                style={{
-                  width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-                  border: "none", background: "transparent", cursor: "pointer", padding: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "rgba(233,233,245,0.40)", fontSize: 24, lineHeight: 1,
-                }}
-              >+</button>
+              <button onClick={handlePlusClick} style={{
+                width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+                border: "none", background: "transparent", cursor: "pointer", padding: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "rgba(233,233,245,0.40)", fontSize: 24, lineHeight: 1,
+              }}>+</button>
             )}
 
             {/* Input */}
@@ -442,7 +440,7 @@ export function AIHomePage() {
               </svg>
             </button>
 
-            {/* Send — toujours violet, flèche, s'active quand canSend */}
+            {/* Send violet — toujours visible */}
             <motion.button
               whileTap={canSend ? { scale: 0.88 } : {}}
               onClick={() => { if (canSend) handleSend(); }}
