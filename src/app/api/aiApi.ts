@@ -155,6 +155,16 @@ export async function sendMessageStream(
     throw err;
   }
 
+  // Fallback : si l'edge function renvoie du JSON classique (ancien déploiement sans streaming),
+  // on simule un seul chunk avec le message complet → compatibilité garantie
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const data = await res.json() as ChatResponse;
+    onChunk(data.message ?? "");
+    return data;
+  }
+
+  // Chemin streaming SSE
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -173,18 +183,22 @@ export async function sendMessageStream(
       const jsonStr = line.slice(6).trim();
       if (!jsonStr) continue;
 
-      let event: Record<string, unknown>;
-      try { event = JSON.parse(jsonStr); } catch { continue; }
+      try {
+        const event = JSON.parse(jsonStr) as Record<string, unknown>;
 
-      if (event.error) throw new Error(event.error as string);
+        if (event.error) throw new Error(event.error as string);
 
-      if (typeof event.chunk === "string") {
-        accText += event.chunk;
-        onChunk(accText);
-      }
+        if (typeof event.chunk === "string") {
+          accText += event.chunk;
+          onChunk(accText);
+        }
 
-      if (event.done === true) {
-        return event as unknown as ChatResponse;
+        if (event.done === true) {
+          return event as unknown as ChatResponse;
+        }
+      } catch (e) {
+        if (e instanceof SyntaxError) continue; // ligne SSE malformée
+        throw e; // vraie erreur (event.error)
       }
     }
   }
