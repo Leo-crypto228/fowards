@@ -19,7 +19,9 @@ function fetchT(url: string, options: RequestInit, ms = 15_000): Promise<Respons
 }
 
 const RESEND_COOLDOWN = 60;
-const CODE_LENGTH = 8;
+// Signup = code 8 chiffres custom (serveur), Login = code 6 chiffres Supabase natif
+const CODE_LENGTH_SIGNUP = 8;
+const CODE_LENGTH_LOGIN  = 6;
 
 export function VerifyEmailPage() {
   const location  = useLocation();
@@ -63,6 +65,7 @@ export function VerifyEmailPage() {
   }, [email, authLoading, navigate]);
 
   // ── Code state ─────────────────────────────────────────────────────────────
+  const CODE_LENGTH = mode === "login" ? CODE_LENGTH_LOGIN : CODE_LENGTH_SIGNUP;
   const [digits, setDigits]       = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const [verifying, setVerifying] = useState(false);
   const [verified,  setVerified]  = useState(false);
@@ -98,22 +101,28 @@ export function VerifyEmailPage() {
     setResendError(null);
 
     try {
-      const res = await fetchT(`${BASE}/auth/verify-otp`, {
-        method: "POST",
-        headers: HEADERS,
-        body: JSON.stringify({ email, code }),
-      });
-      const data = await res.json();
+      if (mode === "login") {
+        // Login : vérification native Supabase (signInWithOtp → verifyOtp)
+        const { error: verifyErr } = await supabase.auth.verifyOtp({
+          email,
+          token: code,
+          type: "email",
+        });
+        if (verifyErr) throw new Error(verifyErr.message);
+      } else {
+        // Signup : vérification via le serveur (code 8 chiffres custom)
+        const res = await fetchT(`${BASE}/auth/verify-otp`, {
+          method: "POST",
+          headers: HEADERS,
+          body: JSON.stringify({ email, code }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Code incorrect ou expiré.");
 
-      if (!res.ok) {
-        throw new Error(data.error || "Code incorrect ou expiré.");
+        const { access_token, refresh_token } = data;
+        const { error: sessionErr } = await supabase.auth.setSession({ access_token, refresh_token });
+        if (sessionErr) throw new Error(`Erreur session: ${sessionErr.message}`);
       }
-
-      const { access_token, refresh_token } = data;
-
-      // Injecter la session dans le client Supabase → AuthContext se met à jour automatiquement
-      const { error: sessionErr } = await supabase.auth.setSession({ access_token, refresh_token });
-      if (sessionErr) throw new Error(`Erreur session: ${sessionErr.message}`);
 
       setVerified(true);
       sessionStorage.removeItem("ff_verify_email");
@@ -125,6 +134,10 @@ export function VerifyEmailPage() {
       const msg =
         low.includes("aborted") || low.includes("abort") || low.includes("load failed") || low.includes("failed to fetch")
           ? "Connexion au serveur impossible. Vérifie ta connexion et réessaie."
+          : low.includes("token") && low.includes("invalid")
+          ? "Code incorrect ou expiré. Demande un nouveau code."
+          : low.includes("expired")
+          ? "Code expiré. Clique sur « Renvoyer le code »."
           : raw;
       setVerifyError(msg);
       // Vider les cases + refocus
@@ -133,7 +146,7 @@ export function VerifyEmailPage() {
     } finally {
       setVerifying(false);
     }
-  }, [verifying, verified, email]);
+  }, [verifying, verified, email, mode, CODE_LENGTH]);
 
   // ── Gestion des inputs ─────────────────────────────────────────────────────
   const handleChange = (index: number, value: string) => {
@@ -197,19 +210,26 @@ export function VerifyEmailPage() {
     setVerifyError(null);
 
     try {
-      const res = await fetchT(`${BASE}/auth/resend-otp`, {
-        method: "POST",
-        headers: HEADERS,
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        // Transformer le message de rate limit Supabase en message user-friendly
-        const raw = data.error || "Erreur lors du renvoi.";
-        const isRateLimit = raw.toLowerCase().includes("security purposes") || raw.toLowerCase().includes("seconds");
-        throw new Error(isRateLimit
-          ? "Patiente quelques secondes avant de renvoyer un code."
-          : raw);
+      if (mode === "login") {
+        // Login : signInWithOtp natif Supabase (pas de dépendance Resend)
+        const { error: otpErr } = await supabase.auth.signInWithOtp({
+          email,
+          options: { shouldCreateUser: false },
+        });
+        if (otpErr) throw new Error(otpErr.message);
+      } else {
+        // Signup : renvoyer via le serveur (code 8 chiffres custom)
+        const res = await fetchT(`${BASE}/auth/resend-otp`, {
+          method: "POST",
+          headers: HEADERS,
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const raw = data.error || "Erreur lors du renvoi.";
+          const isRateLimit = raw.toLowerCase().includes("security purposes") || raw.toLowerCase().includes("seconds");
+          throw new Error(isRateLimit ? "Patiente quelques secondes avant de renvoyer un code." : raw);
+        }
       }
 
       setResendSuccess(true);
@@ -225,12 +245,14 @@ export function VerifyEmailPage() {
       setResendError(
         low.includes("aborted") || low.includes("abort") || low.includes("load failed") || low.includes("failed to fetch")
           ? "Connexion au serveur impossible. Vérifie ta connexion et réessaie."
+          : low.includes("rate limit") || low.includes("security purposes") || low.includes("seconds")
+          ? "Trop de tentatives. Attends quelques minutes avant de renvoyer."
           : raw,
       );
     } finally {
       setResending(false);
     }
-  }, [resending, countdown, email]);
+  }, [resending, countdown, email, mode, CODE_LENGTH]);
 
   // ── UI ─────────────────────────────────────────────────────────────────────
   const maskEmail = (e: string) => {
@@ -335,7 +357,7 @@ export function VerifyEmailPage() {
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", margin: "0 0 4px", lineHeight: 1.6 }}>
             {verified
               ? "Tu vas être redirigé…"
-              : "Code à 8 chiffres envoyé à"}
+              : `Code à ${CODE_LENGTH} chiffres envoyé à`}
           </p>
           {!verified && (
             <p style={{

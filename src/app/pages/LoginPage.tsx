@@ -877,13 +877,12 @@ function LoginOtpPanel({ onBack }: { onBack: () => void }) {
 
     setPending(true);
     try {
-      const res = await fetchT(`${BASE}/auth/resend-otp`, {
-        method: "POST",
-        headers: HEADERS,
-        body: JSON.stringify({ email: trimmed }),
+      // Utilise le signInWithOtp natif Supabase (6 chiffres) — ne dépend pas de Resend
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: trimmed,
+        options: { shouldCreateUser: false },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+      if (otpErr) throw new Error(otpErr.message);
 
       sessionStorage.setItem("ff_verify_email", trimmed);
       sessionStorage.setItem("ff_verify_mode", "login");
@@ -891,14 +890,13 @@ function LoginOtpPanel({ onBack }: { onBack: () => void }) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Une erreur est survenue.";
       const low = msg.toLowerCase();
-      if (low.includes("load failed") || low.includes("failed to fetch") || low.includes("network") || low.includes("aborted") || low.includes("abort")) {
+      if (low.includes("load failed") || low.includes("failed to fetch") || low.includes("network") || low.includes("aborted")) {
         setError("Connexion au serveur impossible. Vérifie ta connexion et réessaie.");
-      } else if (low.includes("security purposes") || low.includes("seconds")) {
-        setError("Patiente quelques secondes avant de renvoyer un code.");
-      } else if (low.includes("rate limit") || low.includes("too many")) {
-        setError("Trop de tentatives. Attends quelques secondes et réessaie.");
+      } else if (low.includes("security purposes") || low.includes("seconds") || low.includes("rate limit") || low.includes("too many")) {
+        setError("Trop de tentatives. Attends quelques minutes et réessaie.");
+      } else if (low.includes("user not found") || low.includes("invalid login") || low.includes("no user")) {
+        setError("Aucun compte trouvé avec cet email. Inscris-toi d'abord.");
       } else {
-        // Affiche le message réel du serveur pour aider au debug (ex: Resend API error)
         setError(msg || "Une erreur est survenue. Réessaie.");
       }
     } finally {
@@ -907,7 +905,7 @@ function LoginOtpPanel({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <PanelWrapper onBack={onBack} title="Connexion par code" subtitle="Saisis ton email pour recevoir un code à 8 chiffres.">
+    <PanelWrapper onBack={onBack} title="Connexion par code" subtitle="Saisis ton email pour recevoir un code à 6 chiffres.">
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <Field label="Email">
           <div style={{ position: "relative" }}>
