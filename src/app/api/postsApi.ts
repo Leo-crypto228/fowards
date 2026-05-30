@@ -8,6 +8,13 @@ const HEADERS = {
   Authorization: `Bearer ${publicAnonKey}`,
 };
 
+// Fetch avec timeout de 20s (upload vidéo/vocal peut être lent)
+function fetchT(url: string, options: RequestInit, ms = 20_000): Promise<Response> {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 export type PostType =
   | "avancee"
   | "question"
@@ -85,14 +92,15 @@ export interface CreatePostPayload {
 
 // Crée un nouveau post
 export async function createPost(payload: CreatePostPayload): Promise<{ success: boolean; post: ApiPost }> {
-  const res = await fetch(`${BASE}/posts`, {
+  const res = await fetchT(`${BASE}/posts`, {
     method: "POST",
     headers: HEADERS,
     body: JSON.stringify(payload),
   });
-  const data = await res.json();
+  let data: { error?: string; success?: boolean; post?: ApiPost };
+  try { data = await res.json(); } catch { throw new Error(`Erreur serveur: ${res.status}`); }
   if (!res.ok) throw new Error(data.error || `Erreur serveur: ${res.status}`);
-  return data;
+  return data as { success: boolean; post: ApiPost };
 }
 
 // Récupère tous les posts (les plus récents en premier)
