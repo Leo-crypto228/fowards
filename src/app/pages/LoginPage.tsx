@@ -888,17 +888,9 @@ function LoginOtpPanel({ onBack }: { onBack: () => void }) {
       sessionStorage.setItem("ff_verify_mode", "login");
       navigate("/verify-email", { state: { email: trimmed, mode: "login" } });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Une erreur est survenue.";
-      const low = msg.toLowerCase();
-      if (low.includes("load failed") || low.includes("failed to fetch") || low.includes("network") || low.includes("aborted")) {
-        setError("Connexion au serveur impossible. Vérifie ta connexion et réessaie.");
-      } else if (low.includes("security purposes") || low.includes("seconds") || low.includes("rate limit") || low.includes("too many")) {
-        setError("Trop de tentatives. Attends quelques minutes et réessaie.");
-      } else if (low.includes("user not found") || low.includes("invalid login") || low.includes("no user")) {
-        setError("Aucun compte trouvé avec cet email. Inscris-toi d'abord.");
-      } else {
-        setError(msg || "Une erreur est survenue. Réessaie.");
-      }
+      // DEBUG temporaire : affiche le message brut pour diagnostiquer
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`[DEBUG] ${msg}`);
     } finally {
       setPending(false);
     }
