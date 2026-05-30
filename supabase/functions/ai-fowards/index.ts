@@ -48,6 +48,7 @@ const DIAGNOSTIC_BASE_LIMIT = 1;
 const DIAGNOSTIC_MAX_LIMIT  = 2;
 const GEMINI_MODEL          = "gemini-2.5-flash";
 const GEMINI_URL            = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_STREAM_URL     = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
 
 // ── V7 startup log ────────────────────────────────────────────────────────────
 console.log(`[V7] Prompt loaded: ${FOWARDS_SYSTEM_PROMPT.length} chars`);
@@ -635,6 +636,7 @@ app.post("/ai-fowards/chat", async (c) => {
     message: string;
     mode: ChatMode;
     is_onboarding_trigger?: boolean;
+    stream?: boolean;
   };
 
   try {
@@ -643,7 +645,7 @@ app.post("/ai-fowards/chat", async (c) => {
     return c.json({ error: "Corps de requête invalide" }, 400);
   }
 
-  const { conversationId, message, mode, is_onboarding_trigger } = body;
+  const { conversationId, message, mode, is_onboarding_trigger, stream: streamMode } = body;
 
   if (!message?.trim()) return c.json({ error: "Message vide" }, 400);
   if (mode !== "normal" && mode !== "diagnostic") {
@@ -742,7 +744,137 @@ app.post("/ai-fowards/chat", async (c) => {
 
     const messageWithContext = `${userContext}\n\n${onboardingPrefix}${modePrefix} ${message.trim()}`;
 
-    // ── Appel Gemini ──────────────────────────────────────────────────────────
+    // ── Streaming SSE — retourner un ReadableStream si demandé ───────────────
+    if (streamMode) {
+      const encoder = new TextEncoder();
+
+      const readableStream = new ReadableStream({
+        async start(controller) {
+          try {
+            const apiKey = Deno.env.get("GEMINI_API_KEY");
+            if (!apiKey) throw new Error("GEMINI_API_KEY manquante côté serveur");
+
+            const geminiContents: GeminiContent[] = [
+              ...geminiHistory,
+              { role: "user", parts: [{ text: messageWithContext }] },
+            ];
+            const geminiBody = {
+              system_instruction: { parts: [{ text: FOWARDS_SYSTEM_PROMPT }] },
+              contents: geminiContents,
+              generationConfig: { temperature: 1, maxOutputTokens: 8192 },
+            };
+
+            const geminiRes = await fetch(GEMINI_STREAM_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+              body: JSON.stringify(geminiBody),
+            });
+
+            if (!geminiRes.ok) {
+              const errText = await geminiRes.text();
+              let geminiMsg = `Gemini ${geminiRes.status}`;
+              try { const e = JSON.parse(errText); geminiMsg = e?.error?.message ?? geminiMsg; } catch { geminiMsg = errText.slice(0, 200) || geminiMsg; }
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: geminiMsg })}\n\n`));
+              controller.close();
+              return;
+            }
+
+            const reader = geminiRes.body!.getReader();
+            const dec = new TextDecoder();
+            let lineBuf = "";
+            let fullText = "";
+            let tokensInput = 0;
+            let tokensOutput = 0;
+
+            // Lire le stream SSE de Gemini et le relayer chunk par chunk
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              lineBuf += dec.decode(value, { stream: true });
+              const lines = lineBuf.split("\n");
+              lineBuf = lines.pop() ?? "";
+              for (const line of lines) {
+                if (!line.startsWith("data: ")) continue;
+                const jsonStr = line.slice(6).trim();
+                if (!jsonStr) continue;
+                try {
+                  const event = JSON.parse(jsonStr) as GeminiResponse;
+                  const chunk = event.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+                  if (chunk) {
+                    fullText += chunk;
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
+                  }
+                  if (event.usageMetadata) {
+                    tokensInput = event.usageMetadata.promptTokenCount ?? 0;
+                    tokensOutput = event.usageMetadata.candidatesTokenCount ?? 0;
+                  }
+                } catch { /* ligne SSE malformée — ignorer */ }
+              }
+            }
+
+            if (!fullText) throw new Error("Gemini: réponse vide");
+
+            // Post-traitement (identique au chemin non-streaming)
+            const { cleanContent, forwardsData, profileUpdate, choices: sChoices } = parseGeminiResponse(fullText);
+
+            let isPhase1JustCompleted = false;
+            if (profileUpdate) {
+              const result = await applyProfileUpdate(userId, profileUpdate, profile);
+              isPhase1JustCompleted = result.isPhase1JustCompleted;
+            }
+
+            const now = new Date().toISOString();
+            await supabaseAdmin.from("messages").insert([
+              { conversation_id: convId, user_id: userId, role: "user", content: message.trim(), mode, fowards_data: null, tokens_input: null, tokens_output: null, created_at: now },
+              { conversation_id: convId, user_id: userId, role: "assistant", content: cleanContent, mode, fowards_data: forwardsData, tokens_input: tokensInput, tokens_output: tokensOutput, created_at: new Date(Date.now() + 1).toISOString() },
+            ]);
+
+            const sLastPreview = cleanContent.replace(/\n+/g, " ").slice(0, 120);
+            const sNewMsgCount = (historyRows?.length ?? 0) + 2;
+            const sConvUpdate: Record<string, unknown> = { last_message_at: now, message_count: sNewMsgCount, last_message_preview: sLastPreview };
+            if (mode === "diagnostic") sConvUpdate.has_final_diagnostic = true;
+            await supabaseAdmin.from("conversations").update(sConvUpdate).eq("id", convId);
+
+            const sToday = new Date().toISOString().split("T")[0];
+            if (mode === "normal") {
+              await supabaseAdmin.from("user_quotas").update({ normal_messages_used: quota.normal_messages_used + 1 }).eq("user_id", userId).eq("quota_date", sToday);
+            } else {
+              await supabaseAdmin.from("user_quotas").update({ diagnostics_used: quota.diagnostics_used + 1 }).eq("user_id", userId).eq("quota_date", sToday);
+            }
+
+            const sFinalPhase1Complete = isPhase1JustCompleted || profile.is_phase1_complete;
+            const sUpdatedQuota = await getOrCreateQuota(userId);
+
+            const finalEvent = {
+              done: true,
+              conversationId: convId,
+              message: cleanContent,
+              forwardsData: forwardsData ?? null,
+              choices: sChoices ?? null,
+              mode,
+              isPhase1JustCompleted,
+              quota: buildQuotaStatus(sUpdatedQuota, sFinalPhase1Complete),
+            };
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(finalEvent)}\n\n`));
+          } catch (err) {
+            try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: err instanceof Error ? err.message : "Erreur serveur" })}\n\n`)); } catch { /* déjà fermé */ }
+          } finally {
+            try { controller.close(); } catch { /* déjà fermé */ }
+          }
+        },
+      });
+
+      return new Response(readableStream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Access-Control-Allow-Origin": "*",
+          "Transfer-Encoding": "chunked",
+        },
+      });
+    }
+
+    // ── Appel Gemini (non-streaming) ──────────────────────────────────────────
     const { text: rawAiResponse, tokensInput, tokensOutput } = await callGemini(geminiHistory, messageWithContext);
 
     // ── Triple parsing (fowards-data, profile-update, choices) ────────────────
