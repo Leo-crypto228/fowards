@@ -50,8 +50,8 @@ const GEMINI_MODEL          = "gemini-2.5-flash";
 const GEMINI_URL            = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const GEMINI_STREAM_URL     = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
 
-// ── V7 startup log ────────────────────────────────────────────────────────────
-console.log(`[V7] Prompt loaded: ${FOWARDS_SYSTEM_PROMPT.length} chars`);
+// ── V8 startup log ────────────────────────────────────────────────────────────
+console.log(`[V8] Prompt loaded: ${FOWARDS_SYSTEM_PROMPT.length} chars`);
 
 // ── Auth helper — vérifie le JWT et retourne l'userId ────────────────────────
 async function getUserId(authHeader: string | undefined): Promise<string | null> {
@@ -353,6 +353,10 @@ async function callGemini(
     },
   };
 
+  // ── Diagnostic logs — vérification prompt + payload ──────────────────────
+  console.log("PROMPT SYSTÈME LENGTH:", FOWARDS_SYSTEM_PROMPT.length);
+  console.log("PAYLOAD system_instruction:", JSON.stringify(body.system_instruction?.parts[0]?.text?.substring(0, 200)));
+
   const res = await fetch(GEMINI_URL, {
     method: "POST",
     headers: {
@@ -419,14 +423,18 @@ function parseGeminiResponse(raw: string): ParsedResponse {
   // 2. <profile-update>
   const puMatches = [...raw.matchAll(RE_PROFILE_UPDATE)];
   if (puMatches.length > 0) {
+    console.log("PROFILE UPDATE DÉTECTÉ — contenu brut:", puMatches[0][1].slice(0, 300));
     try {
       // L'IA peut entourer le JSON de backticks markdown (```json ... ```) — on les strip
       let jsonStr = puMatches[0][1].trim();
       jsonStr = jsonStr.replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "").trim();
       profileUpdate = JSON.parse(jsonStr) as ProfileUpdateBlock;
+      console.log("PROFILE UPDATE PARSÉ — type:", profileUpdate.type);
     } catch (e) {
       console.error("[profile-update] JSON parse error:", e, "raw:", puMatches[0][1].slice(0, 200));
     }
+  } else {
+    console.log("PROFILE UPDATE: aucun bloc <profile-update> dans la réponse Gemini");
   }
   cleanContent = cleanContent.replace(RE_PROFILE_UPDATE, "");
   RE_PROFILE_UPDATE.lastIndex = 0;
@@ -731,6 +739,11 @@ app.post("/ai-fowards/chat", async (c) => {
         parts: [{ text: row.content }],
       }),
     );
+
+    // ── Diagnostic logs — vérification profil IA injecté ────────────────────
+    console.log("PROFIL IA TROUVÉ:", !!profile?.content_markdown);
+    console.log("PROFIL IA CONTENU:", profile?.content_markdown?.substring(0, 100));
+    console.log("PHASE 1 COMPLETE:", profile?.is_phase1_complete);
 
     // ── Injection contexte V8 (profil + mode + onboarding trigger) ───────────
     const userContext = buildUserContext(profile, mode);
