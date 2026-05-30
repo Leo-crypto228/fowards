@@ -54,6 +54,8 @@ export function Layout() {
   const isCreatePage = location.pathname === "/create";
   // /ai/new, /ai/:conversationId, /ai/profile — tout sauf /ai (liste)
   const isAiConversation = location.pathname.startsWith("/ai/");
+  // Page IA accueil — gère elle-même height + safe-area, main ne doit pas scroller
+  const isAIHome = location.pathname === "/ai";
   const hideNav = isPostDetail || isWaysViewer || isCreatePage || isAiConversation;
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const { unreadCount } = useNotifications();
@@ -168,11 +170,13 @@ export function Layout() {
 
       <main
         id="app-scroll"
-        className={`flex-1 overflow-y-auto overflow-x-hidden${hideNav ? "" : " fw-main"}`}
+        className={`flex-1 overflow-x-hidden${hideNav || isAIHome ? "" : " overflow-y-auto fw-main"}`}
         style={{
           minHeight: 0,
-          paddingTop: "env(safe-area-inset-top, 0px)",
-          paddingBottom: hideNav ? 0 : 60,
+          // Pour /ai : aucun padding, pas de scroll — la page gère elle-même tout son espace
+          paddingTop: isAIHome ? 0 : "env(safe-area-inset-top, 0px)",
+          paddingBottom: isAIHome ? 0 : (hideNav ? 0 : 60),
+          overflowY: isAIHome ? "hidden" : undefined,
           WebkitOverflowScrolling: "touch",
         } as React.CSSProperties}
       >

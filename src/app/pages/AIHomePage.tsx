@@ -183,9 +183,9 @@ export function AIHomePage() {
         {quota ? (
           <div style={{
             fontSize: 11.5, fontWeight: 500,
-            color: quota.canSendNormal ? "rgba(255,255,255,0.42)" : "rgba(239,100,100,0.80)",
-            background: quota.canSendNormal ? "rgba(255,255,255,0.05)" : "rgba(239,68,68,0.10)",
-            border: `1px solid ${quota.canSendNormal ? "rgba(255,255,255,0.08)" : "rgba(239,68,68,0.25)"}`,
+            color: "rgba(255,255,255,0.42)",
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.08)",
             borderRadius: 999, padding: "4px 11px",
           }}>
             {quotaLabel()}
@@ -319,10 +319,11 @@ export function AIHomePage() {
       </div>
 
       {/* ── Dock (fond noir) ─────────────────────────────────────────────────── */}
+      {/* paddingBottom = nav bar (56px) + home indicator + un peu d'air */}
       <div style={{
         position: "relative", zIndex: 10, flexShrink: 0,
         background: "#000",
-        paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))",
+        paddingBottom: "calc(56px + max(10px, env(safe-area-inset-bottom, 10px)))",
       }}>
         {/* Mode pills */}
         <div style={{ display: "flex", gap: 8, padding: "10px 16px 10px" }}>
