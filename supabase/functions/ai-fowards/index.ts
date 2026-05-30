@@ -24,6 +24,9 @@ import type {
 
 const app = new Hono();
 
+// ── Timeout max de la fonction (Deno Deploy / Supabase Edge) ──────────────────
+export const config = { maxDuration: 60 };
+
 // ── Supabase admin client ─────────────────────────────────────────────────────
 const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -44,7 +47,7 @@ app.use("/*", logger());
 
 // ── Log de démarrage par requête ──────────────────────────────────────────────
 app.use("/*", async (c, next) => {
-  console.log(`[REQUEST] ${c.req.method} ${c.req.path} — ts: ${Date.now()}`);
+  console.log(`START ${c.req.method} ${c.req.path} — ts: ${Date.now()}`);
   await next();
 });
 
@@ -331,18 +334,19 @@ async function applyProfileUpdate(
     patch.phase1_completed_at = now;
   }
 
+  // upsert (pas update) : safe si la row n'existe pas encore pour une raison quelconque
   const { error } = await supabaseAdmin
     .from("user_profile_page")
-    .update(patch)
-    .eq("user_id", userId);
+    .upsert({ user_id: userId, ...patch }, { onConflict: "user_id" });
 
   if (error) {
     console.error("[profile-update] UPSERT error:", JSON.stringify(error));
-    // BUG FIX: ne pas retourner isPhase1JustCompleted=true si le DB update a échoué
+    // Ne pas retourner isPhase1JustCompleted=true si le DB upsert a échoué
     return { isPhase1JustCompleted: false };
   }
 
   console.log(`[profile-update] Applied type=${update.type}, isPhase1JustCompleted=${isPhase1JustCompleted}`);
+  console.log("PROFIL SAUVEGARDÉ EN DB ✅");
 
   // Note : onboardingComplete dans le profil KV est mis à jour par le client
   // (OnboardingIAPage.completeOnboarding via upsertProfile) — pas besoin ici.
