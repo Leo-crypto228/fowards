@@ -9,6 +9,23 @@ function makeHeaders(accessToken?: string) {
   };
 }
 
+// Fetch avec timeout — évite les requêtes bloquées indéfiniment (cold start, réseau lent)
+function fetchT(url: string, options: RequestInit, ms = 15_000): Promise<Response> {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
+// Warm-up — réveille les deux edge functions en arrière-plan dès l'import du module
+// (appelé une seule fois au démarrage de l'app, pas d'await)
+(function warmUpEdgeFunctions() {
+  const anonHeader = { Authorization: `Bearer ${publicAnonKey}` };
+  fetch(`${BASE}/ping`, { headers: anonHeader }).catch(() => {});
+  fetch(`https://${projectId}.supabase.co/functions/v1/make-server-218684af/ping`, {
+    headers: anonHeader,
+  }).catch(() => {});
+})();
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ChatMode = "normal" | "diagnostic";
@@ -70,7 +87,7 @@ export interface ChatResponse {
 // ── API functions ─────────────────────────────────────────────────────────────
 
 export async function getQuotaStatus(accessToken: string): Promise<QuotaStatus> {
-  const res = await fetch(`${BASE}/quota-status`, {
+  const res = await fetchT(`${BASE}/quota-status`, {
     headers: makeHeaders(accessToken),
   });
   if (!res.ok) throw new Error(`quota-status ${res.status}`);
@@ -78,7 +95,7 @@ export async function getQuotaStatus(accessToken: string): Promise<QuotaStatus> 
 }
 
 export async function getConversations(accessToken: string): Promise<AiConversation[]> {
-  const res = await fetch(`${BASE}/conversations`, {
+  const res = await fetchT(`${BASE}/conversations`, {
     headers: makeHeaders(accessToken),
   });
   if (!res.ok) throw new Error(`conversations ${res.status}`);
@@ -90,7 +107,7 @@ export async function getConversation(
   accessToken: string,
   conversationId: string,
 ): Promise<{ conversation: AiConversation; messages: AiMessage[] }> {
-  const res = await fetch(`${BASE}/conversations/${conversationId}`, {
+  const res = await fetchT(`${BASE}/conversations/${conversationId}`, {
     headers: makeHeaders(accessToken),
   });
   if (!res.ok) throw new Error(`conversations/${conversationId} ${res.status}`);
@@ -210,7 +227,7 @@ export async function deleteConversation(
   accessToken: string,
   conversationId: string,
 ): Promise<void> {
-  const res = await fetch(`${BASE}/conversations/${conversationId}`, {
+  const res = await fetchT(`${BASE}/conversations/${conversationId}`, {
     method: "DELETE",
     headers: makeHeaders(accessToken),
   });
@@ -218,7 +235,7 @@ export async function deleteConversation(
 }
 
 export async function getProfile(accessToken: string): Promise<ProfilePage> {
-  const res = await fetch(`${BASE}/profile`, {
+  const res = await fetchT(`${BASE}/profile`, {
     headers: makeHeaders(accessToken),
   });
   if (!res.ok) throw new Error(`profile GET ${res.status}`);
@@ -229,7 +246,7 @@ export async function updateProfile(
   accessToken: string,
   contentMarkdown: string,
 ): Promise<void> {
-  const res = await fetch(`${BASE}/profile`, {
+  const res = await fetchT(`${BASE}/profile`, {
     method: "PUT",
     headers: makeHeaders(accessToken),
     body: JSON.stringify({ contentMarkdown }),

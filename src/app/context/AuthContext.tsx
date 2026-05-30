@@ -67,9 +67,9 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
   const authUsername = normalizeUsername(meta.username || supabaseUser.email?.split("@")[0] || "user");
   const nameDefault  = meta.name || meta.username || supabaseUser.email?.split("@")[0] || "Utilisateur";
 
-  // 5s timeout — évite de bloquer indéfiniment si le worker KV est lent/cold
+  // 3s timeout — évite de bloquer indéfiniment si le worker KV est lent/cold
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5000);
+  const timer = setTimeout(() => controller.abort(), 3000);
 
   try {
     // Les deux fetches en parallèle (gagne ~300-800ms sur le cas nominal)
@@ -245,9 +245,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Failsafe : si Supabase/réseau ne répond pas dans les 8s,
+    // Failsafe : si Supabase/réseau ne répond pas dans les 5s,
     // on force loading=false pour ne pas bloquer l'app indéfiniment.
-    const failsafe = setTimeout(() => setLoading(false), 8000);
+    const failsafe = setTimeout(() => setLoading(false), 5000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, sess) => {

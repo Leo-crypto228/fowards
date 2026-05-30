@@ -26,7 +26,11 @@ export function AIHomePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      // Pas encore authentifié — on attend max 6s avant d'afficher la page vide
+      const t = setTimeout(() => setLoading(false), 6000);
+      return () => clearTimeout(t);
+    }
     try {
       const [convs, q] = await Promise.all([
         getConversations(token),
@@ -41,6 +45,12 @@ export function AIHomePage() {
       setLoading(false);
     }
   }, [token]);
+
+  // Sécurité absolue : quoi qu'il arrive, loading disparaît après 10s
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 10_000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
