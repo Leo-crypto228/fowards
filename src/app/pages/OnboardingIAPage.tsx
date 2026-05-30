@@ -223,14 +223,14 @@ export function OnboardingIAPage() {
   // En onboarding : on ne bloque jamais sur le quota (is_onboarding_trigger bypass côté serveur)
   const inputDisabled = sending;
 
-  // Le bouton "Valider" apparaît dès que :
+  // Le bouton "Accéder à Fowards" apparaît dès que :
   //   a) le serveur confirme Phase 1 complete (isPhase1JustCompleted ou quota.isPhase1Complete)
-  //   b) OU l'IA a envoyé ≥ 14 messages (12 questions + récap + buffer), comme fallback
+  //   b) OU l'IA a envoyé ≥ 10 messages (fallback si le bloc <profile-update> est manqué)
   // Le bouton ET l'input coexistent — l'user peut toujours écrire même quand le bouton est visible
   const aiMessageCount = messages.filter(
     (m) => m.role === "assistant" && m.id !== "typing"
   ).length;
-  const showValidateButton = phase1Complete || aiMessageCount >= 14;
+  const showValidateButton = phase1Complete || aiMessageCount >= 10;
 
   // ── Rendu ─────────────────────────────────────────────────────────────────────
 
@@ -238,6 +238,9 @@ export function OnboardingIAPage() {
     <div style={{
       display: "flex", flexDirection: "column",
       height: "100dvh",
+      width: "100%",
+      maxWidth: 740,
+      margin: "0 auto",
       paddingTop: "env(safe-area-inset-top, 0px)",
       background: "#000",
       position: "relative",
@@ -260,7 +263,7 @@ export function OnboardingIAPage() {
 
       {/* ── Messages ──────────────────────────────────────────────────────── */}
       <div style={{
-        flex: 1, overflowY: "auto",
+        flex: 1, minHeight: 0, overflowY: "auto",
         padding: "60px 16px 8px",
         WebkitOverflowScrolling: "touch",
       } as React.CSSProperties}>
@@ -310,10 +313,10 @@ export function OnboardingIAPage() {
       </div>
 
       {/* ── Zone basse ────────────────────────────────────────────────────── */}
-      <div style={{ flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-        {/* Boutons choix Phase 1 */}
+      <div style={{ flexShrink: 0 }}>
+        {/* Boutons choix Phase 1 — masqués quand le bouton de validation est visible */}
         <AnimatePresence>
-          {currentChoices && !sending && (
+          {currentChoices && !sending && !showValidateButton && (
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -410,43 +413,46 @@ export function OnboardingIAPage() {
           )}
         </AnimatePresence>
 
-        {/* Bouton "Valider et accéder à Fowards" — affiché quand Phase 1 terminée */}
+        {/* Bouton "Accéder à Fowards" — pill compact, coin droit, juste au-dessus de l'input */}
         <AnimatePresence>
           {showValidateButton && (
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.28, ease: "easeOut" }}
+              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
               style={{
-                padding: "12px 16px",
-                borderTop: "0.5px solid rgba(255,255,255,0.08)",
+                display: "flex",
+                justifyContent: "flex-end",
+                padding: "6px 14px 4px",
                 background: "#000",
               }}
             >
               <motion.button
-                whileTap={{ scale: 0.97 }}
+                whileTap={{ scale: 0.93 }}
                 onClick={handleValidate}
                 style={{
-                  width: "100%",
-                  height: 52,
-                  borderRadius: 14,
+                  padding: "11px 22px",
+                  borderRadius: 999,
                   border: "none",
                   background: "#fff",
                   color: "#000",
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: 700,
                   cursor: "pointer",
                   letterSpacing: "-0.01em",
+                  boxShadow: "0 2px 20px rgba(255,255,255,0.18)",
+                  whiteSpace: "nowrap",
                 }}
               >
-                Valider et accéder à Fowards →
+                Accéder à Fowards →
               </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Input texte — toujours visible sauf si des choix sont affichés */}
-        {!currentChoices && (
+        {/* Input texte — visible quand pas de choix en cours OU quand le bouton de validation est affiché */}
+        {(!currentChoices || showValidateButton) && (
           <ChatInput
             onSend={(text) => handleSend(text)}
             disabled={inputDisabled}
