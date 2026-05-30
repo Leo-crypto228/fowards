@@ -227,24 +227,22 @@ export function AIProfilePage() {
                   </div>
                 )}
 
-                {/* Edit button — only shown if Phase 1 is complete */}
-                {profile.isPhase1Complete && (
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={startEdit}
-                    style={{
-                      marginTop: 16,
-                      width: "100%", height: 40,
-                      borderRadius: 10,
-                      border: "0.5px solid rgba(255,255,255,0.15)",
-                      background: "transparent",
-                      color: "rgba(235,235,245,0.5)",
-                      fontSize: 13, cursor: "pointer",
-                    }}
-                  >
-                    Modifier le profil
-                  </motion.button>
-                )}
+                {/* Bouton modifier — toujours accessible */}
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={startEdit}
+                  style={{
+                    marginTop: 16,
+                    width: "100%", height: 40,
+                    borderRadius: 10,
+                    border: "0.5px solid rgba(255,255,255,0.15)",
+                    background: "transparent",
+                    color: "rgba(235,235,245,0.5)",
+                    fontSize: 13, cursor: "pointer",
+                  }}
+                >
+                  Modifier le profil
+                </motion.button>
               </div>
             )}
           </>

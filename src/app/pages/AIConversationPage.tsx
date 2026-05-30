@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import {
   getConversation,
-  sendMessage,
+  sendMessageStream,
   type AiMessage,
   type QuotaStatus,
   type ChatMode,
@@ -77,49 +77,53 @@ export function AIConversationPage() {
     setCurrentChoices(null);
     setMultiSelected(new Set());
 
+    const tempUserId = `temp-${Date.now()}`;
+    const streamingAiId = `a-${Date.now() + 1}`;
+
     const tempUserMsg: AiMessage = {
-      id: `temp-${Date.now()}`,
-      role: "user",
-      content: text,
-      mode,
-      fowards_data: null,
-      created_at: new Date().toISOString(),
+      id: tempUserId, role: "user", content: text, mode,
+      fowards_data: null, created_at: new Date().toISOString(),
     };
     const typingMsg: AiMessage = {
-      id: "typing",
-      role: "assistant",
-      content: "…",
-      mode,
-      fowards_data: null,
-      created_at: new Date().toISOString(),
+      id: "typing", role: "assistant", content: "…", mode,
+      fowards_data: null, created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, tempUserMsg, typingMsg]);
 
     try {
-      const response = await sendMessage(token, {
+      const response = await sendMessageStream(token, {
         conversationId: activeConvId,
         message: text,
         mode,
+      }, (partialText) => {
+        setMessages((prev) => {
+          if (!prev.some((m) => m.id === streamingAiId)) {
+            return [
+              ...prev.filter((m) => m.id !== "typing"),
+              { id: streamingAiId, role: "assistant" as const, content: partialText, mode, fowards_data: null, created_at: new Date().toISOString() },
+            ];
+          }
+          return prev.map((m) => m.id === streamingAiId ? { ...m, content: partialText } : m);
+        });
       });
 
+      // Finaliser avec contenu propre
       setMessages((prev) => {
-        const base = prev.filter((m) => m.id !== "typing" && m.id !== tempUserMsg.id);
-        return [
-          ...base,
-          { id: `u-${Date.now()}`, role: "user" as const, content: text, mode, fowards_data: null, created_at: new Date().toISOString() },
-          { id: `a-${Date.now()}`, role: "assistant" as const, content: response.message, mode: response.mode, fowards_data: response.forwardsData, created_at: new Date(Date.now() + 1).toISOString() },
-        ];
+        const base = prev.filter((m) => m.id !== "typing" && m.id !== tempUserId);
+        return base.map((m) =>
+          m.id === streamingAiId
+            ? { ...m, content: response.message, fowards_data: response.forwardsData ?? null }
+            : m,
+        );
       });
 
       setQuota(response.quota);
 
-      // V6 — boutons de réponse Phase 1
       if (response.choices) {
         setCurrentChoices(response.choices);
         setMultiSelected(new Set());
       }
 
-      // V6 — Phase 1 vient de se terminer
       if (response.isPhase1JustCompleted) {
         toast("Profil créé ! Le Diagnostic est maintenant disponible.", {
           duration: 4000,
@@ -136,7 +140,7 @@ export function AIConversationPage() {
         window.history.replaceState(null, "", `/ai/${response.conversationId}`);
       }
     } catch (err: unknown) {
-      setMessages((prev) => prev.filter((m) => m.id !== "typing" && m.id !== tempUserMsg.id));
+      setMessages((prev) => prev.filter((m) => m.id !== "typing" && m.id !== tempUserId && m.id !== streamingAiId));
       const error = err as Error & { quotaExceeded?: boolean; quota?: QuotaStatus };
       toast.error(error.message ?? "Erreur lors de l'envoi", { duration: 4000 });
       if (error.quota) setQuota(error.quota);

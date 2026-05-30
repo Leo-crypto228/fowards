@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../context/AuthContext";
 import { upsertProfile } from "../api/profileApi";
 import {
-  sendMessage,
+  sendMessageStream,
   type AiMessage,
   type QuotaStatus,
   type ChoicesBlock,
@@ -67,23 +67,30 @@ export function OnboardingIAPage() {
     setTriggerError(null);
     setSending(true);
 
-    const typingMsg: AiMessage = {
-      id: "typing", role: "assistant", content: "…", mode: "normal",
-      fowards_data: null, created_at: new Date().toISOString(),
-    };
-    setMessages([typingMsg]);
+    const streamingId = `a-${Date.now()}`;
+    setMessages([{ id: "typing", role: "assistant", content: "…", mode: "normal", fowards_data: null, created_at: new Date().toISOString() }]);
 
     try {
-      console.log("[OnboardingIA] Déclenchement Phase 1…");
-      const response = await sendMessage(tok, {
+      console.log("[OnboardingIA] Déclenchement Phase 1 (streaming)…");
+      const response = await sendMessageStream(tok, {
         message: "Bonjour",
         mode: "normal",
         is_onboarding_trigger: true,
+      }, (partialText) => {
+        setMessages((prev) => {
+          if (!prev.some((m) => m.id === streamingId)) {
+            // Premier chunk — remplacer le typing indicator
+            return [{ id: streamingId, role: "assistant" as const, content: partialText, mode: "normal", fowards_data: null, created_at: new Date().toISOString() }];
+          }
+          return prev.map((m) => m.id === streamingId ? { ...m, content: partialText } : m);
+        });
       });
+
       console.log("[OnboardingIA] Phase 1 réponse reçue, convId=", response.conversationId);
 
+      // Finaliser avec le contenu nettoyé (sans les blocs XML)
       setMessages([{
-        id: `a-${Date.now()}`, role: "assistant" as const,
+        id: streamingId, role: "assistant" as const,
         content: response.message, mode: response.mode,
         fowards_data: response.forwardsData,
         created_at: new Date().toISOString(),
@@ -129,8 +136,11 @@ export function OnboardingIAPage() {
     setCurrentChoices(null);
     setMultiSelected(new Set());
 
+    const tempUserId = `temp-${Date.now()}`;
+    const streamingAiId = `a-${Date.now() + 1}`;
+
     const tempUser: AiMessage = {
-      id: `temp-${Date.now()}`, role: "user", content: text, mode: "normal",
+      id: tempUserId, role: "user", content: text, mode: "normal",
       fowards_data: null, created_at: new Date().toISOString(),
     };
     const typingMsg: AiMessage = {
@@ -140,24 +150,35 @@ export function OnboardingIAPage() {
     setMessages((prev) => [...prev, tempUser, typingMsg]);
 
     try {
-      const response = await sendMessage(token, {
+      const response = await sendMessageStream(token, {
         conversationId: activeConvId,
         message: text,
         mode: "normal",
-        is_onboarding_trigger: true, // bypass quota sur tous les messages d'onboarding
+        is_onboarding_trigger: true,
+      }, (partialText) => {
+        setMessages((prev) => {
+          if (!prev.some((m) => m.id === streamingAiId)) {
+            // Premier chunk — remplacer le typing indicator
+            return [
+              ...prev.filter((m) => m.id !== "typing"),
+              { id: streamingAiId, role: "assistant" as const, content: partialText, mode: "normal", fowards_data: null, created_at: new Date().toISOString() },
+            ];
+          }
+          return prev.map((m) => m.id === streamingAiId ? { ...m, content: partialText } : m);
+        });
       });
 
+      // Finaliser : contenu nettoyé + remplacer message temp user
       setMessages((prev) => {
-        const base = prev.filter((m) => m.id !== "typing" && m.id !== tempUser.id);
-        return [
-          ...base,
-          { id: `u-${Date.now()}`, role: "user" as const, content: text, mode: "normal", fowards_data: null, created_at: new Date().toISOString() },
-          { id: `a-${Date.now()}`, role: "assistant" as const, content: response.message, mode: response.mode, fowards_data: response.forwardsData, created_at: new Date(Date.now() + 1).toISOString() },
-        ];
+        const base = prev.filter((m) => m.id !== "typing" && m.id !== tempUserId);
+        return base.map((m) =>
+          m.id === streamingAiId
+            ? { ...m, content: response.message, fowards_data: response.forwardsData ?? null }
+            : m,
+        );
       });
 
       setQuota(response.quota);
-
       if (!activeConvId) setActiveConvId(response.conversationId);
 
       if (response.choices) {
@@ -166,13 +187,12 @@ export function OnboardingIAPage() {
       }
 
       // Phase 1 terminée → afficher le bouton de validation
-      // Fallback : quota.isPhase1Complete si le bloc <profile-update> a manqué
       if (response.isPhase1JustCompleted || response.quota.isPhase1Complete) {
         setCurrentChoices(null);
         setPhase1Complete(true);
       }
     } catch (err: unknown) {
-      setMessages((prev) => prev.filter((m) => m.id !== "typing" && m.id !== tempUser.id));
+      setMessages((prev) => prev.filter((m) => m.id !== "typing" && m.id !== tempUserId && m.id !== streamingAiId));
       const error = err as Error & { quota?: QuotaStatus };
       toast.error(error.message ?? "Erreur lors de l'envoi");
       if (error.quota) setQuota(error.quota);
@@ -225,12 +245,12 @@ export function OnboardingIAPage() {
 
   // Le bouton "Accéder à Fowards" apparaît dès que :
   //   a) le serveur confirme Phase 1 complete (isPhase1JustCompleted ou quota.isPhase1Complete)
-  //   b) OU l'IA a envoyé ≥ 10 messages (fallback si le bloc <profile-update> est manqué)
+  //   b) OU l'IA a envoyé ≥ 15 messages (fallback si le bloc <profile-update> est manqué)
   // Le bouton ET l'input coexistent — l'user peut toujours écrire même quand le bouton est visible
   const aiMessageCount = messages.filter(
     (m) => m.role === "assistant" && m.id !== "typing"
   ).length;
-  const showValidateButton = phase1Complete || aiMessageCount >= 10;
+  const showValidateButton = phase1Complete || aiMessageCount >= 15;
 
   // ── Rendu ─────────────────────────────────────────────────────────────────────
 
