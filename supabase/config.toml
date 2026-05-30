@@ -1,0 +1,5 @@
+[functions.ai-fowards]
+verify_jwt = true
+
+[functions.make-server-218684af]
+verify_jwt = false

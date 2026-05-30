@@ -42,6 +42,18 @@ app.use(
 );
 app.use("/*", logger());
 
+// ── Log de démarrage par requête ──────────────────────────────────────────────
+app.use("/*", async (c, next) => {
+  console.log(`[REQUEST] ${c.req.method} ${c.req.path} — ts: ${Date.now()}`);
+  await next();
+});
+
+// ── Catch global des erreurs Hono ─────────────────────────────────────────────
+app.onError((err, c) => {
+  console.error("ERREUR FATALE:", err.message, err.stack ?? "");
+  return c.json({ error: err.message ?? "Erreur serveur" }, 500);
+});
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 const NORMAL_DAILY_LIMIT    = 30;
 const DIAGNOSTIC_BASE_LIMIT = 1;
@@ -51,15 +63,25 @@ const GEMINI_URL            = `https://generativelanguage.googleapis.com/v1beta/
 const GEMINI_STREAM_URL     = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
 
 // ── V8 startup log ────────────────────────────────────────────────────────────
-console.log(`[V8] Prompt loaded: ${FOWARDS_SYSTEM_PROMPT.length} chars`);
+console.log(`[V8] Edge function démarrée — timestamp: ${Date.now()} — prompt: ${FOWARDS_SYSTEM_PROMPT.length} chars`);
 
 // ── Auth helper — vérifie le JWT et retourne l'userId ────────────────────────
+// Timeout 8s : si Auth Supabase est Malsain, l'appel bloquait indéfiniment → EarlyDrop
 async function getUserId(authHeader: string | undefined): Promise<string | null> {
   if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7);
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data.user) return null;
-  return data.user.id;
+
+  const timeoutPromise = new Promise<null>((resolve) =>
+    setTimeout(() => { console.error("[getUserId] Auth timeout 8s — Auth service possiblement down"); resolve(null); }, 8000)
+  );
+  const authPromise = supabaseAdmin.auth.getUser(token)
+    .then(({ data, error }) => {
+      if (error || !data?.user) return null;
+      return data.user.id;
+    })
+    .catch((e) => { console.error("[getUserId] Auth error:", e?.message); return null; });
+
+  return Promise.race([authPromise, timeoutPromise]);
 }
 
 // ── Quota helpers ─────────────────────────────────────────────────────────────
