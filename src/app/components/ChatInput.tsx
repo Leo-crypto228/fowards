@@ -3,6 +3,9 @@ import { motion } from "motion/react";
 import { Mic, MicOff } from "lucide-react";
 import type { ChatMode } from "../api/aiApi";
 
+// ── Design tokens ──────────────────────────────────────────────────────────────
+const GRAD = "linear-gradient(120deg, #a86bff 0%, #8a6bff 55%, #7287ff 100%)";
+
 // ── Web Speech API — détection à la construction du module (pas dans le render)
 // SpeechRecognition n'est pas dans les types TS standard → cast any
 const SpeechRecognitionAPI: (new () => SpeechRecognitionInstance) | null =
@@ -141,20 +144,18 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
       const displayed = finalTextRef.current
         ? (interim ? finalTextRef.current.trimEnd() + " " + interim : finalTextRef.current)
         : interim;
-      setTextSynced(displayed); // met aussi displayedRef à jour
+      setTextSynced(displayed);
       resizeTextarea();
     };
 
     rec.onerror = (e) => {
       if (e.error !== "no-speech") console.warn("[Mic] erreur:", e.error);
-      // Préserver ce qui était affiché (final ou intermédiaire)
       const toPreserve = finalTextRef.current || displayedRef.current;
       resetRecording();
       setTextSynced(toPreserve);
     };
 
     rec.onend = () => {
-      // Préserver ce qui était affiché — finalTextRef OU displayedRef (résultats intermédiaires)
       const toPreserve = finalTextRef.current || displayedRef.current;
       resetRecording();
       setTextSynced(toPreserve);
@@ -165,7 +166,6 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
     try {
       rec.start();
       setIsRecording(true);
-      // Timeout de sécurité : si rien ne se passe dans 10s, on annule
       timeoutRef.current = setTimeout(() => {
         console.warn("[Mic] timeout — aucun résultat en 10s");
         resetRecording();
@@ -178,10 +178,8 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
   function handleMicClick() {
     if (disabled) return;
     if (isRecording) {
-      // Préserver ce qui était affiché avant le reset
       const toPreserve = finalTextRef.current || displayedRef.current;
       resetRecording();
-      // Toujours re-setter pour forcer le re-render avec le bon texte
       setTextSynced(toPreserve);
       resizeTextarea();
     } else {
@@ -192,157 +190,183 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
   // ── Rendu ─────────────────────────────────────────────────────────────────────
 
   const hasMic = Boolean(SpeechRecognitionAPI);
+  const hasText = text.trim().length > 0;
 
   return (
     <div style={{
-      padding: "12px 16px",
-      borderTop: "0.5px solid rgba(255,255,255,0.08)",
-      background: "#000",
-      paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",
+      paddingBottom: "max(14px, env(safe-area-inset-bottom, 14px))",
     }}>
-
-      {/* ── Input row ─────────────────────────────────────────────────────── */}
-      <div style={{
-        display: "flex",
-        gap: 8,
-        alignItems: "flex-end",
-        background: "rgba(255,255,255,0.08)",
-        borderRadius: 999,
-        border: `0.5px solid ${isRecording ? "rgba(239,68,68,0.45)" : "rgba(255,255,255,0.12)"}`,
-        padding: "10px 14px",
-        marginBottom: showModeButtons ? 10 : 0,
-        transition: "border-color 0.2s",
-      }}>
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={handleTextChange}
-          onKeyDown={handleKeyDown}
-          disabled={disabled}
-          placeholder={isRecording ? "Je t'écoute…" : "Entame la conversation…"}
-          rows={1}
-          style={{
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            resize: "none",
-            color: "rgba(235,235,245,0.92)",
-            fontSize: 15,
-            lineHeight: 1.5,
-            padding: 0,
-            fontFamily: "inherit",
-            minHeight: 24,
-            maxHeight: 120,
-            overflowY: "auto",
-          } as React.CSSProperties}
-        />
-
-        {/* Bouton micro — uniquement si l'API est dispo dans ce navigateur */}
-        {hasMic && (
-          <motion.button
-            whileTap={disabled ? {} : { scale: 0.82 }}
-            onClick={handleMicClick}
-            type="button"
-            aria-label={isRecording ? "Arrêter l'enregistrement" : "Dicter un message"}
+      {/* ── Boutons de mode ───────────────────────────────────────────────── */}
+      {showModeButtons && (
+        <div style={{ display: "flex", gap: 8, padding: "0 16px 10px" }}>
+          <button
+            onClick={() => setMode("normal")}
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              border: "none",
-              background: isRecording ? "rgba(239,68,68,0.18)" : "transparent",
-              color: isRecording ? "rgba(239,68,68,0.85)" : "rgba(255,255,255,0.32)",
-              cursor: disabled ? "default" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              opacity: disabled ? 0.35 : 1,
-              transition: "all 0.18s",
+              flex: 1, height: 32, borderRadius: 999, cursor: "pointer",
+              border: `1px solid ${mode === "normal" ? "rgba(168,107,255,0.60)" : "rgba(255,255,255,0.08)"}`,
+              background: mode === "normal" ? "rgba(168,107,255,0.10)" : "transparent",
+              color: mode === "normal" ? "rgba(235,235,245,0.90)" : "rgba(255,255,255,0.28)",
+              fontSize: 12, fontWeight: mode === "normal" ? 600 : 400,
+              transition: "all 0.15s",
             }}
           >
-            {isRecording ? (
-              <motion.div
-                animate={{ opacity: [1, 0.4, 1] }}
-                transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+            Discussion
+          </button>
+          <button
+            onClick={() => { if (canDiagnostic) setMode("diagnostic"); }}
+            disabled={!canDiagnostic}
+            style={{
+              flex: 1, height: 32, borderRadius: 999,
+              border: `1px solid ${
+                !canDiagnostic
+                  ? "rgba(255,255,255,0.05)"
+                  : mode === "diagnostic"
+                  ? "rgba(168,107,255,0.60)"
+                  : "rgba(255,255,255,0.08)"
+              }`,
+              background: (mode === "diagnostic" && canDiagnostic)
+                ? "rgba(168,107,255,0.10)" : "transparent",
+              color: !canDiagnostic
+                ? "rgba(255,255,255,0.14)"
+                : mode === "diagnostic"
+                ? "rgba(235,235,245,0.90)"
+                : "rgba(255,255,255,0.28)",
+              fontSize: 12, fontWeight: (mode === "diagnostic" && canDiagnostic) ? 600 : 400,
+              cursor: canDiagnostic ? "pointer" : "default",
+              opacity: canDiagnostic ? 1 : 0.45,
+              transition: "all 0.15s",
+            }}
+          >
+            Diagnostic
+          </button>
+        </div>
+      )}
+
+      {/* ── Composer Aura ─────────────────────────────────────────────────── */}
+      <div style={{ padding: "0 16px" }}>
+        <div style={{
+          borderRadius: 30,
+          padding: "6px 6px 6px 8px",
+          background: "#1c1c20",
+          border: `1px solid ${isRecording ? "rgba(239,68,68,0.45)" : "rgba(255,255,255,0.07)"}`,
+          boxShadow: "0 12px 40px rgba(0,0,0,0.45)",
+          display: "flex",
+          alignItems: "flex-end",
+          gap: 6,
+          transition: "border-color 0.2s",
+        }}>
+          {/* + décoratif */}
+          <button
+            tabIndex={-1}
+            style={{
+              width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+              border: "none", background: "transparent", cursor: "default", padding: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "rgba(233,233,245,0.40)", fontSize: 22, lineHeight: 1,
+            }}
+          >+</button>
+
+          {/* Textarea */}
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={handleTextChange}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            placeholder={isRecording ? "Je t'écoute…" : "Demander à Fowards"}
+            rows={1}
+            style={{
+              flex: 1,
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              resize: "none",
+              color: isRecording ? "rgba(235,235,245,0.6)" : "#fff",
+              fontSize: 16.5,
+              lineHeight: 1.5,
+              padding: "8px 2px",
+              fontFamily: "inherit",
+              minHeight: 24,
+              maxHeight: 120,
+              overflowY: "auto",
+              alignSelf: "center",
+            } as React.CSSProperties}
+          />
+
+          {/* Boutons droite */}
+          {hasText ? (
+            /* Envoyer */
+            <motion.button
+              whileTap={disabled ? {} : { scale: 0.88 }}
+              onClick={handleSubmit}
+              disabled={disabled}
+              style={{
+                width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+                border: "none", cursor: disabled ? "default" : "pointer", padding: 0,
+                background: disabled ? "rgba(168,107,255,0.3)" : GRAD,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#0c0c12",
+                opacity: disabled ? 0.5 : 1,
+                transition: "opacity 0.15s",
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2"
+                  strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </motion.button>
+          ) : (
+            <>
+              {/* Micro */}
+              {hasMic && (
+                <motion.button
+                  whileTap={disabled ? {} : { scale: 0.82 }}
+                  onClick={handleMicClick}
+                  type="button"
+                  aria-label={isRecording ? "Arrêter l'enregistrement" : "Dicter un message"}
+                  style={{
+                    width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+                    border: "none",
+                    background: isRecording ? "rgba(239,68,68,0.18)" : "transparent",
+                    color: isRecording ? "rgba(239,68,68,0.85)" : "rgba(233,233,245,0.55)",
+                    cursor: disabled ? "default" : "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    opacity: disabled ? 0.35 : 1,
+                    transition: "all 0.18s",
+                  }}
+                >
+                  {isRecording ? (
+                    <motion.div
+                      animate={{ opacity: [1, 0.4, 1] }}
+                      transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <MicOff size={18} />
+                    </motion.div>
+                  ) : (
+                    <Mic size={18} />
+                  )}
+                </motion.button>
+              )}
+
+              {/* Waveform gradient */}
+              <button
+                style={{
+                  width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+                  border: "none", background: GRAD, cursor: "pointer", padding: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff",
+                }}
               >
-                <MicOff size={15} />
-              </motion.div>
-            ) : (
-              <Mic size={15} />
-            )}
-          </motion.button>
-        )}
-
-        {/* Bouton envoyer */}
-        <motion.button
-          whileTap={!text.trim() || disabled ? {} : { scale: 0.88 }}
-          onClick={handleSubmit}
-          disabled={!text.trim() || disabled}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            border: "none",
-            background: "#7C3AED",
-            color: "#fff",
-            fontSize: !text.trim() || disabled ? 13 : 15,
-            cursor: !text.trim() || disabled ? "default" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            fontWeight: 700,
-            letterSpacing: !text.trim() || disabled ? "0.05em" : 0,
-            opacity: !text.trim() || disabled ? 0.45 : 1,
-            transition: "opacity 0.15s",
-          }}
-        >
-          {!text.trim() || disabled ? "···" : "↑"}
-        </motion.button>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M4 10v4M9 6v12M15 8v8M20 11v2"/>
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
       </div>
-
-      {/* ── Boutons de mode ───────────────────────────────────────────────── */}
-      {showModeButtons && <div style={{ display: "flex", gap: 8 }}>
-        <button
-          onClick={() => setMode("normal")}
-          style={{
-            flex: 1,
-            height: 36,
-            borderRadius: 999,
-            border: `1px solid ${mode === "normal" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
-            background: mode === "normal" ? "rgba(255,255,255,0.12)" : "transparent",
-            color: mode === "normal" ? "rgba(235,235,245,0.88)" : "rgba(255,255,255,0.3)",
-            fontSize: 13,
-            fontWeight: mode === "normal" ? 600 : 400,
-            cursor: "pointer",
-            transition: "all 0.15s",
-          }}
-        >
-          Discussion normale
-        </button>
-        <button
-          onClick={() => { if (canDiagnostic) setMode("diagnostic"); }}
-          disabled={!canDiagnostic}
-          style={{
-            flex: 1,
-            height: 36,
-            borderRadius: 999,
-            border: `1px solid ${!canDiagnostic ? "rgba(255,255,255,0.08)" : mode === "diagnostic" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
-            background: !canDiagnostic ? "transparent" : mode === "diagnostic" ? "rgba(255,255,255,0.12)" : "transparent",
-            color: !canDiagnostic ? "rgba(255,255,255,0.18)" : mode === "diagnostic" ? "rgba(235,235,245,0.88)" : "rgba(255,255,255,0.3)",
-            fontSize: 13,
-            fontWeight: mode === "diagnostic" && canDiagnostic ? 600 : 400,
-            cursor: canDiagnostic ? "pointer" : "default",
-            transition: "all 0.15s",
-            opacity: canDiagnostic ? 1 : 0.4,
-          }}
-        >
-          Diagnostic
-        </button>
-      </div>}
-
     </div>
   );
 }

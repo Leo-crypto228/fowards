@@ -14,7 +14,51 @@ import {
 import { MessageBubble } from "../components/MessageBubble";
 import { ChatInput } from "../components/ChatInput";
 import { toast } from "sonner";
+import mascot from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 
+// ── Design tokens ──────────────────────────────────────────────────────────────
+const GRAD = "linear-gradient(120deg, #a86bff 0%, #8a6bff 55%, #7287ff 100%)";
+
+// ── Robot icon SVG ─────────────────────────────────────────────────────────────
+function RobotIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="8" width="18" height="13" rx="3"/>
+      <path d="M8 8V6a4 4 0 0 1 8 0v2"/>
+      <circle cx="9" cy="14" r="1.5" fill="currentColor" stroke="none"/>
+      <circle cx="15" cy="14" r="1.5" fill="currentColor" stroke="none"/>
+      <path d="M9 18h6"/>
+    </svg>
+  );
+}
+
+// ── Round button ───────────────────────────────────────────────────────────────
+function RoundBtn({
+  children, onClick,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.88 }}
+      onClick={onClick}
+      style={{
+        width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+        border: "1px solid rgba(165,125,255,0.22)",
+        background: "rgba(150,110,255,0.12)",
+        cursor: "pointer", padding: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: "#fff",
+      }}
+    >
+      {children}
+    </motion.button>
+  );
+}
+
+// ── Main ───────────────────────────────────────────────────────────────────────
 export function AIConversationPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
@@ -128,8 +172,8 @@ export function AIConversationPage() {
         toast("Profil créé ! Le Diagnostic est maintenant disponible.", {
           duration: 4000,
           style: {
-            background: "rgba(99,102,241,0.15)",
-            border: "0.5px solid rgba(99,102,241,0.35)",
+            background: "rgba(168,107,255,0.15)",
+            border: "0.5px solid rgba(168,107,255,0.35)",
             color: "rgba(235,235,245,0.92)",
           },
         });
@@ -187,72 +231,92 @@ export function AIConversationPage() {
 
   return (
     <div style={{
+      height: "100dvh",
       display: "flex", flexDirection: "column",
-      height: "calc(100dvh - env(safe-area-inset-top, 0px))",
-      background: "#000",
+      background: "#0a0a10",
       overflow: "hidden",
       position: "relative",
     }}>
-      {/* Floating back button */}
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        whileTap={{ scale: 0.88 }}
-        onClick={() => navigate("/ai")}
-        style={{
-          position: "absolute",
-          top: 14,
-          left: 14,
-          zIndex: 20,
-          width: 36, height: 36,
-          borderRadius: "50%",
-          border: "0.5px solid rgba(255,255,255,0.15)",
-          background: "rgba(0,0,0,0.7)",
-          backdropFilter: "blur(8px)",
-          color: "rgba(235,235,245,0.8)",
-          cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}
-      >
-        <ArrowLeft style={{ width: 17, height: 17 }} />
-      </motion.button>
-
-      {/* Messages */}
+      {/* Halos */}
       <div style={{
-        flex: 1, overflowY: "auto",
-        padding: "60px 16px 8px",
-        WebkitOverflowScrolling: "touch",
-      } as React.CSSProperties}>
-        {messages.length === 0 && !sending && (
-          <div style={{
-            textAlign: "center", paddingTop: 80,
-            color: "rgba(235,235,245,0.25)", fontSize: 14,
-          }}>
-            En attente de réponse…
-          </div>
-        )}
+        position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+        background:
+          "radial-gradient(120% 80% at 78% -8%, rgba(160,100,255,0.42) 0%, transparent 52%), " +
+          "radial-gradient(110% 70% at 8% 6%, rgba(118,120,255,0.30) 0%, transparent 48%)",
+      }}/>
+      {/* Grain */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.5,
+        backgroundImage: "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
+        backgroundSize: "4px 4px", mixBlendMode: "overlay" as const,
+      }}/>
 
-        <AnimatePresence initial={false}>
-          {messages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.18 }}
-            >
-              {msg.id === "typing" ? (
-                <TypingIndicator />
-              ) : (
-                <MessageBubble message={msg} />
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        <div ref={messagesEndRef} />
+      {/* ── TopBar ──────────────────────────────────────────────────────────── */}
+      <div style={{
+        position: "relative", zIndex: 10, flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "calc(env(safe-area-inset-top, 0px) + 14px) 18px 10px",
+      }}>
+        {/* Back → /ai */}
+        <RoundBtn onClick={() => navigate("/ai")}>
+          <ArrowLeft style={{ width: 18, height: 18 }}/>
+        </RoundBtn>
+
+        {/* Centre */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ fontSize: 18, fontWeight: 600, color: "#fff", letterSpacing: 0.1 }}>Fowards</span>
+          <span style={{ fontSize: 18, fontWeight: 400, color: "rgba(233,233,245,0.55)" }}>IA</span>
+        </div>
+
+        {/* Robot → profil IA */}
+        <RoundBtn onClick={() => navigate("/ai/profile")}>
+          <RobotIcon size={20}/>
+        </RoundBtn>
       </div>
 
-      {/* Zone basse — boutons Phase 1 OU input */}
-      <div style={{ flexShrink: 0 }}>
+      {/* ── Messages ─────────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          position: "relative", zIndex: 1,
+          WebkitOverflowScrolling: "touch",
+          maskImage: "linear-gradient(to bottom, transparent, #000 22px)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 22px)",
+        } as React.CSSProperties}
+      >
+        <div style={{ padding: "8px 18px 4px", display: "flex", flexDirection: "column" }}>
+          {messages.length === 0 && !sending && (
+            <div style={{
+              textAlign: "center", paddingTop: 80,
+              color: "rgba(235,235,245,0.22)", fontSize: 14,
+            }}>
+              En attente de réponse…
+            </div>
+          )}
+
+          <AnimatePresence initial={false}>
+            {messages.map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 9 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {msg.id === "typing" ? (
+                  <TypingIndicator />
+                ) : (
+                  <MessageBubble message={msg} />
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* ── Zone basse — boutons Phase 1 OU input ──────────────────────────── */}
+      <div style={{ flexShrink: 0, position: "relative", zIndex: 10 }}>
 
         {/* Boutons de choix Phase 1 */}
         <AnimatePresence>
@@ -265,11 +329,9 @@ export function AIConversationPage() {
               style={{
                 padding: "8px 16px 4px",
                 borderTop: "0.5px solid rgba(255,255,255,0.06)",
-                background: "#000",
               }}
             >
               {currentChoices.type === "single" ? (
-                /* Single choice — boutons */
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {currentChoices.choices.map((choice) => (
                     <motion.button
@@ -285,15 +347,15 @@ export function AIConversationPage() {
                       style={{
                         width: "100%",
                         minHeight: 44,
-                        borderRadius: 10,
-                        border: "0.5px solid rgba(255,255,255,0.18)",
-                        background: "rgba(255,255,255,0.05)",
+                        borderRadius: 12,
+                        border: "1px solid rgba(165,125,255,0.22)",
+                        background: "rgba(150,110,255,0.08)",
                         color: "rgba(235,235,245,0.88)",
                         fontSize: 14,
                         fontWeight: 500,
                         cursor: "pointer",
                         textAlign: "left",
-                        padding: "0 14px",
+                        padding: "0 16px",
                         transition: "background 0.12s",
                       }}
                     >
@@ -302,7 +364,6 @@ export function AIConversationPage() {
                   ))}
                 </div>
               ) : (
-                /* Multi choice — toggle + valider */
                 <div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
                     {currentChoices.choices.map((choice) => {
@@ -325,26 +386,26 @@ export function AIConversationPage() {
                           style={{
                             width: "100%",
                             minHeight: 44,
-                            borderRadius: 10,
-                            border: `0.5px solid ${isSelected ? "rgba(99,102,241,0.6)" : "rgba(255,255,255,0.18)"}`,
-                            background: isSelected ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.05)",
+                            borderRadius: 12,
+                            border: `1px solid ${isSelected ? "rgba(168,107,255,0.60)" : "rgba(165,125,255,0.22)"}`,
+                            background: isSelected ? "rgba(168,107,255,0.15)" : "rgba(150,110,255,0.08)",
                             color: isSelected ? "rgba(235,235,245,0.95)" : "rgba(235,235,245,0.7)",
                             fontSize: 14,
                             fontWeight: isSelected ? 600 : 400,
                             cursor: "pointer",
                             textAlign: "left",
-                            padding: "0 14px",
+                            padding: "0 16px",
                             display: "flex",
                             alignItems: "center",
-                            gap: 8,
+                            gap: 10,
                             transition: "all 0.12s",
                           }}
                         >
                           <span style={{
                             width: 18, height: 18,
                             borderRadius: 5,
-                            border: `1.5px solid ${isSelected ? "rgba(99,102,241,0.8)" : "rgba(255,255,255,0.25)"}`,
-                            background: isSelected ? "rgba(99,102,241,0.6)" : "transparent",
+                            border: `1.5px solid ${isSelected ? "rgba(168,107,255,0.8)" : "rgba(255,255,255,0.25)"}`,
+                            background: isSelected ? "rgba(168,107,255,0.6)" : "transparent",
                             display: "flex", alignItems: "center", justifyContent: "center",
                             flexShrink: 0,
                             fontSize: 10, color: "#fff",
@@ -366,10 +427,10 @@ export function AIConversationPage() {
                       style={{
                         width: "100%",
                         height: 44,
-                        borderRadius: 10,
+                        borderRadius: 12,
                         border: "none",
-                        background: "rgba(255,255,255,0.9)",
-                        color: "#000",
+                        background: GRAD,
+                        color: "#0c0c12",
                         fontSize: 14,
                         fontWeight: 700,
                         cursor: "pointer",
@@ -398,32 +459,28 @@ export function AIConversationPage() {
   );
 }
 
+// ── Typing indicator ───────────────────────────────────────────────────────────
 function TypingIndicator() {
   return (
-    <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-      <div style={{
-        width: 32, height: 32, borderRadius: "50%",
-        background: "rgba(255,255,255,0.08)",
-        border: "0.5px solid rgba(255,255,255,0.15)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0, marginTop: 2,
-        fontSize: 11, color: "rgba(235,235,245,0.7)", fontWeight: 700,
-      }}>
-        IA
-      </div>
-      <div style={{
-        background: "rgba(255,255,255,0.05)",
-        borderRadius: "4px 18px 18px 18px",
-        padding: "12px 16px",
-        border: "0.5px solid rgba(255,255,255,0.08)",
-        display: "flex", alignItems: "center", gap: 5,
-      }}>
-        {[0, 1, 2].map((i) => (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 11, marginBottom: 22 }}>
+      <img
+        src={mascot}
+        alt=""
+        style={{
+          width: 34, height: "auto", flexShrink: 0, marginTop: 2,
+          filter: "drop-shadow(0 0 8px rgba(160,100,255,0.65))",
+        }}
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 6, paddingTop: 9 }}>
+        {([0, 0.16, 0.32] as number[]).map((delay, i) => (
           <motion.div
             key={i}
-            style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(235,235,245,0.4)" }}
-            animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ duration: 1.2, delay: i * 0.2, repeat: Infinity }}
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 1.1, delay, repeat: Infinity, ease: "easeInOut" }}
+            style={{
+              width: 8, height: 8, borderRadius: 999,
+              background: GRAD,
+            }}
           />
         ))}
       </div>
