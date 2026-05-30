@@ -12,15 +12,31 @@ import mascot from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const GRAD = "linear-gradient(120deg, #a86bff 0%, #8a6bff 55%, #7287ff 100%)";
 
-const CHIPS: { label: string; hint: string }[] = [
-  { label: "Structurer",  hint: "une idée" },
-  { label: "Débloquer",   hint: "un blocage" },
-  { label: "Planifier",   hint: "ma semaine" },
-  { label: "Avancer",     hint: "sur un projet" },
-];
+// ── Photo quota (localStorage) — 4 photos / 5 jours ──────────────────────────
+const PHOTO_QUOTA_KEY = "ff_photo_quota";
+const PHOTO_MAX = 4;
+const PHOTO_PERIOD_MS = 5 * 24 * 60 * 60 * 1000;
+
+function getPhotoQuota(): { count: number; since: number } {
+  try {
+    const raw = localStorage.getItem(PHOTO_QUOTA_KEY);
+    if (!raw) return { count: 0, since: Date.now() };
+    const q = JSON.parse(raw);
+    if (Date.now() - q.since > PHOTO_PERIOD_MS) {
+      const fresh = { count: 0, since: Date.now() };
+      localStorage.setItem(PHOTO_QUOTA_KEY, JSON.stringify(fresh));
+      return fresh;
+    }
+    return q;
+  } catch { return { count: 0, since: Date.now() }; }
+}
+function incrementPhotoQuota() {
+  const q = getPhotoQuota();
+  localStorage.setItem(PHOTO_QUOTA_KEY, JSON.stringify({ ...q, count: q.count + 1 }));
+}
 
 // ── Robot icon SVG ─────────────────────────────────────────────────────────────
-function RobotIcon({ size = 20 }: { size?: number }) {
+function RobotIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
       stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -30,32 +46,6 @@ function RobotIcon({ size = 20 }: { size?: number }) {
       <circle cx="15" cy="14" r="1.5" fill="currentColor" stroke="none"/>
       <path d="M9 18h6"/>
     </svg>
-  );
-}
-
-// ── Round button ───────────────────────────────────────────────────────────────
-function RoundBtn({
-  children, onClick, gradient = false,
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  gradient?: boolean;
-}) {
-  return (
-    <motion.button
-      whileTap={{ scale: 0.88 }}
-      onClick={onClick}
-      style={{
-        width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-        border: gradient ? "none" : "1px solid rgba(165,125,255,0.22)",
-        background: gradient ? GRAD : "rgba(150,110,255,0.12)",
-        cursor: "pointer", padding: 0,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: gradient ? "#0c0c12" : "#fff",
-      }}
-    >
-      {children}
-    </motion.button>
   );
 }
 
@@ -71,7 +61,10 @@ export function AIHomePage() {
   const [loading,       setLoading]       = useState(true);
   const [text,          setText]          = useState("");
   const [mode,          setMode]          = useState<ChatMode>("normal");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [photo,         setPhoto]         = useState<string | null>(null);
+
+  const inputRef   = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Data load ────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -99,6 +92,7 @@ export function AIHomePage() {
     const trimmed = (txt ?? text).trim();
     if (!trimmed) return;
     navigate("/ai/new", { state: { initialMessage: trimmed, initialMode: mode } });
+    setPhoto(null);
   }
 
   async function handleDeleteConv(id: string, e: React.MouseEvent) {
@@ -111,16 +105,52 @@ export function AIHomePage() {
     }
   }
 
+  // ── Photo ─────────────────────────────────────────────────────────────────────
+  function handlePlusClick() {
+    const q = getPhotoQuota();
+    if (q.count >= PHOTO_MAX) {
+      const daysLeft = Math.ceil((PHOTO_PERIOD_MS - (Date.now() - q.since)) / (24 * 60 * 60 * 1000));
+      toast.error(`Quota photo atteint (${PHOTO_MAX} / 5 jours). Revient dans ${daysLeft} jour${daysLeft > 1 ? "s" : ""}.`);
+      return;
+    }
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image trop lourde (max 5 Mo)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhoto(reader.result as string);
+      incrementPhotoQuota();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
   // ── Derived state ─────────────────────────────────────────────────────────────
   const isPhase1Complete = quota?.isPhase1Complete ?? true;
   const canDiagnostic    = isPhase1Complete && (!quota || quota.canSendDiagnostic);
   const hasText          = text.trim().length > 0;
   const hasConvs         = !loading && isPhase1Complete && conversations.length > 0;
+  const canSend          = hasText || !!photo;
+
+  // ── Quota label ───────────────────────────────────────────────────────────────
+  function quotaLabel(): string | null {
+    if (!quota) return null;
+    if (!quota.canSendNormal) return "Quota atteint";
+    if (quota.normalRemaining <= 0) return "Quota atteint";
+    return `${quota.normalRemaining} message${quota.normalRemaining > 1 ? "s" : ""} restant${quota.normalRemaining > 1 ? "s" : ""}`;
+  }
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div style={{
-      minHeight: "100dvh",
+      height: "100dvh",
       background: "#0a0a10",
       display: "flex", flexDirection: "column",
       position: "relative", overflow: "hidden",
@@ -149,32 +179,47 @@ export function AIHomePage() {
         backgroundSize: "4px 4px", mixBlendMode: "overlay" as const,
       }}/>
 
-      {/* ── TopBar ──────────────────────────────────────────────────────────── */}
+      {/* ── Mini header : quota + robot ────────────────────────────────────── */}
       <div style={{
         position: "relative", zIndex: 10, flexShrink: 0,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "calc(env(safe-area-inset-top, 0px) + 14px) 18px 10px",
+        padding: "calc(env(safe-area-inset-top, 0px) + 10px) 18px 4px",
       }}>
-        {/* Left spacer — no hamburger */}
-        <div style={{ width: 42 }}/>
-
-        {/* Center title */}
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ fontSize: 18, fontWeight: 600, color: "#fff", letterSpacing: 0.1 }}>Fowards</span>
-          <span style={{ fontSize: 18, fontWeight: 400, color: "rgba(233,233,245,0.55)" }}>IA</span>
-        </div>
+        {/* Quota pill */}
+        {quota ? (
+          <div style={{
+            fontSize: 11.5, fontWeight: 500,
+            color: quota.canSendNormal ? "rgba(255,255,255,0.45)" : "rgba(239,100,100,0.80)",
+            background: quota.canSendNormal ? "rgba(255,255,255,0.06)" : "rgba(239,68,68,0.10)",
+            border: `1px solid ${quota.canSendNormal ? "rgba(255,255,255,0.09)" : "rgba(239,68,68,0.25)"}`,
+            borderRadius: 999, padding: "4px 11px",
+          }}>
+            {quotaLabel()}
+          </div>
+        ) : <div/>}
 
         {/* Robot → profil IA */}
-        <RoundBtn onClick={() => navigate("/ai/profile")}>
-          <RobotIcon size={20}/>
-        </RoundBtn>
+        <motion.button
+          whileTap={{ scale: 0.88 }}
+          onClick={() => navigate("/ai/profile")}
+          style={{
+            width: 36, height: 36, borderRadius: 999, flexShrink: 0,
+            border: "1px solid rgba(165,125,255,0.22)",
+            background: "rgba(150,110,255,0.12)",
+            cursor: "pointer", padding: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#fff",
+          }}
+        >
+          <RobotIcon size={18}/>
+        </motion.button>
       </div>
 
-      {/* ── Body ────────────────────────────────────────────────────────────── */}
+      {/* ── Body (scrollable) ───────────────────────────────────────────────── */}
       <div style={{
-        flex: 1, position: "relative", zIndex: 1,
+        flex: 1, overflowY: "auto",
+        position: "relative", zIndex: 1,
         display: "flex", flexDirection: "column",
-        overflowY: "auto",
         WebkitOverflowScrolling: "touch" as any,
       }}>
         {/* Hero */}
@@ -183,7 +228,7 @@ export function AIHomePage() {
           display: "flex", flexDirection: "column",
           alignItems: "center", justifyContent: "center",
           textAlign: "center",
-          padding: hasConvs ? "16px 22px 12px" : "0 22px 40px",
+          padding: hasConvs ? "14px 22px 10px" : "0 22px 32px",
         }}>
           <motion.img
             src={mascot}
@@ -191,7 +236,7 @@ export function AIHomePage() {
             animate={{ y: [0, -9, 0] }}
             transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
             style={{
-              width: hasConvs ? 68 : 132,
+              width: hasConvs ? 52 : 96,
               height: "auto",
               filter: "url(#ai-rm-black) drop-shadow(0 0 14px rgba(160,100,255,0.7))",
               display: "block",
@@ -199,8 +244,8 @@ export function AIHomePage() {
             }}
           />
           <h1 style={{
-            margin: hasConvs ? "12px 0 0" : "24px 0 0",
-            fontSize: hasConvs ? 22 : 33,
+            margin: "10px 0 0",
+            fontSize: hasConvs ? 20 : 30,
             lineHeight: 1.18, fontWeight: 600,
             letterSpacing: -0.5, color: "#fff",
             transition: "font-size 0.3s",
@@ -208,8 +253,8 @@ export function AIHomePage() {
             Eyy, {username} !
           </h1>
           <p style={{
-            margin: "10px 0 0",
-            fontSize: hasConvs ? 14 : 16.5,
+            margin: "8px 0 0",
+            fontSize: hasConvs ? 13.5 : 16,
             lineHeight: 1.5, maxWidth: 260,
             background: GRAD,
             WebkitBackgroundClip: "text", backgroundClip: "text",
@@ -275,42 +320,18 @@ export function AIHomePage() {
       {/* ── Dock ─────────────────────────────────────────────────────────────── */}
       <div style={{
         position: "relative", zIndex: 10, flexShrink: 0,
+        background: "#000",
         paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))",
       }}>
-        {/* Chips — visible seulement sans conversations */}
-        {!hasConvs && !loading && (
-          <div style={{
-            display: "flex", gap: 9,
-            overflowX: "auto", padding: "0 16px 12px",
-            scrollbarWidth: "none" as const,
-          } as React.CSSProperties}>
-            {CHIPS.map((chip) => (
-              <button
-                key={chip.label}
-                onClick={() => handleSend(`${chip.label} ${chip.hint}`)}
-                style={{
-                  flexShrink: 0,
-                  display: "flex", flexDirection: "column", alignItems: "flex-start",
-                  gap: 2, padding: "10px 15px", borderRadius: 16, cursor: "pointer",
-                  background: "#1c1c20", border: "1px solid rgba(255,255,255,0.07)",
-                }}
-              >
-                <span style={{ fontSize: 14.5, fontWeight: 600, color: "#fff" }}>{chip.label}</span>
-                <span style={{ fontSize: 12.5, color: "rgba(233,233,245,0.55)" }}>{chip.hint}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Mode pills */}
-        <div style={{ display: "flex", gap: 8, padding: "0 16px 10px" }}>
+        <div style={{ display: "flex", gap: 8, padding: "10px 16px 10px" }}>
           <button
             onClick={() => setMode("normal")}
             style={{
               flex: 1, height: 32, borderRadius: 999, cursor: "pointer",
-              border: `1px solid ${mode === "normal" ? "rgba(168,107,255,0.60)" : "rgba(255,255,255,0.08)"}`,
-              background: mode === "normal" ? "rgba(168,107,255,0.10)" : "transparent",
-              color: mode === "normal" ? "rgba(235,235,245,0.90)" : "rgba(255,255,255,0.28)",
+              border: `1px solid ${mode === "normal" ? "rgba(168,107,255,0.55)" : "rgba(255,255,255,0.09)"}`,
+              background: mode === "normal" ? "rgba(168,107,255,0.10)" : "#1c1c20",
+              color: mode === "normal" ? "rgba(235,235,245,0.90)" : "rgba(255,255,255,0.40)",
               fontSize: 12, fontWeight: mode === "normal" ? 600 : 400,
               transition: "all 0.15s",
             }}
@@ -324,16 +345,16 @@ export function AIHomePage() {
                 (!isPhase1Complete || !canDiagnostic)
                   ? "rgba(255,255,255,0.05)"
                   : mode === "diagnostic"
-                  ? "rgba(168,107,255,0.60)"
-                  : "rgba(255,255,255,0.08)"
+                  ? "rgba(168,107,255,0.55)"
+                  : "rgba(255,255,255,0.09)"
               }`,
               background: (mode === "diagnostic" && isPhase1Complete && canDiagnostic)
-                ? "rgba(168,107,255,0.10)" : "transparent",
+                ? "rgba(168,107,255,0.10)" : "#1c1c20",
               color: (!isPhase1Complete || !canDiagnostic)
-                ? "rgba(255,255,255,0.14)"
+                ? "rgba(255,255,255,0.18)"
                 : mode === "diagnostic"
                 ? "rgba(235,235,245,0.90)"
-                : "rgba(255,255,255,0.28)",
+                : "rgba(255,255,255,0.40)",
               fontSize: 12, fontWeight: (mode === "diagnostic" && isPhase1Complete) ? 600 : 400,
               cursor: (isPhase1Complete && canDiagnostic) ? "pointer" : "default",
               opacity: isPhase1Complete ? 1 : 0.45,
@@ -344,6 +365,15 @@ export function AIHomePage() {
 
         {/* Composer */}
         <div style={{ padding: "0 16px" }}>
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+
           <div style={{
             borderRadius: 30, padding: "6px 6px 6px 8px",
             background: "#1c1c20",
@@ -351,20 +381,44 @@ export function AIHomePage() {
             boxShadow: "0 12px 40px rgba(0,0,0,0.45)",
             display: "flex", alignItems: "center", gap: 6,
           }}>
-            {/* + decorative */}
-            <button style={{
-              width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-              border: "none", background: "transparent", cursor: "default", padding: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "rgba(233,233,245,0.40)", fontSize: 22,
-            }}>+</button>
+            {/* + / photo thumbnail */}
+            {photo ? (
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <img
+                  src={photo}
+                  alt=""
+                  style={{ width: 42, height: 42, borderRadius: 12, objectFit: "cover", display: "block" }}
+                />
+                <button
+                  onClick={() => setPhoto(null)}
+                  style={{
+                    position: "absolute", top: -5, right: -5,
+                    width: 17, height: 17, borderRadius: "50%",
+                    background: "rgba(0,0,0,0.85)", border: "1px solid rgba(255,255,255,0.20)",
+                    color: "#fff", fontSize: 9, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    lineHeight: 1,
+                  }}
+                >×</button>
+              </div>
+            ) : (
+              <button
+                onClick={handlePlusClick}
+                style={{
+                  width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+                  border: "none", background: "transparent", cursor: "pointer", padding: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "rgba(233,233,245,0.40)", fontSize: 24, lineHeight: 1,
+                }}
+              >+</button>
+            )}
 
             {/* Input */}
             <input
               ref={inputRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && hasText) handleSend(); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && canSend) handleSend(); }}
               placeholder="Demander à Fowards"
               style={{
                 flex: 1, minWidth: 0,
@@ -374,53 +428,39 @@ export function AIHomePage() {
               }}
             />
 
-            {/* Right — send OR mic+wave */}
-            {hasText ? (
-              <motion.button
-                whileTap={{ scale: 0.88 }}
-                onClick={() => handleSend()}
-                style={{
-                  width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-                  border: "none", cursor: "pointer", padding: 0,
-                  background: GRAD,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#0c0c12",
-                }}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2"
-                    strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </motion.button>
-            ) : (
-              <>
-                {/* Mic */}
-                <button style={{
-                  width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-                  border: "none", background: "transparent", cursor: "pointer", padding: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "rgba(233,233,245,0.55)",
-                }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                    <rect x="9" y="3" width="6" height="11" rx="3"/>
-                    <path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>
-                  </svg>
-                </button>
-                {/* Waveform gradient */}
-                <button style={{
-                  width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-                  border: "none", background: GRAD, cursor: "pointer", padding: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#fff",
-                }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M4 10v4M9 6v12M15 8v8M20 11v2"/>
-                  </svg>
-                </button>
-              </>
-            )}
+            {/* Micro */}
+            <button style={{
+              width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+              border: "none", background: "transparent", cursor: "pointer", padding: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "rgba(233,233,245,0.55)",
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <rect x="9" y="3" width="6" height="11" rx="3"/>
+                <path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>
+              </svg>
+            </button>
+
+            {/* Send — toujours violet, flèche, s'active quand canSend */}
+            <motion.button
+              whileTap={canSend ? { scale: 0.88 } : {}}
+              onClick={() => { if (canSend) handleSend(); }}
+              style={{
+                width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+                border: "none", cursor: canSend ? "pointer" : "default", padding: 0,
+                background: canSend ? GRAD : "rgba(168,107,255,0.20)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#0c0c12",
+                opacity: canSend ? 1 : 0.55,
+                transition: "opacity 0.2s, background 0.2s",
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2"
+                  strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </motion.button>
           </div>
         </div>
       </div>

@@ -452,6 +452,7 @@ export function AIConversationPage() {
             onSend={handleSend}
             disabled={inputDisabled}
             canDiagnostic={canDiagnostic}
+            onPhotoToast={(msg) => toast.error(msg)}
           />
         )}
       </div>

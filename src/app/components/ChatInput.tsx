@@ -6,14 +6,35 @@ import type { ChatMode } from "../api/aiApi";
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const GRAD = "linear-gradient(120deg, #a86bff 0%, #8a6bff 55%, #7287ff 100%)";
 
-// ── Web Speech API — détection à la construction du module (pas dans le render)
-// SpeechRecognition n'est pas dans les types TS standard → cast any
+// ── Photo quota (localStorage) — 4 photos / 5 jours ──────────────────────────
+const PHOTO_QUOTA_KEY = "ff_photo_quota";
+const PHOTO_MAX = 4;
+const PHOTO_PERIOD_MS = 5 * 24 * 60 * 60 * 1000;
+
+function getPhotoQuota(): { count: number; since: number } {
+  try {
+    const raw = localStorage.getItem(PHOTO_QUOTA_KEY);
+    if (!raw) return { count: 0, since: Date.now() };
+    const q = JSON.parse(raw);
+    if (Date.now() - q.since > PHOTO_PERIOD_MS) {
+      const fresh = { count: 0, since: Date.now() };
+      localStorage.setItem(PHOTO_QUOTA_KEY, JSON.stringify(fresh));
+      return fresh;
+    }
+    return q;
+  } catch { return { count: 0, since: Date.now() }; }
+}
+function incrementPhotoQuota() {
+  const q = getPhotoQuota();
+  localStorage.setItem(PHOTO_QUOTA_KEY, JSON.stringify({ ...q, count: q.count + 1 }));
+}
+
+// ── Web Speech API ────────────────────────────────────────────────────────────
 const SpeechRecognitionAPI: (new () => SpeechRecognitionInstance) | null =
   typeof window !== "undefined"
     ? ((window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition ?? null)
     : null;
 
-// Type minimal pour éviter les any partout dans le composant
 interface SpeechRecognitionInstance extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
@@ -40,17 +61,20 @@ interface Props {
   disabled?: boolean;
   canDiagnostic?: boolean;
   showModeButtons?: boolean;
+  onPhotoToast?: (msg: string) => void;
 }
 
-export function ChatInput({ onSend, disabled = false, canDiagnostic = true, showModeButtons = true }: Props) {
+export function ChatInput({ onSend, disabled = false, canDiagnostic = true, showModeButtons = true, onPhotoToast }: Props) {
   const [text, setText]               = useState("");
   const [mode, setMode]               = useState<ChatMode>("normal");
   const [isRecording, setIsRecording] = useState(false);
+  const [photo, setPhoto]             = useState<string | null>(null);
 
-  const textareaRef      = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef   = useRef<SpeechRecognitionInstance | null>(null);
-  const finalTextRef     = useRef(""); // texte confirmé (résultats isFinal)
-  const displayedRef     = useRef(""); // miroir du text state — toujours à jour
+  const textareaRef    = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const finalTextRef   = useRef("");
+  const displayedRef   = useRef("");
+  const fileInputRef   = useRef<HTMLInputElement>(null);
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -61,7 +85,6 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
     ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
   }
 
-  // Toujours passer par setTextSynced pour garder displayedRef à jour
   function setTextSynced(val: string) {
     displayedRef.current = val;
     setText(val);
@@ -71,7 +94,6 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
   function handleSubmit() {
     const trimmed = text.trim();
     if (!trimmed || disabled) return;
-    // Couper l'enregistrement si actif
     if (recognitionRef.current) {
       recognitionRef.current.abort();
       recognitionRef.current = null;
@@ -80,6 +102,7 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
     }
     onSend(trimmed, mode);
     setTextSynced("");
+    setPhoto(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   }
 
@@ -100,7 +123,6 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset complet — appelé depuis stopRecording ET les handlers onerror/onend
   const resetRecording = useCallback(() => {
     if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
     try { recognitionRef.current?.abort(); } catch {}
@@ -109,7 +131,6 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
     setIsRecording(false);
   }, []);
 
-  // Nettoyage du timeout également au démontage
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -119,9 +140,7 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
 
   const startRecording = useCallback(() => {
     if (!SpeechRecognitionAPI || disabled) return;
-
     finalTextRef.current = text;
-
     const rec = new SpeechRecognitionAPI();
     rec.lang            = "fr-FR";
     rec.continuous      = false;
@@ -130,16 +149,13 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
 
     rec.onresult = (e) => {
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
-
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
         if (e.results[i].isFinal) {
           const base = finalTextRef.current;
           finalTextRef.current = base ? base.trimEnd() + " " + t : t;
-        } else {
-          interim = t;
-        }
+        } else { interim = t; }
       }
       const displayed = finalTextRef.current
         ? (interim ? finalTextRef.current.trimEnd() + " " + interim : finalTextRef.current)
@@ -170,9 +186,7 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
         console.warn("[Mic] timeout — aucun résultat en 10s");
         resetRecording();
       }, 10_000);
-    } catch {
-      recognitionRef.current = null;
-    }
+    } catch { recognitionRef.current = null; }
   }, [text, disabled, resetRecording]);
 
   function handleMicClick() {
@@ -187,10 +201,40 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
     }
   }
 
+  // ── Photo ─────────────────────────────────────────────────────────────────────
+  function handlePlusClick() {
+    if (disabled) return;
+    const q = getPhotoQuota();
+    if (q.count >= PHOTO_MAX) {
+      const daysLeft = Math.ceil((PHOTO_PERIOD_MS - (Date.now() - q.since)) / (24 * 60 * 60 * 1000));
+      const msg = `Quota photo atteint (${PHOTO_MAX} / 5 jours). Revient dans ${daysLeft} jour${daysLeft > 1 ? "s" : ""}.`;
+      if (onPhotoToast) onPhotoToast(msg);
+      return;
+    }
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      if (onPhotoToast) onPhotoToast("Image trop lourde (max 5 Mo)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhoto(reader.result as string);
+      incrementPhotoQuota();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
   // ── Rendu ─────────────────────────────────────────────────────────────────────
 
-  const hasMic = Boolean(SpeechRecognitionAPI);
+  const hasMic  = Boolean(SpeechRecognitionAPI);
   const hasText = text.trim().length > 0;
+  const canSend = hasText && !disabled;
 
   return (
     <div style={{
@@ -203,9 +247,9 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
             onClick={() => setMode("normal")}
             style={{
               flex: 1, height: 32, borderRadius: 999, cursor: "pointer",
-              border: `1px solid ${mode === "normal" ? "rgba(168,107,255,0.60)" : "rgba(255,255,255,0.08)"}`,
-              background: mode === "normal" ? "rgba(168,107,255,0.10)" : "transparent",
-              color: mode === "normal" ? "rgba(235,235,245,0.90)" : "rgba(255,255,255,0.28)",
+              border: `1px solid ${mode === "normal" ? "rgba(168,107,255,0.55)" : "rgba(255,255,255,0.09)"}`,
+              background: mode === "normal" ? "rgba(168,107,255,0.10)" : "#1c1c20",
+              color: mode === "normal" ? "rgba(235,235,245,0.90)" : "rgba(255,255,255,0.40)",
               fontSize: 12, fontWeight: mode === "normal" ? 600 : 400,
               transition: "all 0.15s",
             }}
@@ -221,16 +265,16 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
                 !canDiagnostic
                   ? "rgba(255,255,255,0.05)"
                   : mode === "diagnostic"
-                  ? "rgba(168,107,255,0.60)"
-                  : "rgba(255,255,255,0.08)"
+                  ? "rgba(168,107,255,0.55)"
+                  : "rgba(255,255,255,0.09)"
               }`,
               background: (mode === "diagnostic" && canDiagnostic)
-                ? "rgba(168,107,255,0.10)" : "transparent",
+                ? "rgba(168,107,255,0.10)" : "#1c1c20",
               color: !canDiagnostic
-                ? "rgba(255,255,255,0.14)"
+                ? "rgba(255,255,255,0.18)"
                 : mode === "diagnostic"
                 ? "rgba(235,235,245,0.90)"
-                : "rgba(255,255,255,0.28)",
+                : "rgba(255,255,255,0.40)",
               fontSize: 12, fontWeight: (mode === "diagnostic" && canDiagnostic) ? 600 : 400,
               cursor: canDiagnostic ? "pointer" : "default",
               opacity: canDiagnostic ? 1 : 0.45,
@@ -242,8 +286,17 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
         </div>
       )}
 
-      {/* ── Composer Aura ─────────────────────────────────────────────────── */}
+      {/* ── Composer ─────────────────────────────────────────────────────── */}
       <div style={{ padding: "0 16px" }}>
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          style={{ display: "none" }}
+        />
+
         <div style={{
           borderRadius: 30,
           padding: "6px 6px 6px 8px",
@@ -255,16 +308,39 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
           gap: 6,
           transition: "border-color 0.2s",
         }}>
-          {/* + décoratif */}
-          <button
-            tabIndex={-1}
-            style={{
-              width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-              border: "none", background: "transparent", cursor: "default", padding: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "rgba(233,233,245,0.40)", fontSize: 22, lineHeight: 1,
-            }}
-          >+</button>
+          {/* + / photo thumbnail */}
+          {photo ? (
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <img
+                src={photo}
+                alt=""
+                style={{ width: 42, height: 42, borderRadius: 12, objectFit: "cover", display: "block" }}
+              />
+              <button
+                onClick={() => setPhoto(null)}
+                style={{
+                  position: "absolute", top: -5, right: -5,
+                  width: 17, height: 17, borderRadius: "50%",
+                  background: "rgba(0,0,0,0.85)", border: "1px solid rgba(255,255,255,0.20)",
+                  color: "#fff", fontSize: 9, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  lineHeight: 1,
+                }}
+              >×</button>
+            </div>
+          ) : (
+            <button
+              onClick={handlePlusClick}
+              tabIndex={-1}
+              style={{
+                width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+                border: "none", background: "transparent",
+                cursor: disabled ? "default" : "pointer", padding: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "rgba(233,233,245,0.40)", fontSize: 24, lineHeight: 1,
+              }}
+            >+</button>
+          )}
 
           {/* Textarea */}
           <textarea
@@ -293,78 +369,59 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
             } as React.CSSProperties}
           />
 
-          {/* Boutons droite */}
-          {hasText ? (
-            /* Envoyer */
+          {/* Micro */}
+          {hasMic && (
             <motion.button
-              whileTap={disabled ? {} : { scale: 0.88 }}
-              onClick={handleSubmit}
-              disabled={disabled}
+              whileTap={disabled ? {} : { scale: 0.82 }}
+              onClick={handleMicClick}
+              type="button"
+              aria-label={isRecording ? "Arrêter l'enregistrement" : "Dicter un message"}
               style={{
                 width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-                border: "none", cursor: disabled ? "default" : "pointer", padding: 0,
-                background: disabled ? "rgba(168,107,255,0.3)" : GRAD,
+                border: "none",
+                background: isRecording ? "rgba(239,68,68,0.18)" : "transparent",
+                color: isRecording ? "rgba(239,68,68,0.85)" : "rgba(233,233,245,0.55)",
+                cursor: disabled ? "default" : "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#0c0c12",
-                opacity: disabled ? 0.5 : 1,
-                transition: "opacity 0.15s",
+                opacity: disabled ? 0.35 : 1,
+                transition: "all 0.18s",
               }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2"
-                  strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </motion.button>
-          ) : (
-            <>
-              {/* Micro */}
-              {hasMic && (
-                <motion.button
-                  whileTap={disabled ? {} : { scale: 0.82 }}
-                  onClick={handleMicClick}
-                  type="button"
-                  aria-label={isRecording ? "Arrêter l'enregistrement" : "Dicter un message"}
-                  style={{
-                    width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-                    border: "none",
-                    background: isRecording ? "rgba(239,68,68,0.18)" : "transparent",
-                    color: isRecording ? "rgba(239,68,68,0.85)" : "rgba(233,233,245,0.55)",
-                    cursor: disabled ? "default" : "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    opacity: disabled ? 0.35 : 1,
-                    transition: "all 0.18s",
-                  }}
+              {isRecording ? (
+                <motion.div
+                  animate={{ opacity: [1, 0.4, 1] }}
+                  transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
-                  {isRecording ? (
-                    <motion.div
-                      animate={{ opacity: [1, 0.4, 1] }}
-                      transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
-                      style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >
-                      <MicOff size={18} />
-                    </motion.div>
-                  ) : (
-                    <Mic size={18} />
-                  )}
-                </motion.button>
+                  <MicOff size={18} />
+                </motion.div>
+              ) : (
+                <Mic size={18} />
               )}
-
-              {/* Waveform gradient */}
-              <button
-                style={{
-                  width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-                  border: "none", background: GRAD, cursor: "pointer", padding: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#fff",
-                }}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M4 10v4M9 6v12M15 8v8M20 11v2"/>
-                </svg>
-              </button>
-            </>
+            </motion.button>
           )}
+
+          {/* Send — toujours violet, flèche, s'active quand canSend */}
+          <motion.button
+            whileTap={canSend ? { scale: 0.88 } : {}}
+            onClick={handleSubmit}
+            disabled={!canSend}
+            style={{
+              width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+              border: "none",
+              cursor: canSend ? "pointer" : "default", padding: 0,
+              background: canSend ? GRAD : "rgba(168,107,255,0.20)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#0c0c12",
+              opacity: canSend ? 1 : 0.55,
+              transition: "opacity 0.15s, background 0.15s",
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2"
+                strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </motion.button>
         </div>
       </div>
     </div>

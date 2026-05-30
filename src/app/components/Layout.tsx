@@ -218,30 +218,20 @@ export function Layout() {
 
             <div className="flex-[1.4] h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full">
               <Link to="/ai" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
-                <motion.div
-                  className="fw-nav-ai-btn"
+                <motion.img
+                  src={logoImage}
+                  alt="IA"
                   whileTap={{ scale: 0.88 }}
                   transition={{ type: "spring", stiffness: 500, damping: 28 }}
                   style={{
-                    width: 30, height: 30, borderRadius: 8,
-                    background: isActive("/ai") ? "#ffffff" : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "background 0.15s",
-                    overflow: "hidden",
-                  }}
-                >
-                  <img
-                    src={logoImage}
-                    alt="IA"
-                    style={{
-                      width: 30, height: 30,
-                      objectFit: "contain",
-                      mixBlendMode: isActive("/ai") ? "normal" : "screen",
-                      filter: isActive("/ai") ? "invert(1)" : "none",
-                      display: "block",
-                    } as React.CSSProperties}
-                  />
-                </motion.div>
+                    width: 30, height: 30,
+                    objectFit: "contain",
+                    mixBlendMode: "screen",
+                    display: "block",
+                    opacity: isActive("/ai") ? 1 : 0.42,
+                    transition: "opacity 0.18s",
+                  } as React.CSSProperties}
+                />
               </Link>
             </div>
 
