@@ -877,12 +877,14 @@ function LoginOtpPanel({ onBack }: { onBack: () => void }) {
 
     setPending(true);
     try {
-      // Utilise le signInWithOtp natif Supabase (6 chiffres) — ne dépend pas de Resend
-      const { error: otpErr } = await supabase.auth.signInWithOtp({
-        email: trimmed,
-        options: { shouldCreateUser: false },
+      // Code 8 chiffres via serveur Resend (même flow que l'inscription)
+      const res = await fetchT(`${BASE}/auth/send-otp`, {
+        method: "POST",
+        headers: HEADERS,
+        body: JSON.stringify({ email: trimmed }),
       });
-      if (otpErr) throw new Error(otpErr.message);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Erreur serveur (${res.status})`);
 
       sessionStorage.setItem("ff_verify_email", trimmed);
       sessionStorage.setItem("ff_verify_mode", "login");
@@ -894,7 +896,7 @@ function LoginOtpPanel({ onBack }: { onBack: () => void }) {
         setError("Connexion au serveur impossible — le projet est peut-être en train de démarrer. Réessaie dans 30 secondes.");
       } else if (low.includes("security purposes") || low.includes("seconds") || low.includes("rate limit") || low.includes("too many")) {
         setError("Trop de tentatives. Attends quelques minutes et réessaie.");
-      } else if (low.includes("user not found") || low.includes("invalid login") || low.includes("no user") || low.includes("signup")) {
+      } else if (low.includes("aucun compte") || low.includes("user not found") || low.includes("no user")) {
         setError("Aucun compte trouvé avec cet email. Inscris-toi d'abord.");
       } else {
         setError(msg || "Une erreur est survenue. Réessaie.");
@@ -905,7 +907,7 @@ function LoginOtpPanel({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <PanelWrapper onBack={onBack} title="Connexion par code" subtitle="Saisis ton email pour recevoir un code à 6 chiffres.">
+    <PanelWrapper onBack={onBack} title="Connexion par code" subtitle="Saisis ton email pour recevoir un code à 8 chiffres.">
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <Field label="Email">
           <div style={{ position: "relative" }}>
