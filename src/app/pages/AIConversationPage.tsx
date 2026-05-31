@@ -255,7 +255,7 @@ export function AIConversationPage() {
     <div style={{
       height: "100dvh",
       display: "flex", flexDirection: "column",
-      background: "#050510",
+      background: "#000000",
       overflow: "hidden",
       position: "relative",
       ...(isDesktop ? {

@@ -308,7 +308,7 @@ export function AIHomePage() {
     return (
       <div style={{
         height: "100dvh",
-        background: "#050510",
+        background: "#000000",
         display: "flex", flexDirection: "column",
         position: "relative",
         overflow: "hidden",
@@ -550,7 +550,7 @@ export function AIHomePage() {
   return (
     <div style={{
       height: "100dvh",
-      background: "#050510",
+      background: "#000000",
       display: "flex", flexDirection: "column",
       position: "relative",
       overflow: "hidden",   /* ← toute la page : jamais de scroll */

@@ -53,16 +53,16 @@ function getNotifText(n: AppNotification): string {
 
 function getNotifIcon(type: AppNotification["type"]) {
   switch (type) {
-    case "like":             return <Heart style={{ width: 21, height: 21, color: "#fff" }} strokeWidth={2} />;
-    case "comment":          return <MessageCircle style={{ width: 21, height: 21, color: "#fff" }} strokeWidth={2} />;
-    case "follow":           return <UserPlus style={{ width: 21, height: 21, color: "#fff" }} strokeWidth={2} />;
-    case "comment_reply":    return <Reply style={{ width: 21, height: 21, color: "#fff" }} strokeWidth={2} />;
-    case "comment_reaction": return <Smile style={{ width: 21, height: 21, color: "#fff" }} strokeWidth={2} />;
-    case "mention":          return <AtSign style={{ width: 21, height: 21, color: "#fff" }} strokeWidth={2} />;
-    case "access_request":   return <Lock style={{ width: 21, height: 21, color: "#fff" }} strokeWidth={2} />;
-    case "access_accepted":  return <Check style={{ width: 21, height: 21, color: "#fff" }} strokeWidth={2} />;
-    case "access_refused":   return <X style={{ width: 21, height: 21, color: "#fff" }} strokeWidth={2} />;
-    default:                 return <Bell style={{ width: 21, height: 21, color: "#fff" }} strokeWidth={2} />;
+    case "like":             return <Heart style={{ width: 16, height: 16, color: "#fff" }} strokeWidth={2} />;
+    case "comment":          return <MessageCircle style={{ width: 16, height: 16, color: "#fff" }} strokeWidth={2} />;
+    case "follow":           return <UserPlus style={{ width: 16, height: 16, color: "#fff" }} strokeWidth={2} />;
+    case "comment_reply":    return <Reply style={{ width: 16, height: 16, color: "#fff" }} strokeWidth={2} />;
+    case "comment_reaction": return <Smile style={{ width: 16, height: 16, color: "#fff" }} strokeWidth={2} />;
+    case "mention":          return <AtSign style={{ width: 16, height: 16, color: "#fff" }} strokeWidth={2} />;
+    case "access_request":   return <Lock style={{ width: 16, height: 16, color: "#fff" }} strokeWidth={2} />;
+    case "access_accepted":  return <Check style={{ width: 16, height: 16, color: "#fff" }} strokeWidth={2} />;
+    case "access_refused":   return <X style={{ width: 16, height: 16, color: "#fff" }} strokeWidth={2} />;
+    default:                 return <Bell style={{ width: 16, height: 16, color: "#fff" }} strokeWidth={2} />;
   }
 }
 
@@ -118,8 +118,8 @@ function NotifRow({
       animate={{ opacity: 1, y: 0 }}
       layout
       style={{
-        display: "flex", alignItems: "center", gap: 18,
-        padding: "21px 24px",
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "16px 18px",
         background: isUnread ? "rgba(255,255,255,0.05)" : "transparent",
         borderBottom: "0.5px solid rgba(255,255,255,0.06)",
         cursor: isAccessRequest ? "default" : "pointer",
@@ -130,10 +130,10 @@ function NotifRow({
     >
       {/* Avatar + type icon overlay */}
       <div style={{ position: "relative", flexShrink: 0 }}>
-        <Avatar src={avatar} name={name} size={66} />
+        <Avatar src={avatar} name={name} size={50} />
         <div style={{
-          position: "absolute", bottom: -3, right: -3,
-          width: 30, height: 30, borderRadius: "50%",
+          position: "absolute", bottom: -2, right: -2,
+          width: 22, height: 22, borderRadius: "50%",
           background: "#1a1a1a", border: "1.5px solid #111",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
@@ -144,7 +144,7 @@ function NotifRow({
       {/* Text */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          fontSize: 21, color: isUnread ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.55)",
+          fontSize: 16, color: isUnread ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.55)",
           fontWeight: isUnread ? 500 : 400, lineHeight: 1.4, margin: 0,
           whiteSpace: "normal",
         }}>
@@ -152,15 +152,15 @@ function NotifRow({
         </p>
         {notif.postSnippet && (
           <span style={{
-            fontSize: 18, color: "rgba(255,255,255,0.28)",
-            display: "block", marginTop: 4,
+            fontSize: 14, color: "rgba(255,255,255,0.28)",
+            display: "block", marginTop: 3,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             maxWidth: "100%",
           }}>
             « {notif.postSnippet.length > 80 ? notif.postSnippet.slice(0, 80) + "…" : notif.postSnippet} »
           </span>
         )}
-        <span style={{ fontSize: 17, color: "rgba(255,255,255,0.28)", marginTop: 4, display: "block" }}>
+        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.28)", marginTop: 3, display: "block" }}>
           {formatTimestamp(notif.timestamp)}
         </span>
 
@@ -198,7 +198,7 @@ function NotifRow({
       {/* Dot non lu */}
       {isUnread && (
         <div style={{
-          width: 10, height: 10, borderRadius: "50%",
+          width: 8, height: 8, borderRadius: "50%",
           background: "#fff", flexShrink: 0,
         }} />
       )}
@@ -306,11 +306,11 @@ export function NotificationsPage() {
   }, []);
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#050510" }}>
+    <div style={{ minHeight: "100dvh", background: "#000000" }}>
       {/* Header */}
       <div style={{
         position: "sticky", top: 0, zIndex: 10,
-        background: "#050510",
+        background: "#000000",
         borderBottom: "0.5px solid rgba(255,255,255,0.08)",
         padding: "0 4px",
       }}>

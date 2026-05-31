@@ -219,21 +219,6 @@ export function Layout() {
               </motion.div>
             </Link>
 
-            <Link to="/create" className="flex-1 h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
-              <motion.div
-                whileTap={{ scale: 0.88 }}
-                transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                style={{
-                  width: 48, height: 48, borderRadius: "50%",
-                  background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: "0 4px 16px rgba(124,58,237,0.45)",
-                }}
-              >
-                <Plus style={{ width: 24, height: 24, color: "#fff", strokeWidth: 2.4 }} />
-              </motion.div>
-            </Link>
-
             <div className="flex-[1.4] h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full">
               <Link to="/ai" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
                 <motion.div
@@ -274,6 +259,21 @@ export function Layout() {
             <Link to="/profile" className="flex-1 h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full" style={{ textDecoration: "none" }}>
               <motion.div whileTap={{ scale: 0.82 }}>
                 <Target style={{ width: 25, height: 25, color: isActive("/profile") ? "#fff" : "rgba(255,255,255,0.38)", strokeWidth: isActive("/profile") ? 2.2 : 1.7, transition: "color 0.18s" }} />
+              </motion.div>
+            </Link>
+
+            <Link to="/create" className="flex-1 h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
+              <motion.div
+                whileTap={{ scale: 0.88 }}
+                transition={{ type: "spring", stiffness: 500, damping: 28 }}
+                style={{
+                  width: 48, height: 48, borderRadius: "50%",
+                  background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 4px 16px rgba(124,58,237,0.45)",
+                }}
+              >
+                <Plus style={{ width: 24, height: 24, color: "#fff", strokeWidth: 2.4 }} />
               </motion.div>
             </Link>
 
