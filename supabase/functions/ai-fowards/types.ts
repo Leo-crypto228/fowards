@@ -59,6 +59,7 @@ export interface DbUserProfilePage {
   last_updated_at: string;
   ai_update_count: number;
   user_update_count: number;
+  onboarding_question_index: number;
   created_at: string;
 }
 

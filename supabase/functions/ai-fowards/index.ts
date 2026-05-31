@@ -34,10 +34,24 @@ const supabaseAdmin = createClient(
 );
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
+// ── CORS — origines autorisées (env ALLOWED_ORIGINS en production) ────────────
+// En prod : définir ALLOWED_ORIGINS="https://fowards.net,https://www.fowards.net"
+// En dev  : laisser vide → wildcard (comportement actuel)
+const _allowedOrigins = Deno.env.get("ALLOWED_ORIGINS")
+  ?.split(",")
+  .map((s) => s.trim())
+  .filter(Boolean) ?? null;
+
 app.use(
   "/*",
   cors({
-    origin: "*",
+    origin: _allowedOrigins
+      ? (origin) => {
+          // Permet les requêtes sans origine (Postman, curl, server-to-server)
+          if (!origin) return "";
+          return _allowedOrigins.includes(origin) ? origin : null;
+        }
+      : "*",
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     maxAge: 600,
@@ -121,6 +135,7 @@ async function getOrCreateQuota(userId: string): Promise<DbUserQuota> {
       .eq("user_id", userId)
       .eq("quota_date", today)
       .single();
+    if (!retry) throw new Error(`getOrCreateQuota: impossible d'obtenir ou créer le quota (userId=${userId})`);
     return retry as DbUserQuota;
   }
 
@@ -174,6 +189,7 @@ async function getOrCreateProfile(userId: string): Promise<DbUserProfilePage> {
       .select("*")
       .eq("user_id", userId)
       .single();
+    if (!retry) throw new Error(`getOrCreateProfile: impossible d'obtenir ou créer le profil (userId=${userId})`);
     return retry as DbUserProfilePage;
   }
 
@@ -332,6 +348,7 @@ async function applyProfileUpdate(
   if (isPhase1JustCompleted) {
     patch.is_phase1_complete = true;
     patch.phase1_completed_at = now;
+    patch.onboarding_question_index = 0; // Reset — plus utile après Phase 1
   }
 
   // upsert (pas update) : safe si la row n'existe pas encore pour une raison quelconque
@@ -489,13 +506,24 @@ function parseGeminiResponse(raw: string): ParsedResponse {
 function buildUserContext(profile: DbUserProfilePage, _mode: ChatMode): string {
   if (!profile.is_phase1_complete) {
     const partialContent = profile.content_markdown.trim();
+    const questionIndex = profile.onboarding_question_index ?? 0;
+
+    // Rappel explicite à Gemini de sa position dans le questionnaire
+    const progressReminder = questionIndex > 0
+      ? `[ONBOARDING_PROGRESS: Tu as déjà posé ${questionIndex} question(s). ` +
+        `Tu es à l'étape ${questionIndex + 1}/12. ` +
+        `NE RECOMMENCE PAS depuis le début. ` +
+        `Continue directement avec la question suivante dans l'ordre défini.]\n\n`
+      : "";
+
     if (!partialContent) {
       // Toute première fois — aucune info collectée
-      return "[FIRST_TIME_USER]";
+      return `[FIRST_TIME_USER]\n${progressReminder}`;
     }
     // Phase 1 en cours — profil partiellement rempli
     return (
       `[FIRST_TIME_USER]\n[PHASE_1_IN_PROGRESS]\n` +
+      `${progressReminder}` +
       `[USER_PROFILE_PAGE - WORK IN PROGRESS]\n${partialContent}\n[/USER_PROFILE_PAGE]`
     );
   }
@@ -567,19 +595,72 @@ app.put("/ai-fowards/profile", async (c) => {
     const existing = await getOrCreateProfile(userId);
     const now = new Date().toISOString();
 
-    await supabaseAdmin
+    const { error: updateErr } = await supabaseAdmin
       .from("user_profile_page")
-      .update({
-        content_markdown: body.contentMarkdown,
-        last_updated_by: "user",
-        last_updated_at: now,
-        user_update_count: (existing.user_update_count ?? 0) + 1,
-      })
-      .eq("user_id", userId);
+      .upsert(
+        {
+          user_id: userId,
+          content_markdown: body.contentMarkdown,
+          last_updated_by: "user",
+          last_updated_at: now,
+          user_update_count: (existing.user_update_count ?? 0) + 1,
+        },
+        { onConflict: "user_id" },
+      );
 
+    if (updateErr) {
+      console.error("[profile PUT] upsert error:", JSON.stringify(updateErr));
+      return c.json({ error: "Erreur lors de la sauvegarde du profil" }, 500);
+    }
+
+    console.log(`[profile PUT] userId=${userId} — profil mis à jour ✅`);
     return c.json({ success: true });
   } catch (err) {
     console.error("[profile PUT] error:", err);
+    return c.json({ error: "Erreur serveur" }, 500);
+  }
+});
+
+// ── POST /complete-phase1 — filet de sécurité onboarding ─────────────────────
+// Marque is_phase1_complete = true même si Gemini n'a pas émis le bloc <profile-update>.
+// Appelé par le client au moment où l'user clique "Accéder à Fowards".
+// Idempotent : sans effet si déjà complet.
+app.post("/ai-fowards/complete-phase1", async (c) => {
+  const userId = await getUserId(c.req.header("Authorization"));
+  if (!userId) return c.json({ error: "Non authentifié" }, 401);
+
+  try {
+    const profile = await getOrCreateProfile(userId);
+
+    if (profile.is_phase1_complete) {
+      // Déjà complet — rien à faire
+      console.log(`[complete-phase1] userId=${userId} — déjà complete, no-op`);
+      return c.json({ success: true, isPhase1Complete: true, wasAlreadyComplete: true });
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await supabaseAdmin
+      .from("user_profile_page")
+      .upsert(
+        {
+          user_id: userId,
+          is_phase1_complete: true,
+          phase1_completed_at: now,
+          last_updated_by: "system",
+          last_updated_at: now,
+        },
+        { onConflict: "user_id" },
+      );
+
+    if (error) {
+      console.error("[complete-phase1] UPSERT error:", JSON.stringify(error));
+      return c.json({ error: "Erreur lors de la mise à jour du profil" }, 500);
+    }
+
+    console.log(`[complete-phase1] userId=${userId} — is_phase1_complete mis à true ✅`);
+    return c.json({ success: true, isPhase1Complete: true, wasAlreadyComplete: false });
+  } catch (err) {
+    console.error("[complete-phase1] error:", err);
     return c.json({ error: "Erreur serveur" }, 500);
   }
 });
@@ -694,7 +775,12 @@ app.post("/ai-fowards/chat", async (c) => {
   const quotaStatus = buildQuotaStatus(quota, profile.is_phase1_complete);
 
   // ── Vérification quota ─────────────────────────────────────────────────────
-  if (mode === "normal" && !is_onboarding_trigger && !quotaStatus.canSendNormal) {
+  // SEC-06 : le bypass onboarding n'est autorisé QUE si Phase 1 pas encore complète.
+  // Sinon, n'importe quel client authentifié pourrait envoyer is_onboarding_trigger=true
+  // pour contourner le quota de 30 messages/jour indéfiniment.
+  const validOnboardingBypass = is_onboarding_trigger === true && !profile.is_phase1_complete;
+
+  if (mode === "normal" && !validOnboardingBypass && !quotaStatus.canSendNormal) {
     return c.json({
       error: `Quota atteint : ${NORMAL_DAILY_LIMIT} messages normaux/jour. Reviens demain !`,
       quotaExceeded: true,
@@ -863,10 +949,43 @@ app.post("/ai-fowards/chat", async (c) => {
             }
 
             const now = new Date().toISOString();
-            await supabaseAdmin.from("messages").insert([
+            const { error: sMsgErr } = await supabaseAdmin.from("messages").insert([
               { conversation_id: convId, user_id: userId, role: "user", content: message.trim(), mode, fowards_data: null, tokens_input: null, tokens_output: null, created_at: now },
               { conversation_id: convId, user_id: userId, role: "assistant", content: cleanContent, mode, fowards_data: forwardsData, tokens_input: tokensInput, tokens_output: tokensOutput, created_at: new Date(Date.now() + 1).toISOString() },
             ]);
+
+            const sFinalPhase1Complete = isPhase1JustCompleted || profile.is_phase1_complete;
+
+            if (sMsgErr) {
+              // Insert échoué → quota NON incrémenté, on envoie quand même le done
+              // (l'user a vu le stream — on préserve son quota plutôt que d'afficher une erreur)
+              console.error("[streaming] Messages insert ERROR:", JSON.stringify(sMsgErr));
+              const sErrFinalEvent = {
+                done: true, conversationId: convId, message: cleanContent,
+                forwardsData: forwardsData ?? null, choices: sChoices ?? null,
+                mode, isPhase1JustCompleted,
+                quota: buildQuotaStatus(quota, sFinalPhase1Complete),
+              };
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(sErrFinalEvent)}\n\n`));
+              return;
+            }
+
+            // ── Mise à jour onboarding_question_index (streaming) ──────────────
+            if (!profile.is_phase1_complete && !isPhase1JustCompleted) {
+              const questionIndex = (historyRows ?? []).filter((r) => r.role === "assistant").length + 1;
+              const { error: indexError } = await supabaseAdmin
+                .from("user_profile_page")
+                .update({
+                  onboarding_question_index: questionIndex,
+                  last_updated_at: new Date().toISOString(),
+                })
+                .eq("user_id", userId);
+              if (indexError) {
+                console.error("[streaming] ERREUR mise à jour onboarding_question_index:", indexError.message);
+              } else {
+                console.log("[streaming] ONBOARDING INDEX mis à jour:", questionIndex);
+              }
+            }
 
             const sLastPreview = cleanContent.replace(/\n+/g, " ").slice(0, 120);
             const sNewMsgCount = (historyRows?.length ?? 0) + 2;
@@ -881,8 +1000,12 @@ app.post("/ai-fowards/chat", async (c) => {
               await supabaseAdmin.from("user_quotas").update({ diagnostics_used: quota.diagnostics_used + 1 }).eq("user_id", userId).eq("quota_date", sToday);
             }
 
-            const sFinalPhase1Complete = isPhase1JustCompleted || profile.is_phase1_complete;
-            const sUpdatedQuota = await getOrCreateQuota(userId);
+            // Quota calculé localement (évite un aller-retour DB inutile — PERF-04)
+            const sUpdatedQuota: DbUserQuota = {
+              ...quota,
+              normal_messages_used: mode === "normal" ? quota.normal_messages_used + 1 : quota.normal_messages_used,
+              diagnostics_used: mode === "diagnostic" ? quota.diagnostics_used + 1 : quota.diagnostics_used,
+            };
 
             const finalEvent = {
               done: true,
@@ -955,8 +1078,27 @@ app.post("/ai-fowards/chat", async (c) => {
         created_at: new Date(Date.now() + 1).toISOString(),
       },
     ]);
-    if (msgInsertErr) console.error("[Bug1] Messages insert ERROR:", JSON.stringify(msgInsertErr));
-    else console.log("[Bug1] Messages inserted OK");
+    if (msgInsertErr) {
+      console.error("[chat] Messages insert ERROR:", JSON.stringify(msgInsertErr));
+      return c.json({ error: "Erreur lors de la sauvegarde du message. Veuillez réessayer." }, 500);
+    }
+
+    // ── Mise à jour onboarding_question_index (non-streaming) ────────────────
+    if (!profile.is_phase1_complete && !isPhase1JustCompleted) {
+      const questionIndex = (historyRows ?? []).filter((r) => r.role === "assistant").length + 1;
+      const { error: indexError } = await supabaseAdmin
+        .from("user_profile_page")
+        .update({
+          onboarding_question_index: questionIndex,
+          last_updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+      if (indexError) {
+        console.error("[chat] ERREUR mise à jour onboarding_question_index:", indexError.message);
+      } else {
+        console.log("[chat] ONBOARDING INDEX mis à jour:", questionIndex);
+      }
+    }
 
     // ── Mettre à jour la conversation ──────────────────────────────────────────
     const lastPreview = cleanContent.replace(/\n+/g, " ").slice(0, 120);
@@ -992,9 +1134,13 @@ app.post("/ai-fowards/chat", async (c) => {
         .eq("quota_date", today);
     }
 
-    // ── Quota final mis à jour ────────────────────────────────────────────────
+    // ── Quota calculé localement (évite un aller-retour DB — PERF-04) ──────────
     const finalPhase1Complete = isPhase1JustCompleted || profile.is_phase1_complete;
-    const updatedQuota = await getOrCreateQuota(userId);
+    const updatedQuota: DbUserQuota = {
+      ...quota,
+      normal_messages_used: mode === "normal" ? quota.normal_messages_used + 1 : quota.normal_messages_used,
+      diagnostics_used: mode === "diagnostic" ? quota.diagnostics_used + 1 : quota.diagnostics_used,
+    };
 
     return c.json({
       conversationId: convId,
