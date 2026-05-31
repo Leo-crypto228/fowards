@@ -255,11 +255,11 @@ export function AIConversationPage() {
     <div style={{
       height: "100dvh",
       display: "flex", flexDirection: "column",
-      background: "#0a0a10",
+      background: "#050510",
       overflow: "hidden",
       position: "relative",
       ...(isDesktop ? {
-        paddingLeft: "max(0px, calc(50vw - 280px))",
+        paddingLeft: "max(0px, calc(50vw - 368px))",
         paddingRight: "max(0px, calc(50vw - 440px))",
       } : {}),
     }}>

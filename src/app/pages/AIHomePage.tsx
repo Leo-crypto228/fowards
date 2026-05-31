@@ -308,12 +308,11 @@ export function AIHomePage() {
     return (
       <div style={{
         height: "100dvh",
-        background: "#0a0a10",
+        background: "#050510",
         display: "flex", flexDirection: "column",
         position: "relative",
         overflow: "hidden",
-        /* Pousse le contenu à droite de la sidebar (160px) tout en restant dans le puits de 880px */
-        paddingLeft: "max(0px, calc(50vw - 280px))",
+        paddingLeft: "max(0px, calc(50vw - 368px))",
         paddingRight: "max(0px, calc(50vw - 440px))",
       }}>
         {/* SVG filter */}
@@ -371,7 +370,7 @@ export function AIHomePage() {
         </div>
 
         {/* ── Scrollable column ─────────────────────────────────────────────── */}
-        <div style={{ flex: 1, overflowY: "auto", position: "relative", zIndex: 1 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", position: "relative", zIndex: 1 }}>
           <div style={{
             width: "100%", maxWidth: 800, margin: "0 auto",
             padding: "4vh 28px 60px",
@@ -551,7 +550,7 @@ export function AIHomePage() {
   return (
     <div style={{
       height: "100dvh",
-      background: "#0a0a10",
+      background: "#050510",
       display: "flex", flexDirection: "column",
       position: "relative",
       overflow: "hidden",   /* ← toute la page : jamais de scroll */
