@@ -169,9 +169,10 @@ export function AIConversationPage() {
         });
       });
 
-      // Finaliser avec contenu propre
+      // Finaliser avec contenu propre — on retire uniquement le typing indicator,
+      // le message utilisateur (tempUserId) reste dans la conversation
       setMessages((prev) => {
-        const base = prev.filter((m) => m.id !== typingId && m.id !== tempUserId);
+        const base = prev.filter((m) => m.id !== typingId);
         return base.map((m) =>
           m.id === streamingAiId
             ? { ...m, content: response.message, fowards_data: response.forwardsData ?? null }
