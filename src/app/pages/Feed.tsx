@@ -25,8 +25,9 @@ const TABS = ["Pour toi", "Abonnements"] as const;
 type Tab = (typeof TABS)[number];
 
 // Module-level cache: persists while the page is open, avoids refetch on back-navigation
+// userId inclus dans le cache pour éviter un flash de contenu si deux comptes se connectent (PERF-02)
 const FEED_CACHE_TTL = 300_000;
-let _feedCache: { posts: ApiPost[]; ts: number; hasMore: boolean; offset: number } | null = null;
+let _feedCache: { userId: string; posts: ApiPost[]; ts: number; hasMore: boolean; offset: number } | null = null;
 
 // ── Le registre de profils est maintenant centralisé dans /src/app/data/profiles.ts
 // GLOBAL_PROFILES_MAP est importé depuis ce module.
@@ -384,16 +385,18 @@ export function Feed() {
   const liveStreak = authUser?.streak ?? USER_STREAK;
 
   // ── API posts state ──────────────────────────────────────────────────────
-  // Initialiser depuis le cache module-level pour éviter le flash au retour d'un post
-  const [apiPosts, setApiPosts] = useState<ApiPost[]>(() => _feedCache?.posts ?? []);
+  // Initialiser depuis le cache module-level — seulement si le cache appartient au même user (PERF-02)
+  const cacheValid = _feedCache && _feedCache.userId === (currentUserId ?? "");
+  const [apiPosts, setApiPosts] = useState<ApiPost[]>(() => cacheValid ? _feedCache!.posts : []);
   const [loadingApi, setLoadingApi] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(() => _feedCache?.hasMore ?? true);
+  const [hasMore, setHasMore] = useState(() => cacheValid ? _feedCache!.hasMore : true);
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const fetchApiPosts = useCallback(async (forceRefresh = false) => {
-    if (!forceRefresh && _feedCache && Date.now() - _feedCache.ts < FEED_CACHE_TTL) {
+    const uid = currentUserId ?? "";
+    if (!forceRefresh && _feedCache && _feedCache.userId === uid && Date.now() - _feedCache.ts < FEED_CACHE_TTL) {
       setApiPosts(_feedCache.posts);
       setHasMore(_feedCache.hasMore);
       return;
@@ -401,11 +404,11 @@ export function Feed() {
     setLoadingApi(true);
     setApiError(null);
     try {
-      const { posts, hasMore: more } = await getAllPosts(20, currentUserId || undefined, 0);
+      const { posts, hasMore: more } = await getAllPosts(20, uid || undefined, 0);
       const valid = posts
         .filter(p => p?.user?.name)
         .filter(p => !p.id?.startsWith("seed-"));
-      _feedCache = { posts: valid, ts: Date.now(), hasMore: more, offset: valid.length };
+      _feedCache = { userId: uid, posts: valid, ts: Date.now(), hasMore: more, offset: valid.length };
       setApiPosts(valid);
       setHasMore(more);
     } catch (err) {
@@ -426,7 +429,7 @@ export function Feed() {
         .filter(p => p?.user?.name)
         .filter(p => !p.id?.startsWith("seed-"));
       const merged = [..._feedCache.posts, ...valid];
-      _feedCache = { posts: merged, ts: _feedCache.ts, hasMore: more, offset: merged.length };
+      _feedCache = { userId: _feedCache.userId, posts: merged, ts: _feedCache.ts, hasMore: more, offset: merged.length };
       setApiPosts(merged);
       setHasMore(more);
     } catch (err) {
@@ -1105,40 +1108,6 @@ export function Feed() {
       </motion.div>
 
       <div className="max-w-2xl mx-auto py-8" />
-
-      {/* ── FAB — créer un post (violet, bas-droite) ──────────────────────────── */}
-      <FeedFAB />
     </div>
-  );
-}
-
-function FeedFAB() {
-  return (
-    <motion.div
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 400, damping: 25, delay: 0.3 }}
-      style={{
-        position: "fixed",
-        bottom: "calc(68px + env(safe-area-inset-bottom, 0px))",
-        right: 20,
-        zIndex: 40,
-      }}
-    >
-      <Link to="/create" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
-        <motion.div
-          whileTap={{ scale: 0.88 }}
-          style={{
-            width: 56, height: 56,
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 20px rgba(124,58,237,0.45)",
-          }}
-        >
-          <Plus style={{ width: 26, height: 26, color: "#fff", strokeWidth: 2.4 }} />
-        </motion.div>
-      </Link>
-    </motion.div>
   );
 }
