@@ -262,7 +262,7 @@ export function Layout() {
               </motion.div>
             </Link>
 
-            <Link to="/create" className="flex-1 h-[56px] flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
+            <Link to="/create" className="hidden lg:flex justify-center items-center lg:flex-none lg:h-[56px] lg:w-full" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
               <motion.div
                 whileTap={{ scale: 0.88 }}
                 transition={{ type: "spring", stiffness: 500, damping: 28 }}
