@@ -258,14 +258,18 @@ export function AIConversationPage() {
       background: "#0a0a10",
       overflow: "hidden",
       position: "relative",
+      ...(isDesktop ? {
+        paddingLeft: "max(0px, calc(50vw - 280px))",
+        paddingRight: "max(0px, calc(50vw - 440px))",
+      } : {}),
     }}>
-      {/* Halos */}
-      <div style={{
+      {/* Halos — mobile uniquement, fond noir plat sur desktop */}
+      {!isDesktop && <div style={{
         position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
         background:
           "radial-gradient(120% 80% at 78% -8%, rgba(160,100,255,0.42) 0%, transparent 52%), " +
           "radial-gradient(110% 70% at 8% 6%, rgba(118,120,255,0.30) 0%, transparent 48%)",
-      }}/>
+      }}/>}
       {/* Grain */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.5,

@@ -312,9 +312,12 @@ export function AIHomePage() {
         display: "flex", flexDirection: "column",
         position: "relative",
         overflow: "hidden",
+        /* Pousse le contenu à droite de la sidebar (160px) tout en restant dans le puits de 880px */
+        paddingLeft: "max(0px, calc(50vw - 280px))",
+        paddingRight: "max(0px, calc(50vw - 440px))",
       }}>
         {/* SVG filter */}
-        <svg style={{ position: "absolute", width: 0, height: 0 }}>
+        <svg style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }}>
           <defs>
             <filter id="ai-rm-black">
               <feColorMatrix type="matrix"
@@ -323,14 +326,7 @@ export function AIHomePage() {
           </defs>
         </svg>
 
-        {/* Halos */}
-        <div style={{
-          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
-          background:
-            "radial-gradient(120% 80% at 78% -8%, rgba(160,100,255,0.42) 0%, transparent 52%), " +
-            "radial-gradient(110% 70% at 8% 6%, rgba(118,120,255,0.30) 0%, transparent 48%)",
-        }}/>
-        {/* Grain */}
+        {/* Grain subtil — pas de halos violets */}
         <div style={{
           position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.5,
           backgroundImage: "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
@@ -339,11 +335,11 @@ export function AIHomePage() {
 
         {fileInput}
 
-        {/* ── Top bar — centré dans la colonne 800px ─────────────────────────── */}
+        {/* ── Top bar ────────────────────────────────────────────────────────── */}
         <div style={{
           position: "relative", zIndex: 10, flexShrink: 0,
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          maxWidth: 800, width: "100%", alignSelf: "center",
+          width: "100%",
           padding: "18px 28px 0",
         }}>
           {quota ? (
@@ -432,12 +428,13 @@ export function AIHomePage() {
             <div style={{
               width: "100%", marginTop: 16,
               display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "center",
+              position: "relative", zIndex: 5,
             }}>
               {/* Discussion */}
               <button
                 onClick={() => setMode("normal")}
                 style={{
-                  padding: "13px 16px", borderRadius: 14, cursor: "pointer",
+                  padding: "13px 16px", borderRadius: 22, cursor: "pointer",
                   fontFamily: "inherit",
                   fontWeight: mode === "normal" ? 700 : 600,
                   fontSize: mode === "normal" ? 17 : 14.5,
@@ -452,12 +449,11 @@ export function AIHomePage() {
                 }}
               >Discussion</button>
 
-              {/* Diagnostic */}
+              {/* Diagnostic — pas de disabled HTML pour garder la zone de clic */}
               <button
                 onClick={() => { if (isPhase1Complete && canDiagnostic) setMode("diagnostic"); }}
-                disabled={!isPhase1Complete || !canDiagnostic}
                 style={{
-                  padding: "13px 16px", borderRadius: 14,
+                  padding: "13px 16px", borderRadius: 22,
                   cursor: (isPhase1Complete && canDiagnostic) ? "pointer" : "default",
                   fontFamily: "inherit",
                   fontWeight: (mode === "diagnostic" && isPhase1Complete && canDiagnostic) ? 700 : 600,
@@ -476,6 +472,7 @@ export function AIHomePage() {
                   boxShadow: (mode === "diagnostic" && isPhase1Complete && canDiagnostic)
                     ? "0 10px 28px rgba(0,0,0,0.45)" : "none",
                   opacity: isPhase1Complete ? 1 : 0.40,
+                  pointerEvents: (!isPhase1Complete && !canDiagnostic) ? "none" : "auto",
                 }}
               >Diagnostic</button>
             </div>
