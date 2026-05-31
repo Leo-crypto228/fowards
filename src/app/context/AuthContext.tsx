@@ -8,6 +8,7 @@ import { normalizeUsername } from "../api/profileCache";
 import { setAuthUser, getAuthUser, type StoredAuthUser } from "../api/authStore";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { dailyLoginImpact } from "../api/impactApi";
+import { upsertProfile } from "../api/profileApi";
 
 const BASE    = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
 const HEADERS = { "Content-Type": "application/json", Authorization: `Bearer ${publicAnonKey}` };
@@ -62,6 +63,22 @@ async function loadKVProfileByUID(supabaseId: string, signal: AbortSignal): Prom
 
 const hasRealData = (kv: KVProfile) => !!(kv.onboardingDone || kv.objective || kv.avatar);
 
+// Vérifie dans user_profile_page (source de vérité Supabase) si la Phase 1 est complète.
+// Utilisé comme filet de sécurité quand le profil KV ne confirme pas l'onboarding
+// (nouvel appareil sans cache localStorage, ou KV lent/vide).
+async function checkPhase1CompleteFromDB(userId: string): Promise<boolean> {
+  try {
+    const { data } = await supabase
+      .from("user_profile_page")
+      .select("is_phase1_complete")
+      .eq("user_id", userId)
+      .maybeSingle();
+    return data?.is_phase1_complete === true;
+  } catch {
+    return false;
+  }
+}
+
 async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
   const meta         = supabaseUser.user_metadata ?? {};
   const authUsername = normalizeUsername(meta.username || supabaseUser.email?.split("@")[0] || "user");
@@ -97,10 +114,24 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
     // onboarding_complete / onboarding_step — stockés dans le profil KV (comme onboardingDone)
     // Rétrocompat : comptes existants (onboardingDone=true mais onboardingComplete non défini)
     //   → on les envoie direct au chat IA (step='ia'), pas à la page profil
-    const onboarding_complete: boolean = Boolean(kv.onboardingComplete);
-    const onboarding_step: StoredAuthUser["onboarding_step"] =
+    let onboarding_complete: boolean = Boolean(kv.onboardingComplete);
+    let onboarding_step: StoredAuthUser["onboarding_step"] =
       (kv.onboardingStep as StoredAuthUser["onboarding_step"] | undefined) ||
       (kv.onboardingDone ? "ia" : "profile");
+
+    // Filet de sécurité : si KV ne confirme pas l'onboarding, vérifier la DB.
+    // user_profile_page.is_phase1_complete est la source de vérité côté serveur.
+    // Évite le faux redirect vers /onboarding/ia sur un nouvel appareil (sans cache localStorage)
+    // si le flag KV est absent ou si le worker KV a retourné des données incomplètes.
+    if (!onboarding_complete) {
+      const dbComplete = await checkPhase1CompleteFromDB(supabaseUser.id);
+      if (dbComplete) {
+        onboarding_complete = true;
+        onboarding_step = "done";
+        // Sync KV — évite la rechute au prochain login sur cet appareil
+        upsertProfile(authUsername, { onboardingComplete: true, onboardingStep: "done" }).catch(() => {});
+      }
+    }
 
     return {
       supabaseId: supabaseUser.id, username: authUsername,
@@ -135,6 +166,19 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
         }
       }
     } catch { /* cache corrompu, valeurs par défaut */ }
+
+    // KV inaccessible + localStorage vide (nouvel appareil) → vérifier la DB
+    // pour ne pas rediriger un utilisateur existant vers l'onboarding.
+    if (!onboarding_complete) {
+      const dbComplete = await checkPhase1CompleteFromDB(supabaseUser.id);
+      if (dbComplete) {
+        onboarding_complete = true;
+        onboarding_step = "done";
+        // Sync KV — évite la rechute au prochain login sur cet appareil
+        upsertProfile(authUsername, { onboardingComplete: true, onboardingStep: "done" }).catch(() => {});
+      }
+    }
+
     return {
       supabaseId: supabaseUser.id, username: authUsername,
       name: cachedName, email: supabaseUser.email || "",
@@ -152,6 +196,7 @@ interface AuthContextValue {
   user:                StoredAuthUser | null;
   session:             Session | null;
   loading:             boolean;
+  isRefreshing:        boolean;
   signIn:              (email: string, password: string) => Promise<void>;
   signOut:             () => Promise<void>;
   refreshUserProfile:  () => Promise<void>;
@@ -160,7 +205,7 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue>({
-  user: null, session: null, loading: true,
+  user: null, session: null, loading: true, isRefreshing: false,
   signIn:             async () => {},
   signOut:            async () => {},
   refreshUserProfile: async () => {},
@@ -171,9 +216,10 @@ const AuthContext = createContext<AuthContextValue>({
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user,    setUser]    = useState<StoredAuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [session,      setSession]      = useState<Session | null>(null);
+  const [user,         setUser]         = useState<StoredAuthUser | null>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const applyUser = useCallback(async (supabaseUser: User | null) => {
     if (!supabaseUser) {
@@ -197,6 +243,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Rafraîchissement silencieux en arrière-plan.
           // On fusionne avec le cache : jamais downgrader onboardingDone/firstPostCreated
           // (protège contre un KV lent qui retournerait false pour un user existant).
+          // isRefreshing bloque le Layout guard pendant ce refresh pour éviter un faux
+          // redirect vers /onboarding/ia avec des données périmées (cache périmé race condition).
+          setIsRefreshing(true);
           buildStoredUser(supabaseUser).then((refreshed) => {
             // Relire le localStorage au moment du merge pour capturer les mises à jour
             // survenues PENDANT le fetch KV (ex: completeOnboarding → updateLocalUser).
@@ -213,15 +262,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             const merged: StoredAuthUser = {
               ...refreshed,
+              // Booléens critiques : ne jamais downgrader
               onboardingDone:      latest.onboardingDone      || refreshed.onboardingDone,
               firstPostCreated:    latest.firstPostCreated    || refreshed.firstPostCreated,
               onboarding_complete: latest.onboarding_complete || refreshed.onboarding_complete,
               onboarding_step:     refreshed.onboarding_step  || latest.onboarding_step || "profile",
+              // Champs texte : préférer latest si non vide (protège contre KV stale
+              // écrasant un updateLocalUser survenu pendant le fetch — BUG-05)
+              avatar:    latest.avatar    || refreshed.avatar,
+              name:      latest.name      || refreshed.name,
+              objective: latest.objective || refreshed.objective,
+              streak:    Math.max(latest.streak || 0, refreshed.streak || 0),
             };
             setAuthUser(merged);
             setUser(merged);
             localStorage.setItem(LS_KEY, JSON.stringify(merged));
-          }).catch(() => { /* échec réseau → on garde le cache intact */ });
+          }).catch(() => { /* échec réseau → on garde le cache intact */ })
+            .finally(() => { setIsRefreshing(false); });
           return;
         }
       }
@@ -298,6 +355,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const devLogin = useCallback(async () => {
+    // SEC-03 : interdit en production — uniquement disponible en développement local
+    if (!import.meta.env.DEV) {
+      console.error("[devLogin] Interdit en production. Cette fonction ne doit jamais être appelée hors dev.");
+      return;
+    }
     try {
       // Charger le vrai profil "leo" depuis Supabase KV
       const res = await fetch(`${BASE}/profiles/leo`, { headers: HEADERS });
@@ -343,7 +405,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signOut, refreshUserProfile, updateLocalUser, devLogin }}>
+    <AuthContext.Provider value={{ user, session, loading, isRefreshing, signIn, signOut, refreshUserProfile, updateLocalUser, devLogin }}>
       {children}
     </AuthContext.Provider>
   );

@@ -40,14 +40,12 @@ function FcoinNotificationWatcher() {
   return null;
 }
 
-// Ping fire-and-forget au montage — réveille le Deno isolate avant le premier vrai appel
-const _BASE = `https://${projectId}.supabase.co/functions/v1/make-server-218684af`;
-fetch(`${_BASE}/ping`, { headers: { Authorization: `Bearer ${publicAnonKey}` } }).catch(() => {});
+// PERF-01 : ping déplacé dans main.tsx (warmUpEdgeFunctions) — supprimé ici pour éviter la duplication
 
 export function Layout() {
   const location = useLocation();
   const navigate  = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, isRefreshing } = useAuth();
   const { communityId: activeCommunityId, channelId: activeChannelId, channelName: activeChannelName } = useActiveCommunity();
   const isPostDetail = location.pathname.startsWith("/post/");
   const isWaysViewer = location.pathname.startsWith("/ways/") && !location.pathname.endsWith("/create");
@@ -87,6 +85,10 @@ export function Layout() {
   // ── Auth guard + onboarding guard ──────────────────────────────────────────
   useEffect(() => {
     if (loading) return;
+    // Ne pas rediriger pendant le background refresh : les données sont peut-être
+    // périmées (cache localStorage d'un appareil précédent). On attend que le refresh
+    // soit terminé pour avoir onboarding_complete à jour avant de décider.
+    if (isRefreshing) return;
     if (!user) {
       const redirect = encodeURIComponent(location.pathname + location.search);
       navigate(`/login?redirect=${redirect}`, { replace: true });
@@ -102,19 +104,16 @@ export function Layout() {
       const onboardingRoutes = ["/onboarding/profile", "/onboarding/ia"];
       const alreadyOnOnboarding = onboardingRoutes.some((r) => location.pathname.startsWith(r));
       if (!alreadyOnOnboarding) {
-        // Règle de priorité :
-        //   1. Si onboardingDone=true (compte existant avec profil déjà créé)
-        //      → toujours /onboarding/ia, JAMAIS /onboarding/profile
-        //      Évite qu'un reload avec un mauvais onboarding_step en cache
-        //      renvoie un utilisateur existant vers la page profil.
-        //   2. Sinon : nouveau compte → utiliser onboarding_step ou "profile" par défaut
-        const target = user.onboardingDone
+        // onboarding_step est la source de vérité pour la cible de redirection.
+        // onboardingDone (= "compte existant") est exclu : ce n'est pas un indicateur
+        // de l'état de l'onboarding IA, il causait un faux redirect sur cache périmé.
+        const target = user.onboarding_step === "ia"
           ? "/onboarding/ia"
-          : (user.onboarding_step === "ia" ? "/onboarding/ia" : "/onboarding/profile");
+          : "/onboarding/profile";
         navigate(target, { replace: true });
       }
     }
-  }, [user, loading, navigate, location.pathname]);
+  }, [user, loading, isRefreshing, navigate, location.pathname]);
 
   // Pendant le chargement initial
   if (loading || !user) {
