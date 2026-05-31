@@ -33,6 +33,20 @@ function RobotIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+// ── Desktop media hook ─────────────────────────────────────────────────────────
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isDesktop;
+}
+
 // ── Round button ───────────────────────────────────────────────────────────────
 function RoundBtn({
   children, onClick,
@@ -82,7 +96,8 @@ export function AIConversationPage() {
   const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const autoSentRef = useRef(false);
+  const autoSentRef    = useRef(false);
+  const typingKeyRef   = useRef(0);   // compteur pour générer des keys uniques au typing indicator
 
   const scrollToBottom = useCallback((smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
@@ -121,15 +136,18 @@ export function AIConversationPage() {
     setCurrentChoices(null);
     setMultiSelected(new Set());
 
-    const tempUserId = `temp-${Date.now()}`;
-    const streamingAiId = `a-${Date.now() + 1}`;
+    // BUG-03 : nonce aléatoire pour éviter les collisions d'ID (ex: StrictMode double-fire)
+    const msgNonce = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+    const tempUserId = `temp-${msgNonce}`;
+    const streamingAiId = `a-${msgNonce}`;
+    const typingId = `typing-${++typingKeyRef.current}`;
 
     const tempUserMsg: AiMessage = {
       id: tempUserId, role: "user", content: text, mode,
       fowards_data: null, created_at: new Date().toISOString(),
     };
     const typingMsg: AiMessage = {
-      id: "typing", role: "assistant", content: "…", mode,
+      id: typingId, role: "assistant", content: "…", mode,
       fowards_data: null, created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, tempUserMsg, typingMsg]);
@@ -143,7 +161,7 @@ export function AIConversationPage() {
         setMessages((prev) => {
           if (!prev.some((m) => m.id === streamingAiId)) {
             return [
-              ...prev.filter((m) => m.id !== "typing"),
+              ...prev.filter((m) => m.id !== typingId),
               { id: streamingAiId, role: "assistant" as const, content: partialText, mode, fowards_data: null, created_at: new Date().toISOString() },
             ];
           }
@@ -153,7 +171,7 @@ export function AIConversationPage() {
 
       // Finaliser avec contenu propre
       setMessages((prev) => {
-        const base = prev.filter((m) => m.id !== "typing" && m.id !== tempUserId);
+        const base = prev.filter((m) => m.id !== typingId && m.id !== tempUserId);
         return base.map((m) =>
           m.id === streamingAiId
             ? { ...m, content: response.message, fowards_data: response.forwardsData ?? null }
@@ -184,7 +202,9 @@ export function AIConversationPage() {
         window.history.replaceState(null, "", `/ai/${response.conversationId}`);
       }
     } catch (err: unknown) {
-      setMessages((prev) => prev.filter((m) => m.id !== "typing" && m.id !== tempUserId && m.id !== streamingAiId));
+      // On retire le typing indicator et l'éventuel début de stream, mais on GARDE
+      // le message utilisateur (tempUserId) pour qu'il puisse le relire et réessayer (UX-03)
+      setMessages((prev) => prev.filter((m) => m.id !== typingId && m.id !== streamingAiId));
       const error = err as Error & { quotaExceeded?: boolean; quota?: QuotaStatus };
       toast.error(error.message ?? "Erreur lors de l'envoi", { duration: 4000 });
       if (error.quota) setQuota(error.quota);
@@ -228,6 +248,8 @@ export function AIConversationPage() {
   const currentMode: ChatMode = messages.length > 0
     ? (messages[messages.length - 1].mode ?? "normal")
     : (locationState?.initialMode ?? "normal");
+
+  const isDesktop = useIsDesktop();
 
   return (
     <div style={{
@@ -285,7 +307,13 @@ export function AIConversationPage() {
           WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 22px)",
         } as React.CSSProperties}
       >
-        <div style={{ padding: "8px 18px 4px", display: "flex", flexDirection: "column" }}>
+        <div style={isDesktop ? {
+          maxWidth: 768, margin: "0 auto",
+          padding: "14px 32px 8px",
+          display: "flex", flexDirection: "column", gap: 30,
+        } : {
+          padding: "8px 18px 4px", display: "flex", flexDirection: "column",
+        }}>
           {messages.length === 0 && !sending && (
             <div style={{
               textAlign: "center", paddingTop: 80,
@@ -303,7 +331,7 @@ export function AIConversationPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                {msg.id === "typing" ? (
+                {msg.id.startsWith("typing-") ? (
                   <TypingIndicator />
                 ) : (
                   <MessageBubble message={msg} />
@@ -317,6 +345,8 @@ export function AIConversationPage() {
 
       {/* ── Zone basse — boutons Phase 1 OU input ──────────────────────────── */}
       <div style={{ flexShrink: 0, position: "relative", zIndex: 10 }}>
+        {/* Sur desktop : centré dans une colonne max-width 768px */}
+        <div style={isDesktop ? { maxWidth: 768, margin: "0 auto" } : {}}>
 
         {/* Boutons de choix Phase 1 */}
         <AnimatePresence>
@@ -455,6 +485,18 @@ export function AIConversationPage() {
             onPhotoToast={(msg) => toast.error(msg)}
           />
         )}
+
+        {/* Disclaimer — desktop uniquement */}
+        {isDesktop && (
+          <p style={{
+            textAlign: "center", margin: "0 0 14px",
+            fontSize: 12, color: "rgba(233,233,245,0.32)",
+          }}>
+            Fowards peut faire des erreurs. Vérifie les informations importantes.
+          </p>
+        )}
+
+        </div>{/* fin du wrapper desktop */}
       </div>
     </div>
   );

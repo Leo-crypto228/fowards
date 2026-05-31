@@ -35,6 +35,36 @@ function incrementPhotoQuota() {
   localStorage.setItem(PHOTO_QUOTA_KEY, JSON.stringify({ ...q, count: q.count + 1 }));
 }
 
+// ── Desktop media hook ─────────────────────────────────────────────────────────
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isDesktop;
+}
+
+// ── Relative date formatter ────────────────────────────────────────────────────
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return "À l'instant";
+  if (diffMins < 60) return `Il y a ${diffMins} min`;
+  if (diffHours < 24) return `Il y a ${diffHours} h`;
+  if (diffDays === 1) return "Hier";
+  if (diffDays < 7) return `Il y a ${diffDays} jours`;
+  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
 // ── Robot icon SVG ─────────────────────────────────────────────────────────────
 function RobotIcon({ size = 18 }: { size?: number }) {
   return (
@@ -62,13 +92,17 @@ export function AIHomePage() {
   const [text,          setText]          = useState("");
   const [mode,          setMode]          = useState<ChatMode>("normal");
   const [photo,         setPhoto]         = useState<string | null>(null);
+  const [isRecording,   setIsRecording]   = useState(false); // UX-05 micro
 
   const inputRef    = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<ReturnType<typeof window.SpeechRecognition> | null>(null);
+
+  const isDesktop = useIsDesktop();
 
   // ── Data load ────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
-    if (!token) { setTimeout(() => setLoading(false), 6000); return; }
+    if (!token) { setTimeout(() => setLoading(false), 3000); return; } // réduit 6s→3s (UX-01)
     try {
       const [convs, q] = await Promise.all([getConversations(token), getQuotaStatus(token)]);
       setConversations(convs);
@@ -82,7 +116,7 @@ export function AIHomePage() {
   }, [token]);
 
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 10_000);
+    const t = setTimeout(() => setLoading(false), 5_000); // réduit 10s→5s (UX-01)
     return () => clearTimeout(t);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -126,12 +160,40 @@ export function AIHomePage() {
     e.target.value = "";
   }
 
+  // ── Micro (UX-05) ────────────────────────────────────────────────────────────
+  function handleMicClick() {
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) return;
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      setIsRecording(false);
+      return;
+    }
+    const rec = new SpeechRecognitionAPI();
+    rec.lang = "fr-FR";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onresult = (e: any) => {
+      const transcript = e.results[0]?.[0]?.transcript ?? "";
+      if (transcript) {
+        setText((prev) => (prev ? prev.trimEnd() + " " + transcript : transcript));
+        inputRef.current?.focus();
+      }
+    };
+    rec.onerror = () => { setIsRecording(false); recognitionRef.current = null; };
+    rec.onend   = () => { setIsRecording(false); recognitionRef.current = null; };
+    recognitionRef.current = rec;
+    rec.start();
+    setIsRecording(true);
+  }
+
   // ── Derived ──────────────────────────────────────────────────────────────────
   const isPhase1Complete = quota?.isPhase1Complete ?? true;
   const canDiagnostic    = isPhase1Complete && (!quota || quota.canSendDiagnostic);
   const hasText          = text.trim().length > 0;
   const canSend          = hasText || !!photo;
-  // Max 4 conversations affichées — pas de scroll sur la liste
+  // Max 4 conversations affichées sur mobile — pas de scroll sur la liste
   const hasConvs  = !loading && isPhase1Complete && conversations.length > 0;
   const shownConvs = conversations.slice(0, 4);
 
@@ -141,7 +203,354 @@ export function AIHomePage() {
     return `${quota.normalRemaining} message${quota.normalRemaining > 1 ? "s" : ""} restant${quota.normalRemaining > 1 ? "s" : ""}`;
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Shared: file input ────────────────────────────────────────────────────────
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file" accept="image/*"
+      onChange={handleFileChange}
+      style={{ display: "none" }}
+    />
+  );
+
+  // ── Shared: composer inner content ────────────────────────────────────────────
+  function renderComposerContent(btnSize: number) {
+    return (
+      <>
+        {/* + / photo thumbnail */}
+        {photo ? (
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <img src={photo} alt="" style={{
+              width: btnSize, height: btnSize, borderRadius: 12,
+              objectFit: "cover", display: "block",
+            }}/>
+            <button onClick={() => setPhoto(null)} style={{
+              position: "absolute", top: -5, right: -5,
+              width: 17, height: 17, borderRadius: "50%",
+              background: "rgba(0,0,0,0.85)", border: "1px solid rgba(255,255,255,0.20)",
+              color: "#fff", fontSize: 9, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              lineHeight: 1,
+            }}>×</button>
+          </div>
+        ) : (
+          <button onClick={handlePlusClick} style={{
+            width: btnSize, height: btnSize, borderRadius: 999, flexShrink: 0,
+            border: "none", background: "transparent", cursor: "pointer", padding: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "rgba(233,233,245,0.40)", fontSize: 24, lineHeight: 1,
+          }}>+</button>
+        )}
+
+        {/* Input */}
+        <input
+          ref={inputRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && canSend) handleSend(); }}
+          placeholder="Demander à Fowards"
+          style={{
+            flex: 1, minWidth: 0,
+            background: "transparent", border: "none", outline: "none",
+            color: "#fff", fontSize: 16, fontFamily: "inherit",
+            padding: "6px 2px",
+          }}
+        />
+
+        {/* Micro */}
+        <button
+          onClick={handleMicClick}
+          aria-label={isRecording ? "Arrêter la dictée" : "Dicter un message"}
+          style={{
+            width: btnSize, height: btnSize, borderRadius: 999, flexShrink: 0,
+            border: "none",
+            background: isRecording ? "rgba(239,68,68,0.18)" : "transparent",
+            cursor: "pointer", padding: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: isRecording ? "rgba(239,68,68,0.85)" : "rgba(233,233,245,0.55)",
+            transition: "all 0.18s",
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <rect x="9" y="3" width="6" height="11" rx="3"/>
+            <path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>
+          </svg>
+        </button>
+
+        {/* Send */}
+        <motion.button
+          whileTap={canSend ? { scale: 0.88 } : {}}
+          onClick={() => { if (canSend) handleSend(); }}
+          style={{
+            width: btnSize, height: btnSize, borderRadius: 999, flexShrink: 0,
+            border: "none", cursor: canSend ? "pointer" : "default", padding: 0,
+            background: canSend ? GRAD : "rgba(168,107,255,0.20)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#0c0c12",
+            opacity: canSend ? 1 : 0.55,
+            transition: "opacity 0.2s, background 0.2s",
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2"
+              strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </motion.button>
+      </>
+    );
+  }
+
+  // ── Desktop render ─────────────────────────────────────────────────────────────
+  if (isDesktop) {
+    const desktopConvs = conversations.slice(0, 8);
+
+    return (
+      <div style={{
+        height: "100dvh",
+        background: "#0a0a10",
+        display: "flex", flexDirection: "column",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        {/* SVG filter */}
+        <svg style={{ position: "absolute", width: 0, height: 0 }}>
+          <defs>
+            <filter id="ai-rm-black">
+              <feColorMatrix type="matrix"
+                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  1 1 1 1 -1"/>
+            </filter>
+          </defs>
+        </svg>
+
+        {/* Halos */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+          background:
+            "radial-gradient(120% 80% at 78% -8%, rgba(160,100,255,0.42) 0%, transparent 52%), " +
+            "radial-gradient(110% 70% at 8% 6%, rgba(118,120,255,0.30) 0%, transparent 48%)",
+        }}/>
+        {/* Grain */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.5,
+          backgroundImage: "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
+          backgroundSize: "4px 4px", mixBlendMode: "overlay" as const,
+        }}/>
+
+        {fileInput}
+
+        {/* ── Top bar — centré dans la colonne 800px ─────────────────────────── */}
+        <div style={{
+          position: "relative", zIndex: 10, flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          maxWidth: 800, width: "100%", alignSelf: "center",
+          padding: "18px 28px 0",
+        }}>
+          {quota ? (
+            <div style={{
+              fontSize: 11.5, fontWeight: 500,
+              color: "rgba(255,255,255,0.42)",
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 999, padding: "4px 11px",
+            }}>
+              {quotaLabel()}
+            </div>
+          ) : <div/>}
+
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={() => navigate("/ai/profile")}
+            style={{
+              width: 44, height: 44, borderRadius: 999, flexShrink: 0,
+              border: "1px solid rgba(255,255,255,0.18)",
+              background: "rgba(255,255,255,0.06)",
+              cursor: "pointer", padding: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#fff",
+            }}
+          >
+            <RobotIcon size={20}/>
+          </motion.button>
+        </div>
+
+        {/* ── Scrollable column ─────────────────────────────────────────────── */}
+        <div style={{ flex: 1, overflowY: "auto", position: "relative", zIndex: 1 }}>
+          <div style={{
+            width: "100%", maxWidth: 800, margin: "0 auto",
+            padding: "4vh 28px 60px",
+            display: "flex", flexDirection: "column", alignItems: "center",
+          }}>
+            {/* Logo */}
+            <motion.img
+              src={mascot}
+              alt=""
+              animate={{ y: [0, -9, 0] }}
+              transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
+              style={{
+                width: 150,
+                height: "auto",
+                filter: "url(#ai-rm-black) drop-shadow(0 0 14px rgba(160,100,255,0.7))",
+                display: "block",
+              }}
+            />
+
+            {/* Title */}
+            <h1 style={{
+              margin: "28px 0 0",
+              fontSize: 42, lineHeight: 1.1, fontWeight: 600,
+              letterSpacing: -0.8, color: "#fff", textAlign: "center",
+            }}>
+              Eyy, {username} !
+            </h1>
+
+            {/* Subtitle */}
+            <p style={{
+              margin: "12px 0 0",
+              fontSize: 19, lineHeight: 1.5, textAlign: "center",
+              background: GRAD,
+              WebkitBackgroundClip: "text", backgroundClip: "text",
+              color: "transparent",
+            }}>
+              Que veux-tu structurer ?
+            </p>
+
+            {/* Composer */}
+            <div style={{ width: "100%", marginTop: 34 }}>
+              <div style={{
+                borderRadius: 26, padding: "8px 8px 8px 14px",
+                background: "#1c1c20",
+                border: "1px solid rgba(255,255,255,0.07)",
+                boxShadow: "0 16px 50px rgba(0,0,0,0.5)",
+                display: "flex", alignItems: "center", gap: 8,
+              }}>
+                {renderComposerContent(44)}
+              </div>
+            </div>
+
+            {/* Mode buttons — grille 2 colonnes avec animation de scale */}
+            <div style={{
+              width: "100%", marginTop: 16,
+              display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "center",
+            }}>
+              {/* Discussion */}
+              <button
+                onClick={() => setMode("normal")}
+                style={{
+                  padding: "13px 16px", borderRadius: 14, cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontWeight: mode === "normal" ? 700 : 600,
+                  fontSize: mode === "normal" ? 17 : 14.5,
+                  transform: mode === "normal" ? "scale(1.06)" : "scale(1)",
+                  transition: "transform .16s ease, font-size .16s ease, background .16s ease, border-color .16s ease",
+                  color: mode === "normal" ? "#fff" : "rgba(233,233,245,0.78)",
+                  background: mode === "normal" ? "#2a2a31" : "#1c1c20",
+                  border: mode === "normal"
+                    ? "1px solid rgba(255,255,255,0.22)"
+                    : "1px solid rgba(255,255,255,0.07)",
+                  boxShadow: mode === "normal" ? "0 10px 28px rgba(0,0,0,0.45)" : "none",
+                }}
+              >Discussion</button>
+
+              {/* Diagnostic */}
+              <button
+                onClick={() => { if (isPhase1Complete && canDiagnostic) setMode("diagnostic"); }}
+                disabled={!isPhase1Complete || !canDiagnostic}
+                style={{
+                  padding: "13px 16px", borderRadius: 14,
+                  cursor: (isPhase1Complete && canDiagnostic) ? "pointer" : "default",
+                  fontFamily: "inherit",
+                  fontWeight: (mode === "diagnostic" && isPhase1Complete && canDiagnostic) ? 700 : 600,
+                  fontSize: (mode === "diagnostic" && isPhase1Complete && canDiagnostic) ? 17 : 14.5,
+                  transform: (mode === "diagnostic" && isPhase1Complete && canDiagnostic)
+                    ? "scale(1.06)" : "scale(1)",
+                  transition: "transform .16s ease, font-size .16s ease, background .16s ease, border-color .16s ease",
+                  color: !isPhase1Complete
+                    ? "rgba(233,233,245,0.30)"
+                    : (mode === "diagnostic" && canDiagnostic) ? "#fff" : "rgba(233,233,245,0.78)",
+                  background: (mode === "diagnostic" && isPhase1Complete && canDiagnostic)
+                    ? "#2a2a31" : "#1c1c20",
+                  border: (mode === "diagnostic" && isPhase1Complete && canDiagnostic)
+                    ? "1px solid rgba(255,255,255,0.22)"
+                    : "1px solid rgba(255,255,255,0.07)",
+                  boxShadow: (mode === "diagnostic" && isPhase1Complete && canDiagnostic)
+                    ? "0 10px 28px rgba(0,0,0,0.45)" : "none",
+                  opacity: isPhase1Complete ? 1 : 0.40,
+                }}
+              >Diagnostic</button>
+            </div>
+
+            {/* Historique des conversations */}
+            {hasConvs && (
+              <div style={{ width: "100%", marginTop: 30 }}>
+                <div style={{
+                  fontSize: 12, fontWeight: 600, letterSpacing: 0.4,
+                  textTransform: "uppercase" as const,
+                  color: "rgba(233,233,245,0.32)", padding: "0 2px 6px",
+                }}>RÉCENT</div>
+                {desktopConvs.map((conv) => (
+                  <div
+                    key={conv.id}
+                    onClick={() => navigate(`/ai/${conv.id}`)}
+                    style={{
+                      display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 3,
+                      width: "100%", cursor: "pointer",
+                      padding: "14px 4px",
+                      borderBottom: "1px solid rgba(255,255,255,0.07)",
+                    }}
+                  >
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      width: "100%",
+                    }}>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: "#fff" }}>
+                        {conv.title || "Discussion"}
+                      </span>
+                      <button
+                        onClick={(e) => handleDeleteConv(conv.id, e)}
+                        style={{
+                          background: "transparent", border: "none",
+                          color: "rgba(235,235,245,0.20)", cursor: "pointer",
+                          fontSize: 18, padding: "0 4px", lineHeight: 1, flexShrink: 0,
+                          transition: "color 0.15s",
+                        }}
+                      >×</button>
+                    </div>
+                    <span style={{
+                      fontSize: 13.5, color: "rgba(233,233,245,0.55)",
+                      whiteSpace: "nowrap", overflow: "hidden",
+                      textOverflow: "ellipsis", maxWidth: "100%",
+                    }}>
+                      {formatRelativeDate(conv.last_message_at)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Loading */}
+            {loading && (
+              <div style={{ display: "flex", justifyContent: "center", paddingTop: 30 }}>
+                <div style={{
+                  width: 16, height: 16, borderRadius: "50%",
+                  border: "2px solid rgba(255,255,255,0.06)",
+                  borderTop: "2px solid rgba(255,255,255,0.35)",
+                  animation: "ai-spin 0.7s linear infinite",
+                }}/>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes ai-spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+          ::-webkit-scrollbar { display: none; }
+        `}</style>
+      </div>
+    );
+  }
+
+  // ── Mobile render (original) ───────────────────────────────────────────────────
   return (
     <div style={{
       height: "100dvh",
@@ -427,13 +836,20 @@ export function AIHomePage() {
               }}
             />
 
-            {/* Micro */}
-            <button style={{
-              width: 42, height: 42, borderRadius: 999, flexShrink: 0,
-              border: "none", background: "transparent", cursor: "pointer", padding: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "rgba(233,233,245,0.55)",
-            }}>
+            {/* Micro (UX-05) */}
+            <button
+              onClick={handleMicClick}
+              aria-label={isRecording ? "Arrêter la dictée" : "Dicter un message"}
+              style={{
+                width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+                border: "none",
+                background: isRecording ? "rgba(239,68,68,0.18)" : "transparent",
+                cursor: "pointer", padding: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: isRecording ? "rgba(239,68,68,0.85)" : "rgba(233,233,245,0.55)",
+                transition: "all 0.18s",
+              }}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <rect x="9" y="3" width="6" height="11" rx="3"/>
