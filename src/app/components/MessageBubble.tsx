@@ -74,6 +74,7 @@ export function MessageBubble({ message }: Props) {
           fontSize: 16,
           lineHeight: 1.55,
         }}>
+          <div style={{ overflowX: "auto", width: "100%" }}>
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -123,6 +124,7 @@ export function MessageBubble({ message }: Props) {
           >
             {message.content}
           </ReactMarkdown>
+          </div>
         </div>
       </div>
     </div>

@@ -305,6 +305,7 @@ export function AIConversationPage() {
         style={{
           flex: 1,
           overflowY: "auto",
+          overflowX: "hidden",
           position: "relative", zIndex: 1,
           WebkitOverflowScrolling: "touch",
           maskImage: "linear-gradient(to bottom, transparent, #000 22px)",
