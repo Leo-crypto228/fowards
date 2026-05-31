@@ -53,10 +53,11 @@ export function MessageBubble({ message }: Props) {
         src={mascot}
         alt=""
         style={{
-          width: 34,
-          height: "auto",
+          width: 28,
+          height: 28,
           flexShrink: 0,
-          marginTop: 2,
+          objectFit: "contain",
+          mixBlendMode: "screen",
           filter: "drop-shadow(0 0 6px rgba(160,100,255,0.5))",
         }}
       />
