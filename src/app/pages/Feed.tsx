@@ -1108,6 +1108,41 @@ export function Feed() {
       </motion.div>
 
       <div className="max-w-2xl mx-auto py-8" />
+
+      {/* FAB — mobile uniquement (desktop : bouton "+" dans la sidebar) */}
+      <FeedFAB />
     </div>
+  );
+}
+
+function FeedFAB() {
+  return (
+    <motion.div
+      className="lg:hidden"
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25, delay: 0.3 }}
+      style={{
+        position: "fixed",
+        bottom: "calc(68px + env(safe-area-inset-bottom, 0px))",
+        right: 20,
+        zIndex: 40,
+      }}
+    >
+      <Link to="/create" style={{ textDecoration: "none" }} onClick={() => navigator.vibrate?.(12)}>
+        <motion.div
+          whileTap={{ scale: 0.88 }}
+          style={{
+            width: 56, height: 56,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 4px 20px rgba(124,58,237,0.45)",
+          }}
+        >
+          <Plus style={{ width: 26, height: 26, color: "#fff", strokeWidth: 2.4 }} />
+        </motion.div>
+      </Link>
+    </motion.div>
   );
 }
