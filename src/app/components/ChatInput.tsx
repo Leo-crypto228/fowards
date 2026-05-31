@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import { motion } from "motion/react";
 import { Mic, MicOff } from "lucide-react";
 import type { ChatMode } from "../api/aiApi";
@@ -62,9 +62,19 @@ interface Props {
   canDiagnostic?: boolean;
   showModeButtons?: boolean;
   onPhotoToast?: (msg: string) => void;
+  autoFocus?: boolean;
 }
 
-export function ChatInput({ onSend, disabled = false, canDiagnostic = true, showModeButtons = true, onPhotoToast }: Props) {
+// Ref handle exposé via forwardRef — permet au parent d'appeler focus() directement
+// (utile pour iOS Safari où useEffect + requestAnimationFrame ne déclenche pas le clavier)
+export interface ChatInputHandle {
+  focus(): void;
+}
+
+export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
+  { onSend, disabled = false, canDiagnostic = true, showModeButtons = true, onPhotoToast, autoFocus = false }: Props,
+  ref,
+) {
   const [text, setText]               = useState("");
   const [mode, setMode]               = useState<ChatMode>("normal");
   const [isRecording, setIsRecording] = useState(false);
@@ -75,6 +85,18 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
   const finalTextRef   = useRef("");
   const displayedRef   = useRef("");
   const fileInputRef   = useRef<HTMLInputElement>(null);
+
+  // Expose focus() au parent — fix UX-04 iOS Safari (flushSync + appel direct en gesture callstack)
+  useImperativeHandle(ref, () => ({
+    focus() { textareaRef.current?.focus(); },
+  }));
+
+  // ── Focus auto (desktop / Android — iOS utilise le forwardRef + flushSync) ────
+  useEffect(() => {
+    if (!autoFocus) return;
+    const raf = requestAnimationFrame(() => { textareaRef.current?.focus(); });
+    return () => cancelAnimationFrame(raf);
+  }, [autoFocus]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -238,7 +260,7 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
 
   return (
     <div style={{
-      paddingBottom: "max(14px, env(safe-area-inset-bottom, 14px))",
+      paddingBottom: "env(safe-area-inset-bottom, 0px)",
     }}>
       {/* ── Boutons de mode ───────────────────────────────────────────────── */}
       {showModeButtons && (
@@ -425,4 +447,4 @@ export function ChatInput({ onSend, disabled = false, canDiagnostic = true, show
       </div>
     </div>
   );
-}
+});
