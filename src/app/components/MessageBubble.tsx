@@ -44,11 +44,12 @@ export function MessageBubble({ message }: Props) {
   return (
     <div style={{
       display: "flex",
-      justifyContent: "flex-start",
+      flexDirection: "column",
+      alignItems: "flex-start",
       marginBottom: 22,
-      gap: 11,
+      gap: 8,
     }}>
-      {/* Avatar — mascot 34px */}
+      {/* Avatar mascot — au-dessus du texte */}
       <img
         src={mascot}
         alt=""
@@ -57,13 +58,12 @@ export function MessageBubble({ message }: Props) {
           height: 28,
           flexShrink: 0,
           objectFit: "contain",
-          mixBlendMode: "screen",
-          filter: "drop-shadow(0 0 6px rgba(160,100,255,0.5))",
+          filter: "url(#conv-rm-black) drop-shadow(0 0 6px rgba(160,100,255,0.5))",
         }}
       />
 
       {/* Texte */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ minWidth: 0, width: "100%" }}>
         {message.mode === "diagnostic" && (
           <div style={{ marginBottom: 6 }}>
             <DiagnosticBadge mode="diagnostic" />

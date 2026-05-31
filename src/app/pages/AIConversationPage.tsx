@@ -277,6 +277,16 @@ export function AIConversationPage() {
         backgroundSize: "4px 4px", mixBlendMode: "overlay" as const,
       }}/>
 
+      {/* SVG filter — supprime le fond noir natif du PNG mascot (alpha = R+G+B-1) */}
+      <svg style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }} aria-hidden>
+        <defs>
+          <filter id="conv-rm-black">
+            <feColorMatrix type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  1 1 1 1 -1"/>
+          </filter>
+        </defs>
+      </svg>
+
       {/* ── TopBar ──────────────────────────────────────────────────────────── */}
       <div style={{
         position: "relative", zIndex: 10, flexShrink: 0,
@@ -510,18 +520,17 @@ export function AIConversationPage() {
 // ── Typing indicator ───────────────────────────────────────────────────────────
 function TypingIndicator() {
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 11, marginBottom: 22 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, marginBottom: 22 }}>
       <img
         src={mascot}
         alt=""
         style={{
           width: 28, height: 28, flexShrink: 0,
           objectFit: "contain",
-          mixBlendMode: "screen",
-          filter: "drop-shadow(0 0 8px rgba(160,100,255,0.65))",
+          filter: "url(#conv-rm-black) drop-shadow(0 0 8px rgba(160,100,255,0.65))",
         }}
       />
-      <div style={{ display: "flex", alignItems: "center", gap: 6, paddingTop: 9 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         {([0, 0.16, 0.32] as number[]).map((delay, i) => (
           <motion.div
             key={i}
