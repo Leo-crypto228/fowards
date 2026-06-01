@@ -276,7 +276,10 @@ export async function createCheckoutSession(
       }),
     },
   );
-  if (!res.ok) throw new Error(`create-checkout-session ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error ?? `create-checkout-session ${res.status}`);
+  }
   return res.json();
 }
 
