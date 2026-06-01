@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
-import { Camera, ImagePlus, Check, Loader2, ChevronDown } from "lucide-react";
+import { motion } from "motion/react";
+import { Camera, ImagePlus, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { upsertProfile, uploadProfileImage } from "../api/profileApi";
 import { toggleFollow } from "../api/followsApi";
@@ -10,19 +10,6 @@ import { useCommunityMember } from "../context/CommunityMemberContext";
 import { toast } from "sonner";
 import { projectId } from "/utils/supabase/info";
 
-// ── Objectifs disponibles ─────────────────────────────────────────────────────
-
-const OBJECTIVES = [
-  "Lancer ma startup",
-  "Développer mon projet freelance",
-  "Trouver mes premiers clients",
-  "Apprendre à coder",
-  "Créer du contenu",
-  "Faire croître mon audience",
-  "Construire un SaaS",
-  "Quitter mon emploi",
-  "Autre",
-];
 
 const PAGE_SIZE = 8; // Nombre d'utilisateurs / communautés chargés par page
 
@@ -68,7 +55,6 @@ export function OnboardingProfilePage() {
   // ── Champs profil ─────────────────────────────────────────────────────────────
   const [bio, setBio]               = useState("");
   const [objective, setObjective]   = useState("");
-  const [showObjPicker, setShowObjPicker] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -335,66 +321,40 @@ export function OnboardingProfilePage() {
         </div>
 
         {/* ── Objectif ───────────────────────────────────────────────────── */}
-        <div style={{ marginBottom: 28, position: "relative" }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: "rgba(235,235,245,0.55)", display: "block", marginBottom: 8 }}>
+        <div style={{ marginBottom: 28 }}>
+          <label style={{
+            fontSize: 13, fontWeight: 600,
+            color: "rgba(235,235,245,0.55)",
+            display: "block", marginBottom: 8,
+          }}>
             Objectif principal <span style={{ color: "rgba(255,100,100,0.7)" }}>*</span>
           </label>
-          <button
-            onClick={() => setShowObjPicker((v) => !v)}
+          <textarea
+            value={objective}
+            onChange={(e) => setObjective(e.target.value)}
+            placeholder="Décris ton objectif principal…"
+            maxLength={200}
+            rows={3}
             style={{
-              width: "100%", padding: "12px 14px",
+              width: "100%",
+              padding: "12px 14px",
               background: "rgba(255,255,255,0.06)",
               border: `0.5px solid ${objective ? "rgba(99,102,241,0.5)" : "rgba(255,255,255,0.1)"}`,
-              borderRadius: 12, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              color: objective ? "rgba(235,235,245,0.92)" : "rgba(255,255,255,0.3)",
-              fontSize: 14, fontFamily: "inherit",
+              borderRadius: 12,
+              color: "rgba(235,235,245,0.92)",
+              fontSize: 14,
+              fontFamily: "inherit",
+              resize: "none",
+              outline: "none",
+              boxSizing: "border-box" as const,
             }}
-          >
-            <span>{objective || "Choisis ton objectif…"}</span>
-            <ChevronDown style={{
-              width: 16, height: 16, color: "rgba(255,255,255,0.3)",
-              transform: showObjPicker ? "rotate(180deg)" : "none",
-              transition: "transform 0.15s",
-            }} />
-          </button>
-
-          <AnimatePresence>
-            {showObjPicker && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15 }}
-                style={{
-                  position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30,
-                  background: "rgba(20,20,30,0.98)",
-                  border: "0.5px solid rgba(255,255,255,0.12)",
-                  borderRadius: 12, marginTop: 4,
-                  overflow: "hidden",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                }}
-              >
-                {OBJECTIVES.map((obj) => (
-                  <button
-                    key={obj}
-                    onClick={() => { setObjective(obj); setShowObjPicker(false); }}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      width: "100%", padding: "13px 16px",
-                      background: objective === obj ? "rgba(99,102,241,0.12)" : "transparent",
-                      border: "none", borderBottom: "0.5px solid rgba(255,255,255,0.05)",
-                      color: objective === obj ? "rgba(235,235,245,0.95)" : "rgba(235,235,245,0.7)",
-                      fontSize: 14, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                    }}
-                  >
-                    {obj}
-                    {objective === obj && <Check style={{ width: 14, height: 14, color: "rgba(99,102,241,0.8)" }} />}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          />
+          <div style={{
+            textAlign: "right", fontSize: 11,
+            color: "rgba(255,255,255,0.25)", marginTop: 4,
+          }}>
+            {objective.length}/200
+          </div>
         </div>
 
         {/* ── Profils suggérés ───────────────────────────────────────────── */}
