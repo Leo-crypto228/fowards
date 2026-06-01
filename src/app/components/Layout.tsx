@@ -51,7 +51,8 @@ export function Layout() {
   const isWaysViewer = location.pathname.startsWith("/ways/") && !location.pathname.endsWith("/create");
   const isCreatePage = location.pathname === "/create";
   // /ai/new, /ai/:conversationId, /ai/profile — tout sauf /ai (liste)
-  const isAiConversation = location.pathname.startsWith("/ai/");
+  // + /onboarding/ia : interface identique à une conversation IA, nav masquée
+  const isAiConversation = location.pathname.startsWith("/ai/") || location.pathname === "/onboarding/ia";
   // Page IA accueil — gère elle-même height + safe-area, main ne doit pas scroller
   const isAIHome = location.pathname === "/ai";
   const hideNav = isPostDetail || isWaysViewer || isCreatePage || isAiConversation;

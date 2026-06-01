@@ -1,17 +1,37 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
+import mascot from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 import { useAuth } from "../context/AuthContext";
 import { upsertProfile } from "../api/profileApi";
 import {
   sendMessageStream,
+  completePhase1,
   type AiMessage,
   type QuotaStatus,
   type ChoicesBlock,
 } from "../api/aiApi";
 import { MessageBubble } from "../components/MessageBubble";
-import { ChatInput } from "../components/ChatInput";
+import { ChatInput, type ChatInputHandle } from "../components/ChatInput";
 import { toast } from "sonner";
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const GRAD = "linear-gradient(120deg, #a86bff 0%, #8a6bff 55%, #7287ff 100%)";
+
+// ── Desktop media hook ─────────────────────────────────────────────────────────
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isDesktop;
+}
 
 // ── OnboardingIAPage ──────────────────────────────────────────────────────────
 // Page dédiée à la configuration du profil IA (Phase 1).
@@ -32,9 +52,14 @@ export function OnboardingIAPage() {
   const [currentChoices, setCurrentChoices] = useState<ChoicesBlock | null>(null);
   const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set());
   const [phase1Complete, setPhase1Complete] = useState(false);
+  const [validating, setValidating] = useState(false);
+
+  const isDesktop = useIsDesktop();
 
   const messagesEndRef    = useRef<HTMLDivElement>(null);
   const hasTriggeredRef   = useRef(false);
+  const typingKeyRef      = useRef(0);   // compteur pour générer des keys uniques au typing indicator
+  const chatInputRef      = useRef<ChatInputHandle>(null); // ref pour focus iOS (UX-04)
   const [triggerError, setTriggerError] = useState<string | null>(null);
 
   const scrollToBottom = useCallback((smooth = true) => {
@@ -68,7 +93,8 @@ export function OnboardingIAPage() {
     setSending(true);
 
     const streamingId = `a-${Date.now()}`;
-    setMessages([{ id: "typing", role: "assistant", content: "…", mode: "normal", fowards_data: null, created_at: new Date().toISOString() }]);
+    const typingId = `typing-${++typingKeyRef.current}`;
+    setMessages([{ id: typingId, role: "assistant", content: "…", mode: "normal", fowards_data: null, created_at: new Date().toISOString() }]);
 
     try {
       console.log("[OnboardingIA] Déclenchement Phase 1 (streaming)…");
@@ -136,15 +162,18 @@ export function OnboardingIAPage() {
     setCurrentChoices(null);
     setMultiSelected(new Set());
 
-    const tempUserId = `temp-${Date.now()}`;
-    const streamingAiId = `a-${Date.now() + 1}`;
+    // BUG-03 : nonce aléatoire pour éviter les collisions d'ID (ex: StrictMode double-fire)
+    const msgNonce = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+    const tempUserId = `temp-${msgNonce}`;
+    const streamingAiId = `a-${msgNonce}`;
+    const typingId = `typing-${++typingKeyRef.current}`;
 
     const tempUser: AiMessage = {
       id: tempUserId, role: "user", content: text, mode: "normal",
       fowards_data: null, created_at: new Date().toISOString(),
     };
     const typingMsg: AiMessage = {
-      id: "typing", role: "assistant", content: "…", mode: "normal",
+      id: typingId, role: "assistant", content: "…", mode: "normal",
       fowards_data: null, created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, tempUser, typingMsg]);
@@ -160,7 +189,7 @@ export function OnboardingIAPage() {
           if (!prev.some((m) => m.id === streamingAiId)) {
             // Premier chunk — remplacer le typing indicator
             return [
-              ...prev.filter((m) => m.id !== "typing"),
+              ...prev.filter((m) => m.id !== typingId),
               { id: streamingAiId, role: "assistant" as const, content: partialText, mode: "normal", fowards_data: null, created_at: new Date().toISOString() },
             ];
           }
@@ -170,7 +199,7 @@ export function OnboardingIAPage() {
 
       // Finaliser : contenu nettoyé + remplacer message temp user
       setMessages((prev) => {
-        const base = prev.filter((m) => m.id !== "typing" && m.id !== tempUserId);
+        const base = prev.filter((m) => m.id !== typingId && m.id !== tempUserId);
         return base.map((m) =>
           m.id === streamingAiId
             ? { ...m, content: response.message, fowards_data: response.forwardsData ?? null }
@@ -192,7 +221,9 @@ export function OnboardingIAPage() {
         setPhase1Complete(true);
       }
     } catch (err: unknown) {
-      setMessages((prev) => prev.filter((m) => m.id !== "typing" && m.id !== tempUserId && m.id !== streamingAiId));
+      // On retire le typing indicator et l'éventuel début de stream, mais on GARDE
+      // le message utilisateur (tempUserId) pour qu'il puisse le relire et réessayer (UX-03)
+      setMessages((prev) => prev.filter((m) => m.id !== typingId && m.id !== streamingAiId));
       const error = err as Error & { quota?: QuotaStatus };
       toast.error(error.message ?? "Erreur lors de l'envoi");
       if (error.quota) setQuota(error.quota);
@@ -203,14 +234,30 @@ export function OnboardingIAPage() {
 
   // ── Valider le récap et rejoindre Fowards ────────────────────────────────────
 
-  function handleValidate() {
+  async function handleValidate() {
+    if (validating) return;
+    setValidating(true);
+
     // 1. État local EN PREMIER (protège contre race condition background-refresh)
     updateLocalUser({ onboarding_complete: true, onboarding_step: "done", onboardingDone: true });
 
-    // 2. Navigation immédiate vers la page IA
+    // 2. Filet de sécurité — garantit is_phase1_complete = true en DB même si
+    //    Gemini n'a pas émis le bloc <profile-update> (timeout 3s max pour ne pas bloquer)
+    try {
+      const timeout = new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 3000),
+      );
+      await Promise.race([completePhase1(token), timeout]);
+      console.log("[OnboardingIA] completePhase1 OK");
+    } catch (e) {
+      // Non bloquant — on navigue quand même (le flag sera corrigé à la prochaine session)
+      console.warn("[OnboardingIA] completePhase1 warning:", e);
+    }
+
+    // 3. Navigation vers la page IA
     navigate("/ai", { replace: true });
 
-    // 3. KV en fire-and-forget
+    // 4. KV en fire-and-forget
     if (user?.username) {
       upsertProfile(user.username, { onboardingComplete: true, onboardingStep: "done" })
         .catch((e) => console.error("[OnboardingIA] handleValidate KV error:", e));
@@ -236,8 +283,24 @@ export function OnboardingIAPage() {
     handleSend([...multiSelected].join(", "));
   }
 
+  // Détecte "Autre / Personnaliser" indépendamment de la casse ou des variantes
+  function isCustomChoice(choice: string): boolean {
+    const c = choice.toLowerCase().trim();
+    return (
+      c === "autre" ||
+      c === "personnaliser" ||
+      c.startsWith("autre ") ||
+      c.startsWith("personnaliser") ||
+      c === "other" ||
+      c === "customize"
+    );
+  }
+
   function handleOtherChoice() {
-    setCurrentChoices(null);
+    // flushSync force la mise à jour DOM de façon synchrone (dans le callstack du geste)
+    // puis focus() est appelé immédiatement → iOS Safari ouvre bien le clavier (UX-04)
+    flushSync(() => setCurrentChoices(null));
+    chatInputRef.current?.focus();
   }
 
   // En onboarding : on ne bloque jamais sur le quota (is_onboarding_trigger bypass côté serveur)
@@ -248,7 +311,7 @@ export function OnboardingIAPage() {
   //   b) OU l'IA a envoyé ≥ 15 messages (fallback si le bloc <profile-update> est manqué)
   // Le bouton ET l'input coexistent — l'user peut toujours écrire même quand le bouton est visible
   const aiMessageCount = messages.filter(
-    (m) => m.role === "assistant" && m.id !== "typing"
+    (m) => m.role === "assistant" && !m.id.startsWith("typing-")
   ).length;
   const showValidateButton = phase1Complete || aiMessageCount >= 15;
 
@@ -259,12 +322,24 @@ export function OnboardingIAPage() {
       display: "flex", flexDirection: "column",
       height: "100dvh",
       width: "100%",
-      maxWidth: 740,
-      margin: "0 auto",
-      paddingTop: "env(safe-area-inset-top, 0px)",
       background: "#000",
+      overflow: "hidden",
       position: "relative",
+      ...(isDesktop ? {
+        paddingLeft: "max(0px, calc(50vw - 368px))",
+        paddingRight: "max(0px, calc(50vw - 440px))",
+      } : {}),
     }}>
+
+      {/* SVG filter — supprime le fond noir natif du PNG mascot (alpha = R+G+B-1) */}
+      <svg style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }} aria-hidden>
+        <defs>
+          <filter id="conv-rm-black">
+            <feColorMatrix type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  1 1 1 1 -1"/>
+          </filter>
+        </defs>
+      </svg>
 
       {/* ── Header fixe ───────────────────────────────────────────────────── */}
       <div style={{
@@ -283,10 +358,21 @@ export function OnboardingIAPage() {
 
       {/* ── Messages ──────────────────────────────────────────────────────── */}
       <div style={{
-        flex: 1, minHeight: 0, overflowY: "auto",
-        padding: "60px 16px 8px",
+        flex: 1, minHeight: 0,
+        overflowY: "auto", overflowX: "hidden",
+        position: "relative", zIndex: 1,
         WebkitOverflowScrolling: "touch",
+        maskImage: "linear-gradient(to bottom, transparent, #000 22px)",
+        WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 22px)",
       } as React.CSSProperties}>
+        <div style={isDesktop ? {
+          maxWidth: 768, margin: "0 auto",
+          padding: "calc(60px + env(safe-area-inset-top, 0px)) 32px 8px",
+          display: "flex", flexDirection: "column", gap: 30,
+        } : {
+          padding: "calc(60px + env(safe-area-inset-top, 0px)) 18px 8px",
+          display: "flex", flexDirection: "column",
+        }}>
         {messages.length === 0 && !sending && (
           <div style={{ textAlign: "center", paddingTop: 80 }}>
             {triggerError ? (
@@ -325,11 +411,12 @@ export function OnboardingIAPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.18 }}
             >
-              {msg.id === "typing" ? <TypingIndicator /> : <MessageBubble message={msg} />}
+              {msg.id.startsWith("typing-") ? <TypingIndicator /> : <MessageBubble message={msg} />}
             </motion.div>
           ))}
         </AnimatePresence>
-        <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} />
+        </div>{/* end inner responsive div */}
       </div>
 
       {/* ── Zone basse ────────────────────────────────────────────────────── */}
@@ -355,7 +442,7 @@ export function OnboardingIAPage() {
                       key={choice}
                       whileTap={{ scale: 0.97 }}
                       onClick={() => {
-                        if (choice === "Autre" || choice === "Personnaliser") handleOtherChoice();
+                        if (isCustomChoice(choice)) handleOtherChoice();
                         else handleSingleChoice(choice);
                       }}
                       style={{
@@ -381,7 +468,7 @@ export function OnboardingIAPage() {
                           key={choice}
                           whileTap={{ scale: 0.97 }}
                           onClick={() => {
-                            if (choice === "Autre" || choice === "Personnaliser") {
+                            if (isCustomChoice(choice)) {
                               multiSelected.size > 0 ? handleMultiValidate() : handleOtherChoice();
                             } else {
                               toggleMultiChoice(choice);
@@ -449,23 +536,25 @@ export function OnboardingIAPage() {
               }}
             >
               <motion.button
-                whileTap={{ scale: 0.93 }}
+                whileTap={validating ? {} : { scale: 0.93 }}
                 onClick={handleValidate}
+                disabled={validating}
                 style={{
                   padding: "11px 22px",
                   borderRadius: 999,
                   border: "none",
-                  background: "#fff",
+                  background: validating ? "rgba(255,255,255,0.55)" : "#fff",
                   color: "#000",
                   fontSize: 14,
                   fontWeight: 700,
-                  cursor: "pointer",
+                  cursor: validating ? "default" : "pointer",
                   letterSpacing: "-0.01em",
                   boxShadow: "0 2px 20px rgba(255,255,255,0.18)",
                   whiteSpace: "nowrap",
+                  transition: "background 0.15s",
                 }}
               >
-                Accéder à Fowards →
+                {validating ? "Un instant…" : "Accéder à Fowards →"}
               </motion.button>
             </motion.div>
           )}
@@ -474,7 +563,8 @@ export function OnboardingIAPage() {
         {/* Input texte — visible quand pas de choix en cours OU quand le bouton de validation est affiché */}
         {(!currentChoices || showValidateButton) && (
           <ChatInput
-            onSend={(text) => handleSend(text)}
+            ref={chatInputRef}
+            onSend={handleSend}
             disabled={inputDisabled}
             canDiagnostic={false}
             showModeButtons={false}
@@ -490,30 +580,23 @@ export function OnboardingIAPage() {
 
 function TypingIndicator() {
   return (
-    <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-      <div style={{
-        width: 32, height: 32, borderRadius: "50%",
-        background: "rgba(255,255,255,0.08)",
-        border: "0.5px solid rgba(255,255,255,0.15)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0, marginTop: 2,
-        fontSize: 11, color: "rgba(235,235,245,0.7)", fontWeight: 700,
-      }}>
-        IA
-      </div>
-      <div style={{
-        background: "rgba(255,255,255,0.05)",
-        borderRadius: "4px 18px 18px 18px",
-        padding: "12px 16px",
-        border: "0.5px solid rgba(255,255,255,0.08)",
-        display: "flex", alignItems: "center", gap: 5,
-      }}>
-        {[0, 1, 2].map((i) => (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, marginBottom: 22 }}>
+      <img
+        src={mascot}
+        alt=""
+        style={{
+          width: 28, height: 28, flexShrink: 0,
+          objectFit: "contain",
+          filter: "url(#conv-rm-black) drop-shadow(0 0 8px rgba(160,100,255,0.65))",
+        }}
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {([0, 0.16, 0.32] as number[]).map((delay, i) => (
           <motion.div
             key={i}
-            style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(235,235,245,0.4)" }}
-            animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ duration: 1.2, delay: i * 0.2, repeat: Infinity }}
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 1.1, delay, repeat: Infinity, ease: "easeInOut" }}
+            style={{ width: 8, height: 8, borderRadius: 999, background: GRAD }}
           />
         ))}
       </div>
