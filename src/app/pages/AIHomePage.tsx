@@ -353,20 +353,40 @@ export function AIHomePage() {
             </div>
           ) : <div/>}
 
-          <motion.button
-            whileTap={{ scale: 0.88 }}
-            onClick={() => navigate("/ai/profile")}
-            style={{
-              width: 44, height: 44, borderRadius: 999, flexShrink: 0,
-              border: "1px solid rgba(255,255,255,0.18)",
-              background: "rgba(255,255,255,0.06)",
-              cursor: "pointer", padding: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff",
-            }}
-          >
-            <RobotIcon size={20}/>
-          </motion.button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {!user?.is_premium && (
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                onClick={() => navigate("/premium")}
+                style={{
+                  background: "rgba(99,102,241,0.15)",
+                  border: "1px solid rgba(99,102,241,0.4)",
+                  borderRadius: 999,
+                  padding: "4px 10px",
+                  cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 4,
+                  color: "#a78bfa", fontSize: 12, fontWeight: 600,
+                  fontFamily: "inherit",
+                }}
+              >
+                ⭐ Premium
+              </motion.button>
+            )}
+            <motion.button
+              whileTap={{ scale: 0.88 }}
+              onClick={() => navigate("/ai/profile")}
+              style={{
+                width: 44, height: 44, borderRadius: 999, flexShrink: 0,
+                border: "1px solid rgba(255,255,255,0.18)",
+                background: "rgba(255,255,255,0.06)",
+                cursor: "pointer", padding: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#fff",
+              }}
+            >
+              <RobotIcon size={20}/>
+            </motion.button>
+          </div>
         </div>
 
         {/* ── Scrollable column ─────────────────────────────────────────────── */}
@@ -474,6 +494,49 @@ export function AIHomePage() {
                   pointerEvents: (!isPhase1Complete && !canDiagnostic) ? "none" : "auto",
                 }}
               >Diagnostic</button>
+
+              {/* Diagnostic Approfondi — premium only */}
+              {user?.is_premium && (
+                quota?.deep_diagnostic_available !== false ? (
+                  <button
+                    onClick={() => setMode("diagnostic_approfondi" as ChatMode)}
+                    style={{
+                      padding: "13px 16px", borderRadius: 22,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontWeight: mode === "diagnostic_approfondi" ? 700 : 600,
+                      fontSize: mode === "diagnostic_approfondi" ? 17 : 14.5,
+                      transform: mode === "diagnostic_approfondi" ? "scale(1.06)" : "scale(1)",
+                      transition: "transform .16s ease, font-size .16s ease, background .16s ease, border-color .16s ease",
+                      color: mode === "diagnostic_approfondi" ? "#fff" : "rgba(233,233,245,0.78)",
+                      background: mode === "diagnostic_approfondi" ? "#2a2a31" : "#1c1c20",
+                      border: mode === "diagnostic_approfondi"
+                        ? "1px solid rgba(255,255,255,0.22)"
+                        : "1px solid rgba(255,255,255,0.07)",
+                      boxShadow: mode === "diagnostic_approfondi" ? "0 10px 28px rgba(0,0,0,0.45)" : "none",
+                    }}
+                  >🔬 Approfondi</button>
+                ) : (
+                  <button
+                    disabled
+                    style={{
+                      padding: "13px 16px", borderRadius: 22,
+                      cursor: "default",
+                      fontFamily: "inherit",
+                      fontWeight: 600,
+                      fontSize: 14.5,
+                      color: "rgba(233,233,245,0.78)",
+                      background: "#1c1c20",
+                      border: "1px solid rgba(255,255,255,0.07)",
+                      opacity: 0.4,
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+                    }}
+                  >
+                    <span>Approfondi</span>
+                    <span style={{ fontSize: 10, fontWeight: 400, color: "rgba(233,233,245,0.55)" }}>Lundi</span>
+                  </button>
+                )
+              )}
             </div>
 
             {/* Historique des conversations */}
@@ -597,20 +660,40 @@ export function AIHomePage() {
           </div>
         ) : <div/>}
 
-        <motion.button
-          whileTap={{ scale: 0.88 }}
-          onClick={() => navigate("/ai/profile")}
-          style={{
-            width: 36, height: 36, borderRadius: 999, flexShrink: 0,
-            border: "1px solid rgba(165,125,255,0.22)",
-            background: "rgba(150,110,255,0.12)",
-            cursor: "pointer", padding: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#fff",
-          }}
-        >
-          <RobotIcon size={18}/>
-        </motion.button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {!user?.is_premium && (
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={() => navigate("/premium")}
+              style={{
+                background: "rgba(99,102,241,0.15)",
+                border: "1px solid rgba(99,102,241,0.4)",
+                borderRadius: 999,
+                padding: "4px 10px",
+                cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4,
+                color: "#a78bfa", fontSize: 12, fontWeight: 600,
+                fontFamily: "inherit",
+              }}
+            >
+              ⭐ Premium
+            </motion.button>
+          )}
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={() => navigate("/ai/profile")}
+            style={{
+              width: 36, height: 36, borderRadius: 999, flexShrink: 0,
+              border: "1px solid rgba(165,125,255,0.22)",
+              background: "rgba(150,110,255,0.12)",
+              cursor: "pointer", padding: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#fff",
+            }}
+          >
+            <RobotIcon size={18}/>
+          </motion.button>
+        </div>
       </div>
 
       {/* ── Body — flex 1, NO scroll ────────────────────────────────────────── */}
@@ -775,6 +858,47 @@ export function AIHomePage() {
               transition: "all 0.15s",
             }}
           >Diagnostic</button>
+
+          {/* Diagnostic Approfondi — premium only */}
+          {user?.is_premium && (
+            quota?.deep_diagnostic_available !== false ? (
+              <button
+                onClick={() => setMode("diagnostic_approfondi" as ChatMode)}
+                style={{
+                  flex: 1, height: 32, borderRadius: 999,
+                  border: `1px solid ${mode === "diagnostic_approfondi" ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)"}`,
+                  background: mode === "diagnostic_approfondi" ? "#1c1c20" : "rgba(255,255,255,0.05)",
+                  color: mode === "diagnostic_approfondi" ? "rgba(255,255,255,0.80)" : "rgba(255,255,255,0.35)",
+                  fontSize: 12,
+                  fontWeight: mode === "diagnostic_approfondi" ? 600 : 400,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  fontFamily: "inherit",
+                }}
+              >🔬 Approfondi</button>
+            ) : (
+              <button
+                disabled
+                style={{
+                  flex: 1, height: 32, borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.04)",
+                  background: "rgba(255,255,255,0.05)",
+                  color: "rgba(255,255,255,0.35)",
+                  fontSize: 11,
+                  fontWeight: 400,
+                  cursor: "default",
+                  opacity: 0.4,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 0,
+                  lineHeight: 1.1,
+                  fontFamily: "inherit",
+                }}
+              >
+                <span>Approfondi</span>
+                <span style={{ fontSize: 9, color: "rgba(255,255,255,0.45)" }}>Lundi</span>
+              </button>
+            )
+          )}
         </div>
 
         {/* Composer */}

@@ -29,12 +29,7 @@ import { useObjectiveProgress } from "../context/ObjectiveProgressContext";
 import { toast } from "sonner";
 import { stripAt } from "../utils/renderText";
 
-// ─── ASSETS ──────────────────────────────────────────────────────────────────
-
-const BANNER_URL =
-  "https://images.unsplash.com/photo-1769184613636-1b7ba2210932?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080";
-const AVATAR_URL =
-  "https://images.unsplash.com/photo-1762753674498-73ec49feafc4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400";
+// ─── ASSETS — plus de placeholder Unsplash hardcodé (UX-06) ─────────────────
 
 const PEOPLE_AVATARS = [
   "https://images.unsplash.com/photo-1737574821698-862e77f044c1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200",
@@ -450,10 +445,15 @@ function NotifPanel({ onClose }: { onClose: () => void }) {
 
 // ─── PROFILE POST ADAPTER (uses ProgressCard) ───��─────────────────────────────
 
-const PROFILE_USER = { name: "Thomas Dubois", avatar: AVATAR_URL, objective: "Construire mon premier SaaS" };
-const PROFILE_STREAK = 27;
-
 function ProfilePostAdapter({ post }: { post: MockPost }) {
+  // UX-06 — utiliser les vraies données de l'utilisateur connecté au lieu du placeholder
+  const { user: liveUser } = useAuth();
+  const PROFILE_USER = {
+    name:      liveUser?.name      || "Moi",
+    avatar:    liveUser?.avatar    || "",
+    objective: liveUser?.objective || "",
+  };
+  const PROFILE_STREAK = liveUser?.streak ?? 0;
   /* ── Reply post: context strip above ProgressCard ── */
   if (post.replyTo) {
     return (
@@ -1341,7 +1341,7 @@ export function Profile() {
   const [activeTab, setActiveTab] = useState<ProfileTab>("evolution");
   const [showNotifs, setShowNotifs] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const { user: authUser } = useAuth();
+  const { user: authUser, session } = useAuth();
   const { primaryProgress } = useObjectiveProgress();
 
   const unreadCount = NOTIFS.filter((n) => n.unread).length;
@@ -1471,6 +1471,12 @@ export function Profile() {
 
   const navigate = useNavigate();
   const showInfo = activeTab === "evolution";
+
+  async function handleOpenPortal() {
+    if (!session?.access_token) return;
+    try { const { createPortalSession } = await import("../api/aiApi"); const { url } = await createPortalSession(session.access_token); window.location.href = url; }
+    catch { toast.error("Impossible d'ouvrir le portail"); }
+  }
 
   return (
     <div className="select-none" style={{ minHeight: "100dvh", background: "#000000", position: "relative", paddingBottom: 120 }}>
@@ -1617,6 +1623,50 @@ export function Profile() {
             </motion.div>
           )}
         
+
+        {/* ── Premium / portal button ── */}
+        <div style={{ padding: "0 16px", marginTop: 12 }}>
+          {!authUser?.is_premium ? (
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("/premium")}
+              style={{
+                width: "100%",
+                border: "1px solid rgba(99,102,241,0.40)",
+                background: "rgba(99,102,241,0.10)",
+                borderRadius: 12,
+                padding: "11px 0",
+                marginBottom: 16,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              <span style={{ color: "#a78bfa", fontWeight: 700, fontSize: 15 }}>⭐ Passer Premium</span>
+            </motion.button>
+          ) : (
+            <button
+              onClick={handleOpenPortal}
+              style={{
+                width: "100%",
+                border: "1px solid rgba(99,102,241,0.25)",
+                background: "rgba(99,102,241,0.07)",
+                borderRadius: 12,
+                padding: "11px 0",
+                marginBottom: 16,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              <span style={{ color: "rgba(167,139,250,0.7)", fontWeight: 700, fontSize: 15 }}>⚙️ Gerer mon abonnement</span>
+            </button>
+          )}
+        </div>
 
         {/* ── Nav + content ── */}
         <div style={{ padding: "0 16px" }}>
