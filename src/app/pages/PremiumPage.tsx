@@ -32,9 +32,12 @@ export function PremiumPage() {
     setLoading(true);
     try {
       const { url } = await createCheckoutSession(session.access_token, plan);
+      if (!url) throw new Error("URL Stripe manquante dans la réponse");
       window.location.href = url;
-    } catch (err) {
-      toast.error("Une erreur est survenue, reessaie.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[PremiumPage] checkout error:", msg);
+      toast.error(`Erreur: ${msg}`, { duration: 8000 });
       setLoading(false);
     }
   }
