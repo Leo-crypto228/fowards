@@ -38,15 +38,20 @@ export async function getSuggestedUsers(
   limit: number,
   offset: number,
   excludeUsername?: string,
+  forceRebuild = false,
 ): Promise<SuggestedUsersResult> {
   const url = new URL(`${BASE}/profiles/suggested`);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));
   if (excludeUsername) url.searchParams.set("exclude", excludeUsername);
+  if (forceRebuild)    url.searchParams.set("rebuild", "true");
 
   const res = await fetch(url.toString(), { headers: H });
   if (!res.ok) throw new Error(`profiles/suggested ${res.status}`);
-  return res.json();
+  const result: SuggestedUsersResult = await res.json();
+  // TEMPORAIRE — diagnostic : retirer une fois les profils confirmés affichés
+  console.log("[getSuggestedUsers] result:", JSON.stringify({ total: result.total, count: result.users?.length, hasMore: result.hasMore }));
+  return result;
 }
 
 // ── Suggested communities (toutes les communautés triées par membres) ─────────

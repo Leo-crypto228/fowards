@@ -89,10 +89,11 @@ export function OnboardingProfilePage() {
     const isFirst = page === 0;
     if (isFirst) setLoadingUsers(true); else setLoadingMoreUsers(true);
     try {
-      const result = await getSuggestedUsers(PAGE_SIZE, page * PAGE_SIZE, user?.username);
-      setUsers((prev) => isFirst ? result.users : [...prev, ...result.users]);
-      setUsersTotal(result.total);
-      setUsersHasMore(result.hasMore);
+      // forceRebuild=true sur la 1ère page pour garantir des données fraîches (invalidate le cache KV)
+      const result = await getSuggestedUsers(PAGE_SIZE, page * PAGE_SIZE, user?.username, isFirst);
+      setUsers((prev) => isFirst ? (result.users ?? []) : [...prev, ...(result.users ?? [])]);
+      setUsersTotal(result.total ?? 0);
+      setUsersHasMore(result.hasMore ?? false);
       setUsersPage(page);
     } catch {
       toast.error("Impossible de charger les profils");
@@ -171,10 +172,13 @@ export function OnboardingProfilePage() {
 
   // ── Valider et passer à la page IA ───────────────────────────────────────────
 
+  // TEMPORAIRE : si aucun profil n'est disponible (usersTotal === 0), le follow n'est pas requis
+  // À retirer une fois l'edge function profiles/suggested confirmée fonctionnelle
+  const followRequired = usersTotal > 0;
   const canProceed =
     bio.trim().length > 0 &&
-    objective.length > 0 &&
-    followedSet.size >= 1 &&
+    objective.trim().length > 0 &&
+    (!followRequired || followedSet.size >= 1) &&
     communities.slice(0, communitiesPage * PAGE_SIZE).some((c) => isMember(c.id));
 
   async function handleValidate() {
@@ -553,7 +557,7 @@ export function OnboardingProfilePage() {
           {[
             { label: "Bio", done: bio.trim().length > 0 },
             { label: "Objectif", done: objective.length > 0 },
-            { label: "1 suivi", done: followedSet.size >= 1 },
+            { label: "1 suivi", done: !followRequired || followedSet.size >= 1 },
             { label: "1 communauté", done: displayedCommunities.some((c) => isMember(c.id)) },
           ].map((item) => (
             <div key={item.label} style={{

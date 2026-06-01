@@ -3719,9 +3719,10 @@ app.get("/make-server-218684af/members/history", async (c) => {
 // GET /profiles/suggested?limit=10&offset=0 — Utilisateurs réels triés par abonnés (onboarding)
 app.get("/make-server-218684af/profiles/suggested", async (c) => {
   try {
-    const limit  = Math.min(50, Math.max(1, parseInt(c.req.query("limit")  || "10", 10)));
-    const offset = Math.max(0,             parseInt(c.req.query("offset") || "0",  10));
+    const limit        = Math.min(50, Math.max(1, parseInt(c.req.query("limit")  || "10", 10)));
+    const offset       = Math.max(0,             parseInt(c.req.query("offset") || "0",  10));
     const excludeUsername = (c.req.query("exclude") || "").toLowerCase().trim();
+    const forceRebuild = c.req.query("rebuild") === "true";
 
     const CACHE_KEY = "ff:profiles:suggested-v1";
     const CACHE_TS  = "ff:profiles:suggested-v1-ts";
@@ -3733,7 +3734,7 @@ app.get("/make-server-218684af/profiles/suggested", async (c) => {
     type SuggestedUser = { username: string; name: string; avatar: string; objective: string; grade: string; followersCount: number };
     let all: SuggestedUser[] = [];
 
-    if (age <= TTL_MS && cachedRaw) {
+    if (!forceRebuild && age <= TTL_MS && cachedRaw) {
       all = JSON.parse(cachedRaw);
     } else {
       // 1. Vrais utilisateurs depuis Supabase Auth
