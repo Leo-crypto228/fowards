@@ -1,8 +1,8 @@
 import Stripe from "npm:stripe@14";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const stripe = new Stripe(Deno.env.get("API Stripe Secret")!);
-const webhookSecret = Deno.env.get("whsec Stripe")!;
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!);
+const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
 
 const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -19,7 +19,7 @@ async function updateSubscription(customerId: string, updates: Record<string, un
 }
 
 function getPlan(priceId: string): "monthly" | "annual" {
-  return priceId === Deno.env.get("ID Fowards Premium Mensuel (24.99euro)") ? "monthly" : "annual";
+  return priceId === Deno.env.get("STRIPE_PRICE_MONTHLY") ? "monthly" : "annual";
 }
 
 Deno.serve(async (req: Request) => {
