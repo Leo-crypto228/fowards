@@ -5,10 +5,12 @@ import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { createCheckoutSession } from "../api/aiApi";
 import { toast } from "sonner";
+import { VerifiedIcon } from "../components/PremiumBadge";
 
 const features = [
   "300 messages discussion / jour",
   "4 Diagnostics Approfondis / jour",
+  "Plus de conseils et de données que le gratuit",
   "Badge Premium sur profil",
   "Historique IA illimite",
 ];
@@ -63,7 +65,9 @@ export function PremiumPage() {
           transition={{ duration: 0.4 }}
           className="text-center mb-8"
         >
-          <div className="text-4xl mb-3">⭐</div>
+          <div className="flex justify-center mb-3">
+            <VerifiedIcon size={52} color="#7c3aed" />
+          </div>
           <h1 className="text-2xl font-bold mb-2">Fowards Premium</h1>
           <p className="text-gray-400 text-sm">
             Debloque ton potentiel de founder

@@ -8,6 +8,7 @@ import {
 } from "../api/aiApi";
 import { toast } from "sonner";
 import mascot from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
+import { VerifiedIcon } from "../components/PremiumBadge";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const GRAD = "linear-gradient(120deg, #a86bff 0%, #8a6bff 55%, #7287ff 100%)";
@@ -369,7 +370,7 @@ export function AIHomePage() {
                   fontFamily: "inherit",
                 }}
               >
-                ⭐ Premium
+                <VerifiedIcon size={13} color="#7c3aed" /> Premium
               </motion.button>
             )}
             <motion.button
