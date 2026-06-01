@@ -28,7 +28,7 @@ function fetchT(url: string, options: RequestInit, ms = 15_000): Promise<Respons
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type ChatMode = "normal" | "diagnostic";
+export type ChatMode = "normal" | "diagnostic" | "diagnostic_approfondi";
 
 export interface QuotaStatus {
   normalUsed: number;
@@ -42,6 +42,12 @@ export interface QuotaStatus {
   canSendDiagnostic: boolean;
   // V6
   isPhase1Complete: boolean;
+  // Premium
+  plan?: "free" | "premium";
+  is_premium?: boolean;
+  premium_expires_at?: string | null;
+  deep_diagnostic_available?: boolean;
+  deep_diagnostic_resets_on?: string | null;
 }
 
 export interface AiConversation {
@@ -123,11 +129,11 @@ export async function sendMessage(
     is_onboarding_trigger?: boolean;
   },
 ): Promise<ChatResponse> {
-  const res = await fetch(`${BASE}/chat`, {
+  const res = await fetchT(`${BASE}/chat`, {
     method: "POST",
     headers: makeHeaders(accessToken),
     body: JSON.stringify(payload),
-  });
+  }, 30_000); // 30s — cold start Deno + appel Gemini (non-streaming)
   const data = await res.json();
   if (!res.ok) {
     const err = new Error(data.error ?? `chat ${res.status}`) as Error & {
@@ -252,4 +258,50 @@ export async function updateProfile(
     body: JSON.stringify({ contentMarkdown }),
   });
   if (!res.ok) throw new Error(`profile PUT ${res.status}`);
+}
+
+export async function createCheckoutSession(
+  token: string,
+  plan: "monthly" | "annual",
+): Promise<{ url: string }> {
+  const res = await fetchT(
+    `https://${projectId}.supabase.co/functions/v1/create-checkout-session`,
+    {
+      method: "POST",
+      headers: makeHeaders(token),
+      body: JSON.stringify({
+        plan,
+        success_url: "https://fowards.net/premium/success",
+        cancel_url: "https://fowards.net/premium",
+      }),
+    },
+  );
+  if (!res.ok) throw new Error(`create-checkout-session ${res.status}`);
+  return res.json();
+}
+
+export async function createPortalSession(token: string): Promise<{ url: string }> {
+  const res = await fetchT(
+    `https://${projectId}.supabase.co/functions/v1/create-portal-session`,
+    {
+      method: "POST",
+      headers: makeHeaders(token),
+    },
+  );
+  if (!res.ok) throw new Error(`create-portal-session ${res.status}`);
+  return res.json();
+}
+
+// ── Filet de sécurité onboarding — appelé au clic "Accéder à Fowards" ─────────
+// Garantit que is_phase1_complete = true en DB même si Gemini n'a pas émis le bloc.
+// Idempotent : sans effet si déjà complet.
+export async function completePhase1(accessToken: string): Promise<void> {
+  const res = await fetchT(`${BASE}/complete-phase1`, {
+    method: "POST",
+    headers: makeHeaders(accessToken),
+  }, 8_000); // timeout court — c'est un safety net, pas bloquant
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { error?: string }).error ?? `complete-phase1 ${res.status}`);
+  }
 }

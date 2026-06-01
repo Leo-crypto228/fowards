@@ -16,6 +16,10 @@ export interface StoredAuthUser {
   // Onboarding V2
   onboarding_complete: boolean;
   onboarding_step: "profile" | "ia" | "done";
+  // Premium / subscription
+  is_premium?: boolean;
+  subscription_status?: "free" | "active" | "past_due" | "canceled" | "trialing";
+  subscription_plan?: "free" | "monthly" | "annual";
 }
 
 // ── Valeurs mutable live-bindable ──────────────────────────────────────────────

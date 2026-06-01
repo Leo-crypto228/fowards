@@ -133,6 +133,23 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
       }
     }
 
+    // ── Premium / subscription depuis Supabase profiles ──────────────────────
+    let is_premium = false;
+    let subscription_status: StoredAuthUser["subscription_status"] = "free";
+    let subscription_plan: StoredAuthUser["subscription_plan"] = "free";
+    try {
+      const { data: premiumData } = await supabase
+        .from("profiles")
+        .select("is_premium, subscription_status, subscription_plan, subscription_current_period_end")
+        .eq("id", supabaseUser.id)
+        .single();
+      if (premiumData) {
+        is_premium          = premiumData.is_premium          ?? false;
+        subscription_status = premiumData.subscription_status ?? "free";
+        subscription_plan   = premiumData.subscription_plan   ?? "free";
+      }
+    } catch { /* profils inaccessibles — valeurs par défaut */ }
+
     return {
       supabaseId: supabaseUser.id, username: authUsername,
       name: kv.name || nameDefault, email: supabaseUser.email || "",
@@ -140,6 +157,9 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
       streak: kv.streak || 0, onboardingDone: kv.onboardingDone || false, firstPostCreated,
       onboarding_complete,
       onboarding_step,
+      is_premium,
+      subscription_status,
+      subscription_plan,
     };
   } catch {
     clearTimeout(timer);
@@ -179,6 +199,22 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
       }
     }
 
+    // ── Premium / subscription depuis Supabase profiles (catch path) ─────────
+    let is_premium = false;
+    let subscription_status: StoredAuthUser["subscription_status"] = "free";
+    let subscription_plan: StoredAuthUser["subscription_plan"] = "free";
+    try {
+      const cachedRaw = localStorage.getItem(LS_KEY);
+      if (cachedRaw) {
+        const c = JSON.parse(cachedRaw) as Partial<StoredAuthUser>;
+        if (c.supabaseId === supabaseUser.id) {
+          is_premium          = c.is_premium          ?? false;
+          subscription_status = c.subscription_status ?? "free";
+          subscription_plan   = c.subscription_plan   ?? "free";
+        }
+      }
+    } catch { /* cache corrompu */ }
+
     return {
       supabaseId: supabaseUser.id, username: authUsername,
       name: cachedName, email: supabaseUser.email || "",
@@ -186,6 +222,9 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
       onboardingDone, firstPostCreated,
       onboarding_complete,
       onboarding_step,
+      is_premium,
+      subscription_status,
+      subscription_plan,
     };
   }
 }
@@ -193,24 +232,26 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
 // ── Context ───────────────────────────────────────────────────────────────────
 
 interface AuthContextValue {
-  user:                StoredAuthUser | null;
-  session:             Session | null;
-  loading:             boolean;
-  isRefreshing:        boolean;
-  signIn:              (email: string, password: string) => Promise<void>;
-  signOut:             () => Promise<void>;
-  refreshUserProfile:  () => Promise<void>;
-  updateLocalUser:     (updates: Partial<StoredAuthUser>) => void;
-  devLogin:            () => void;
+  user:                  StoredAuthUser | null;
+  session:               Session | null;
+  loading:               boolean;
+  isRefreshing:          boolean;
+  signIn:                (email: string, password: string) => Promise<void>;
+  signOut:               () => Promise<void>;
+  refreshUserProfile:    () => Promise<void>;
+  updateLocalUser:       (updates: Partial<StoredAuthUser>) => void;
+  refreshPremiumStatus:  () => Promise<void>;
+  devLogin:              () => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null, session: null, loading: true, isRefreshing: false,
-  signIn:             async () => {},
-  signOut:            async () => {},
-  refreshUserProfile: async () => {},
-  updateLocalUser:    () => {},
-  devLogin:           () => {},
+  signIn:                async () => {},
+  signOut:               async () => {},
+  refreshUserProfile:    async () => {},
+  updateLocalUser:       () => {},
+  refreshPremiumStatus:  async () => {},
+  devLogin:              () => {},
 });
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -354,6 +395,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LS_KEY, JSON.stringify(updated));
   }, []);
 
+  const refreshPremiumStatus = useCallback(async () => {
+    const current = getAuthUser();
+    if (!current?.supabaseId) return;
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("is_premium, subscription_status, subscription_plan, subscription_current_period_end")
+        .eq("id", current.supabaseId)
+        .single();
+      if (data) {
+        updateLocalUser({
+          is_premium:          data.is_premium          ?? false,
+          subscription_status: data.subscription_status ?? "free",
+          subscription_plan:   data.subscription_plan   ?? "free",
+        });
+      }
+    } catch { /* réseau inaccessible — on conserve les valeurs actuelles */ }
+  }, [updateLocalUser]);
+
   const devLogin = useCallback(async () => {
     // SEC-03 : interdit en production — uniquement disponible en développement local
     if (!import.meta.env.DEV) {
@@ -405,7 +465,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isRefreshing, signIn, signOut, refreshUserProfile, updateLocalUser, devLogin }}>
+    <AuthContext.Provider value={{ user, session, loading, isRefreshing, signIn, signOut, refreshUserProfile, updateLocalUser, refreshPremiumStatus, devLogin }}>
       {children}
     </AuthContext.Provider>
   );
@@ -413,4 +473,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   return useContext(AuthContext);
+}
+
+/**
+ * Standalone helper — re-queries the Supabase profiles table and syncs
+ * premium fields into the local auth store via updateLocalUser.
+ * Call this after a successful checkout, webhook confirmation, etc.
+ */
+export function useRefreshPremiumStatus() {
+  const { refreshPremiumStatus } = useContext(AuthContext);
+  return refreshPremiumStatus;
 }

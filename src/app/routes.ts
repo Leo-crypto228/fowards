@@ -41,6 +41,8 @@ const NewMembersPage    = lazy(() => import("./pages/NewMembersPage").then(m => 
 const AIHomePage        = lazy(() => import("./pages/AIHomePage").then(m => ({ default: m.AIHomePage })));
 const AIConversationPage = lazy(() => import("./pages/AIConversationPage").then(m => ({ default: m.AIConversationPage })));
 const AIProfilePage     = lazy(() => import("./pages/AIProfilePage").then(m => ({ default: m.AIProfilePage })));
+const PremiumPage        = lazy(() => import("./pages/PremiumPage").then(m => ({ default: m.PremiumPage })));
+const PremiumSuccessPage = lazy(() => import("./pages/PremiumSuccessPage").then(m => ({ default: m.PremiumSuccessPage })));
 
 export const router = createBrowserRouter([
   // ── Auth pages (hors Layout, hors guard) ─────────────────────────────────
@@ -89,6 +91,8 @@ export const router = createBrowserRouter([
       { path: "ai",                 Component: AIHomePage },
       { path: "ai/profile",         Component: AIProfilePage },
       { path: "ai/:conversationId", Component: AIConversationPage },
+      { path: "premium",            Component: PremiumPage },
+      { path: "premium/success",    Component: PremiumSuccessPage },
     ],
   },
 ]);
