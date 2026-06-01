@@ -275,6 +275,7 @@ export async function createCheckoutSession(
         cancel_url: "https://fowards.net/premium",
       }),
     },
+    30_000, // cold start Supabase Edge Function peut prendre ~20s
   );
   if (!res.ok) {
     const body = await res.json().catch(() => null);
