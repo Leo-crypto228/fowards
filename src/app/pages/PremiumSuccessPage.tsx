@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
-import { motion } from "framer-motion";
-import { useAuth } from "../hooks/useAuth";
+import { motion } from "motion/react";
+import { useAuth } from "../context/AuthContext";
 
 export function PremiumSuccessPage() {
   const navigate = useNavigate();

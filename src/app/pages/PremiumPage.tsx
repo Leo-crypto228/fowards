@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../context/AuthContext";
 import { createCheckoutSession } from "../api/aiApi";
 import { toast } from "sonner";
 
