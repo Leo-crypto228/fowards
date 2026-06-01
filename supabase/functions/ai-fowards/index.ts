@@ -74,9 +74,9 @@ app.onError((err, c) => {
 // ── Constants ─────────────────────────────────────────────────────────────────
 const NORMAL_DAILY_LIMIT_FREE    = 30;
 const NORMAL_DAILY_LIMIT_PREMIUM = 300;
-const DIAGNOSTIC_BASE_LIMIT = 1;
-const DIAGNOSTIC_MAX_LIMIT_FREE    = 2;
-const DIAGNOSTIC_MAX_LIMIT_PREMIUM = 5;
+const DIAGNOSTIC_BASE_LIMIT      = 1;
+const DIAGNOSTIC_MAX_LIMIT_FREE  = 2;
+const DEEP_DIAGNOSTIC_DAILY_LIMIT = 4; // Premium : 4 diagnostics approfondis/jour, reset minuit
 const GEMINI_MODEL          = "gemini-2.5-flash";
 const GEMINI_URL            = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const GEMINI_STREAM_URL     = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
@@ -125,6 +125,7 @@ async function getOrCreateQuota(userId: string): Promise<DbUserQuota> {
       normal_messages_used: 0,
       diagnostics_used: 0,
       diagnostics_unlocked_via_post: 0,
+      deep_diagnostics_used_today: 0,
     })
     .select()
     .single();
@@ -146,11 +147,13 @@ async function getOrCreateQuota(userId: string): Promise<DbUserQuota> {
 
 function buildQuotaStatus(quota: DbUserQuota, isPhase1Complete: boolean, isPremium = false): QuotaStatus {
   const normalLimit = isPremium ? NORMAL_DAILY_LIMIT_PREMIUM : NORMAL_DAILY_LIMIT_FREE;
-  const diagnosticsMaxLimit = isPremium ? DIAGNOSTIC_MAX_LIMIT_PREMIUM : DIAGNOSTIC_MAX_LIMIT_FREE;
-  const diagnosticsLimit = Math.min(
+  // Premium : pas de diagnostic normal (0). Free : 1 base + 1 via post, max 2.
+  const diagnosticsLimit = isPremium ? 0 : Math.min(
     DIAGNOSTIC_BASE_LIMIT + quota.diagnostics_unlocked_via_post,
-    diagnosticsMaxLimit,
+    DIAGNOSTIC_MAX_LIMIT_FREE,
   );
+  const deepLimit = isPremium ? DEEP_DIAGNOSTIC_DAILY_LIMIT : 0;
+  const deepUsed  = quota.deep_diagnostics_used_today ?? 0;
   return {
     normalUsed: quota.normal_messages_used,
     normalLimit,
@@ -160,8 +163,12 @@ function buildQuotaStatus(quota: DbUserQuota, isPhase1Complete: boolean, isPremi
     diagnosticsRemaining: Math.max(0, diagnosticsLimit - quota.diagnostics_used),
     diagnosticsUnlockedViaPost: quota.diagnostics_unlocked_via_post > 0,
     canSendNormal: quota.normal_messages_used < normalLimit,
-    canSendDiagnostic: isPhase1Complete && quota.diagnostics_used < diagnosticsLimit,
+    canSendDiagnostic: !isPremium && isPhase1Complete && quota.diagnostics_used < diagnosticsLimit,
     isPhase1Complete,
+    deepDiagnosticsUsedToday: deepUsed,
+    deepDiagnosticsLimit: deepLimit,
+    deepDiagnosticsRemaining: Math.max(0, deepLimit - deepUsed),
+    canSendDeepDiagnostic: isPremium && isPhase1Complete && deepUsed < deepLimit,
   };
 }
 
@@ -556,8 +563,9 @@ app.get("/ai-fowards/quota-status", async (c) => {
       getOrCreateQuota(userId),
       getOrCreateProfile(userId),
     ]);
+    const qs = buildQuotaStatus(quota, profile.is_phase1_complete, isPremium);
     return c.json({
-      ...buildQuotaStatus(quota, profile.is_phase1_complete, isPremium),
+      ...qs,
       plan: isPremium ? (profileRow?.subscription_plan || "premium") : "free",
       is_premium: isPremium,
       premium_expires_at: profileRow?.subscription_current_period_end || null,
@@ -788,33 +796,30 @@ app.post("/ai-fowards/chat", async (c) => {
     return new Response(JSON.stringify({ error: "premium_required", message: "Le Diagnostic Approfondi est reserve aux membres Premium." }), { status: 403, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
   }
 
-  // EDIT 5 — Deep diagnostic weekly quota (premium only)
+  // Deep diagnostic daily quota (premium only) — reset automatique via quota_date
   if (mode === "diagnostic_approfondi" && isPremium) {
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + daysToMonday);
-    const weekStartStr = monday.toISOString().split("T")[0];
-
+    const today = new Date().toISOString().split("T")[0];
     const { data: deepQuotaRow } = await supabaseAdmin
       .from("user_quotas")
-      .select("deep_diagnostic_used_this_week, deep_diagnostic_week_start")
+      .select("deep_diagnostics_used_today")
       .eq("user_id", userId)
+      .eq("quota_date", today)
       .maybeSingle();
 
-    if (
-      deepQuotaRow?.deep_diagnostic_used_this_week === true &&
-      deepQuotaRow?.deep_diagnostic_week_start === weekStartStr
-    ) {
-      return new Response(JSON.stringify({ error: "quota_exceeded", message: "Tu as déjà utilisé ton Diagnostic Approfondi cette semaine. Il se renouvelle le lundi." }), { status: 429, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+    const deepUsed = deepQuotaRow?.deep_diagnostics_used_today ?? 0;
+
+    if (deepUsed >= DEEP_DIAGNOSTIC_DAILY_LIMIT) {
+      return new Response(JSON.stringify({
+        error: "deep_diagnostic_daily_limit",
+        message: "Tu as utilisé tes 4 Diagnostics Approfondis aujourd'hui. Ils se renouvellent à minuit.",
+      }), { status: 429, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
     }
 
-    await supabaseAdmin
-      .from("user_quotas")
+    // Pré-incrémenter avant traitement pour éviter la double utilisation
+    await supabaseAdmin.from("user_quotas")
       .upsert(
-        { user_id: userId, deep_diagnostic_used_this_week: true, deep_diagnostic_week_start: weekStartStr },
-        { onConflict: "user_id" },
+        { user_id: userId, quota_date: today, deep_diagnostics_used_today: deepUsed + 1 },
+        { onConflict: "user_id, quota_date" },
       );
   }
 
@@ -1052,15 +1057,17 @@ app.post("/ai-fowards/chat", async (c) => {
             const sToday = new Date().toISOString().split("T")[0];
             if (mode === "normal") {
               await supabaseAdmin.from("user_quotas").update({ normal_messages_used: quota.normal_messages_used + 1 }).eq("user_id", userId).eq("quota_date", sToday);
-            } else {
+            } else if (mode === "diagnostic") {
               await supabaseAdmin.from("user_quotas").update({ diagnostics_used: quota.diagnostics_used + 1 }).eq("user_id", userId).eq("quota_date", sToday);
             }
+            // diagnostic_approfondi : déjà pré-incrémenté avant traitement — pas de mise à jour ici
 
             // Quota calculé localement (évite un aller-retour DB inutile — PERF-04)
             const sUpdatedQuota: DbUserQuota = {
               ...quota,
               normal_messages_used: mode === "normal" ? quota.normal_messages_used + 1 : quota.normal_messages_used,
               diagnostics_used: mode === "diagnostic" ? quota.diagnostics_used + 1 : quota.diagnostics_used,
+              // deep_diagnostics_used_today : déjà pré-incrémenté → quota contient la valeur +1
             };
 
             const finalEvent = {
@@ -1196,6 +1203,7 @@ app.post("/ai-fowards/chat", async (c) => {
       ...quota,
       normal_messages_used: mode === "normal" ? quota.normal_messages_used + 1 : quota.normal_messages_used,
       diagnostics_used: mode === "diagnostic" ? quota.diagnostics_used + 1 : quota.diagnostics_used,
+      // deep_diagnostics_used_today : déjà pré-incrémenté → quota contient la valeur +1
     };
 
     return c.json({

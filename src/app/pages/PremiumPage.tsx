@@ -8,8 +8,7 @@ import { toast } from "sonner";
 
 const features = [
   "300 messages discussion / jour",
-  "5 diagnostics / jour",
-  "1 Diagnostic Approfondi / semaine",
+  "4 Diagnostics Approfondis / jour",
   "Badge Premium sur profil",
   "Historique IA illimite",
 ];

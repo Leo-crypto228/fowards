@@ -29,6 +29,7 @@ export interface DbUserQuota {
   normal_messages_used: number;
   diagnostics_used: number;
   diagnostics_unlocked_via_post: number;
+  deep_diagnostics_used_today: number; // reset automatique via quota_date
   created_at: string;
   updated_at: string;
 }
@@ -38,13 +39,22 @@ export interface QuotaStatus {
   normalLimit: number;
   normalRemaining: number;
   diagnosticsUsed: number;
-  diagnosticsLimit: number;
+  diagnosticsLimit: number;      // 0 pour Premium (pas de diag normal)
   diagnosticsRemaining: number;
   diagnosticsUnlockedViaPost: boolean;
   canSendNormal: boolean;
   canSendDiagnostic: boolean;
   // V6 — état Phase 1
   isPhase1Complete: boolean;
+  // Premium — Diagnostic Approfondi (4/jour)
+  deepDiagnosticsUsedToday: number;
+  deepDiagnosticsLimit: number;  // 4 pour Premium, 0 pour Free
+  deepDiagnosticsRemaining: number;
+  canSendDeepDiagnostic: boolean;
+  // Champs plan
+  plan?: "free" | "premium";
+  is_premium?: boolean;
+  premium_expires_at?: string | null;
 }
 
 // ── V6 — user_profile_page ────────────────────────────────────────────────────

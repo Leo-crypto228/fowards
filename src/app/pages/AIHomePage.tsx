@@ -495,9 +495,9 @@ export function AIHomePage() {
                 }}
               >Diagnostic</button>
 
-              {/* Diagnostic Approfondi — premium only */}
+              {/* Diagnostic Approfondi — premium only (4/jour) */}
               {user?.is_premium && (
-                quota?.deep_diagnostic_available !== false ? (
+                (quota?.deepDiagnosticsRemaining ?? 0) > 0 ? (
                   <button
                     onClick={() => setMode("diagnostic_approfondi" as ChatMode)}
                     style={{
@@ -515,7 +515,7 @@ export function AIHomePage() {
                         : "1px solid rgba(255,255,255,0.07)",
                       boxShadow: mode === "diagnostic_approfondi" ? "0 10px 28px rgba(0,0,0,0.45)" : "none",
                     }}
-                  >🔬 Approfondi</button>
+                  >🔬 Approfondi ({quota?.deepDiagnosticsRemaining ?? 4})</button>
                 ) : (
                   <button
                     disabled
@@ -533,7 +533,7 @@ export function AIHomePage() {
                     }}
                   >
                     <span>Approfondi</span>
-                    <span style={{ fontSize: 10, fontWeight: 400, color: "rgba(233,233,245,0.55)" }}>Lundi</span>
+                    <span style={{ fontSize: 10, fontWeight: 400, color: "rgba(233,233,245,0.55)" }}>Épuisé · minuit</span>
                   </button>
                 )
               )}
@@ -859,9 +859,9 @@ export function AIHomePage() {
             }}
           >Diagnostic</button>
 
-          {/* Diagnostic Approfondi — premium only */}
+          {/* Diagnostic Approfondi — premium only (4/jour) */}
           {user?.is_premium && (
-            quota?.deep_diagnostic_available !== false ? (
+            (quota?.deepDiagnosticsRemaining ?? 0) > 0 ? (
               <button
                 onClick={() => setMode("diagnostic_approfondi" as ChatMode)}
                 style={{
@@ -875,7 +875,7 @@ export function AIHomePage() {
                   transition: "all 0.15s",
                   fontFamily: "inherit",
                 }}
-              >🔬 Approfondi</button>
+              >🔬 Approfondi ({quota?.deepDiagnosticsRemaining ?? 4})</button>
             ) : (
               <button
                 disabled
@@ -895,7 +895,7 @@ export function AIHomePage() {
                 }}
               >
                 <span>Approfondi</span>
-                <span style={{ fontSize: 9, color: "rgba(255,255,255,0.45)" }}>Lundi</span>
+                <span style={{ fontSize: 9, color: "rgba(255,255,255,0.45)" }}>Épuisé · minuit</span>
               </button>
             )
           )}

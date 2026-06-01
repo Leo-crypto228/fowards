@@ -35,19 +35,21 @@ export interface QuotaStatus {
   normalLimit: number;
   normalRemaining: number;
   diagnosticsUsed: number;
-  diagnosticsLimit: number;
+  diagnosticsLimit: number;      // 0 pour Premium
   diagnosticsRemaining: number;
   diagnosticsUnlockedViaPost: boolean;
   canSendNormal: boolean;
   canSendDiagnostic: boolean;
-  // V6
   isPhase1Complete: boolean;
-  // Premium
+  // Premium — Diagnostic Approfondi (4/jour)
+  deepDiagnosticsUsedToday: number;
+  deepDiagnosticsLimit: number;  // 4 Premium, 0 Free
+  deepDiagnosticsRemaining: number;
+  canSendDeepDiagnostic: boolean;
+  // Plan
   plan?: "free" | "premium";
   is_premium?: boolean;
   premium_expires_at?: string | null;
-  deep_diagnostic_available?: boolean;
-  deep_diagnostic_resets_on?: string | null;
 }
 
 export interface AiConversation {
