@@ -72,9 +72,11 @@ app.onError((err, c) => {
 });
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const NORMAL_DAILY_LIMIT    = 30;
+const NORMAL_DAILY_LIMIT_FREE    = 30;
+const NORMAL_DAILY_LIMIT_PREMIUM = 300;
 const DIAGNOSTIC_BASE_LIMIT = 1;
-const DIAGNOSTIC_MAX_LIMIT  = 2;
+const DIAGNOSTIC_MAX_LIMIT_FREE    = 2;
+const DIAGNOSTIC_MAX_LIMIT_PREMIUM = 5;
 const GEMINI_MODEL          = "gemini-2.5-flash";
 const GEMINI_URL            = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const GEMINI_STREAM_URL     = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
@@ -142,20 +144,22 @@ async function getOrCreateQuota(userId: string): Promise<DbUserQuota> {
   return created as DbUserQuota;
 }
 
-function buildQuotaStatus(quota: DbUserQuota, isPhase1Complete: boolean): QuotaStatus {
+function buildQuotaStatus(quota: DbUserQuota, isPhase1Complete: boolean, isPremium = false): QuotaStatus {
+  const normalLimit = isPremium ? NORMAL_DAILY_LIMIT_PREMIUM : NORMAL_DAILY_LIMIT_FREE;
+  const diagnosticsMaxLimit = isPremium ? DIAGNOSTIC_MAX_LIMIT_PREMIUM : DIAGNOSTIC_MAX_LIMIT_FREE;
   const diagnosticsLimit = Math.min(
     DIAGNOSTIC_BASE_LIMIT + quota.diagnostics_unlocked_via_post,
-    DIAGNOSTIC_MAX_LIMIT,
+    diagnosticsMaxLimit,
   );
   return {
     normalUsed: quota.normal_messages_used,
-    normalLimit: NORMAL_DAILY_LIMIT,
-    normalRemaining: Math.max(0, NORMAL_DAILY_LIMIT - quota.normal_messages_used),
+    normalLimit,
+    normalRemaining: Math.max(0, normalLimit - quota.normal_messages_used),
     diagnosticsUsed: quota.diagnostics_used,
     diagnosticsLimit,
     diagnosticsRemaining: Math.max(0, diagnosticsLimit - quota.diagnostics_used),
     diagnosticsUnlockedViaPost: quota.diagnostics_unlocked_via_post > 0,
-    canSendNormal: quota.normal_messages_used < NORMAL_DAILY_LIMIT,
+    canSendNormal: quota.normal_messages_used < normalLimit,
     canSendDiagnostic: isPhase1Complete && quota.diagnostics_used < diagnosticsLimit,
     isPhase1Complete,
   };
@@ -544,12 +548,20 @@ app.get("/ai-fowards/quota-status", async (c) => {
   const userId = await getUserId(c.req.header("Authorization"));
   if (!userId) return c.json({ error: "Non authentifié" }, 401);
 
+  const { data: profileRow } = await supabaseAdmin.from("profiles").select("is_premium, subscription_status, subscription_plan, subscription_current_period_end").eq("id", userId).single();
+  const isPremium = profileRow?.is_premium === true;
+
   try {
     const [quota, profile] = await Promise.all([
       getOrCreateQuota(userId),
       getOrCreateProfile(userId),
     ]);
-    return c.json(buildQuotaStatus(quota, profile.is_phase1_complete));
+    return c.json({
+      ...buildQuotaStatus(quota, profile.is_phase1_complete, isPremium),
+      plan: isPremium ? (profileRow?.subscription_plan || "premium") : "free",
+      is_premium: isPremium,
+      premium_expires_at: profileRow?.subscription_current_period_end || null,
+    });
   } catch (err) {
     console.error("[quota-status] error:", err);
     return c.json({ error: "Erreur serveur" }, 500);
@@ -763,8 +775,47 @@ app.post("/ai-fowards/chat", async (c) => {
   const { conversationId, message, mode, is_onboarding_trigger, stream: streamMode } = body;
 
   if (!message?.trim()) return c.json({ error: "Message vide" }, 400);
-  if (mode !== "normal" && mode !== "diagnostic") {
-    return c.json({ error: "Mode invalide (normal | diagnostic)" }, 400);
+  if (mode !== "normal" && mode !== "diagnostic" && mode !== "diagnostic_approfondi") {
+    return c.json({ error: "Mode invalide (normal | diagnostic | diagnostic_approfondi)" }, 400);
+  }
+
+  // ── Premium check ──────────────────────────────────────────────────────────
+  const { data: profileRow } = await supabaseAdmin.from("profiles").select("is_premium, subscription_status, subscription_plan, subscription_current_period_end").eq("id", userId).single();
+  const isPremium = profileRow?.is_premium === true;
+
+  // EDIT 3 — Block diagnostic_approfondi for free users
+  if (mode === "diagnostic_approfondi" && !isPremium) {
+    return new Response(JSON.stringify({ error: "premium_required", message: "Le Diagnostic Approfondi est reserve aux membres Premium." }), { status: 403, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+  }
+
+  // EDIT 5 — Deep diagnostic weekly quota (premium only)
+  if (mode === "diagnostic_approfondi" && isPremium) {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + daysToMonday);
+    const weekStartStr = monday.toISOString().split("T")[0];
+
+    const { data: deepQuotaRow } = await supabaseAdmin
+      .from("user_quotas")
+      .select("deep_diagnostic_used_this_week, deep_diagnostic_week_start")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (
+      deepQuotaRow?.deep_diagnostic_used_this_week === true &&
+      deepQuotaRow?.deep_diagnostic_week_start === weekStartStr
+    ) {
+      return new Response(JSON.stringify({ error: "quota_exceeded", message: "Tu as déjà utilisé ton Diagnostic Approfondi cette semaine. Il se renouvelle le lundi." }), { status: 429, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+    }
+
+    await supabaseAdmin
+      .from("user_quotas")
+      .upsert(
+        { user_id: userId, deep_diagnostic_used_this_week: true, deep_diagnostic_week_start: weekStartStr },
+        { onConflict: "user_id" },
+      );
   }
 
   // ── Quota + profil en parallèle ────────────────────────────────────────────
@@ -772,7 +823,7 @@ app.post("/ai-fowards/chat", async (c) => {
     getOrCreateQuota(userId),
     getOrCreateProfile(userId),
   ]);
-  const quotaStatus = buildQuotaStatus(quota, profile.is_phase1_complete);
+  const quotaStatus = buildQuotaStatus(quota, profile.is_phase1_complete, isPremium);
 
   // ── Vérification quota ─────────────────────────────────────────────────────
   // SEC-06 : le bypass onboarding n'est autorisé QUE si Phase 1 pas encore complète.
@@ -782,7 +833,7 @@ app.post("/ai-fowards/chat", async (c) => {
 
   if (mode === "normal" && !validOnboardingBypass && !quotaStatus.canSendNormal) {
     return c.json({
-      error: `Quota atteint : ${NORMAL_DAILY_LIMIT} messages normaux/jour. Reviens demain !`,
+      error: `Quota atteint : ${quotaStatus.normalLimit} messages normaux/jour. Reviens demain !`,
       quotaExceeded: true,
       quota: quotaStatus,
     }, 429);
@@ -859,7 +910,12 @@ app.post("/ai-fowards/chat", async (c) => {
 
     // ── Injection contexte V8 (profil + mode + onboarding trigger) ───────────
     const userContext = buildUserContext(profile, mode);
-    const modePrefix = mode === "diagnostic" ? "[MODE: DIAGNOSTIC]" : "[MODE: NORMAL]";
+    const modeMap: Record<string, string> = {
+      "normal": "[MODE: NORMAL]",
+      "diagnostic": "[MODE: DIAGNOSTIC]",
+      "diagnostic_approfondi": "[MODE: DIAGNOSTIC_APPROFONDI]",
+    };
+    const modePrefix = modeMap[mode] ?? "[MODE: NORMAL]";
 
     // is_onboarding_trigger : l'utilisateur vient de créer son compte,
     // on injecte un message système invisible qui déclenche la Phase 1.
@@ -964,7 +1020,7 @@ app.post("/ai-fowards/chat", async (c) => {
                 done: true, conversationId: convId, message: cleanContent,
                 forwardsData: forwardsData ?? null, choices: sChoices ?? null,
                 mode, isPhase1JustCompleted,
-                quota: buildQuotaStatus(quota, sFinalPhase1Complete),
+                quota: buildQuotaStatus(quota, sFinalPhase1Complete, isPremium),
               };
               controller.enqueue(encoder.encode(`data: ${JSON.stringify(sErrFinalEvent)}\n\n`));
               return;
@@ -1015,7 +1071,7 @@ app.post("/ai-fowards/chat", async (c) => {
               choices: sChoices ?? null,
               mode,
               isPhase1JustCompleted,
-              quota: buildQuotaStatus(sUpdatedQuota, sFinalPhase1Complete),
+              quota: buildQuotaStatus(sUpdatedQuota, sFinalPhase1Complete, isPremium),
             };
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(finalEvent)}\n\n`));
           } catch (err) {
@@ -1149,7 +1205,7 @@ app.post("/ai-fowards/chat", async (c) => {
       choices: choices ?? null,
       mode,
       isPhase1JustCompleted,
-      quota: buildQuotaStatus(updatedQuota, finalPhase1Complete),
+      quota: buildQuotaStatus(updatedQuota, finalPhase1Complete, isPremium),
     });
   } catch (err) {
     console.error("[chat] error:", err);
