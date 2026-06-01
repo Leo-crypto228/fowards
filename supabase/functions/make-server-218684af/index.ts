@@ -176,13 +176,16 @@ async function addDailyMember(member: { id: string; name: string; avatar: string
       await kv.set(dailyKey, JSON.stringify(existing));
     }
     // Permanent history for "Nouveaux membres" page
-    const histKey = "ff:members:history";
+    const histKey = "ff:members:history-v3";
     const hist: Array<{ id: string; name: string; avatar: string; objective: string; joinedAt: string }> =
       JSON.parse((await kv.get(histKey)) || "[]");
     if (!hist.find((m) => m.id === member.id)) {
       hist.unshift({ ...member, joinedAt: new Date().toISOString() });
       if (hist.length > 500) hist.splice(500);
-      await kv.set(histKey, JSON.stringify(hist));
+      await Promise.all([
+        kv.set(histKey, JSON.stringify(hist)),
+        kv.del("ff:members:history-v3-ts"), // invalide le cache horaire → prochain appel voit le nouveau membre
+      ]);
     }
   } catch (e) {
     console.log("addDailyMember error:", e);
@@ -3633,6 +3636,13 @@ app.get("/make-server-218684af/members/history", async (c) => {
 
     let hist: Array<{ id: string; name: string; avatar: string; objective: string; joinedAt: string }> = [];
 
+    // Conserver les joinedAt déjà enregistrés par addDailyMember (plus précis que p.createdAt)
+    const prevJoinedMap = new Map<string, string>(
+      cachedRaw
+        ? (JSON.parse(cachedRaw) as Array<{ id: string; joinedAt: string }>).map((m) => [m.id, m.joinedAt])
+        : []
+    );
+
     if (!needsRebuild && cachedRaw) {
       hist = JSON.parse(cachedRaw);
     } else {
@@ -3675,12 +3685,17 @@ app.get("/make-server-218684af/members/history", async (c) => {
         try {
           const p = JSON.parse(raw);
           const id = usernameList[i];
+          const profileDate = p.createdAt || new Date().toISOString();
+          const prevJoinedAt = prevJoinedMap.get(id);
+          // Priorité à la date enregistrée par addDailyMember si elle est plus récente
+          // (= vrai moment de complétion du profil, pas la date de création du compte)
+          const joinedAt = prevJoinedAt && prevJoinedAt > profileDate ? prevJoinedAt : profileDate;
           hist.push({
             id,
             name: p.name || id,
             avatar: p.avatar || "",
             objective: p.objective || "",
-            joinedAt: p.createdAt || new Date().toISOString(),
+            joinedAt,
           });
         } catch { /* skip */ }
       }
