@@ -702,13 +702,16 @@ export function Feed() {
 
           {/* Row 1: logo gauche (mobile) + stats centrées (mobile + desktop) */}
           <div className="flex items-center mb-3" style={{ gap: 0, minHeight: 47 }}>
-            {/* Logo à gauche — masqué sur desktop (déjà dans le sidebar) */}
+            {/* Logo à gauche — masqué sur desktop (déjà dans le sidebar)
+                Cliquable → page des nouveaux membres */}
             <div className="lg:hidden" style={{ flexShrink: 0 }}>
               <motion.div
                 initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
+                whileTap={{ scale: 0.88 }}
                 transition={{ duration: 0.5, ease: [0.25, 0, 0.35, 1] }}
-                style={{ display: "flex", alignItems: "center" }}
+                style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                onClick={() => navigate("/new-members")}
               >
                 <img
                   src={logoImage}
@@ -750,27 +753,6 @@ export function Feed() {
                     <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)", lineHeight: 1 }}>{todayStats.interactions}</span>
                   </div>
 
-                  {/* Membres — visible uniquement si > 0, sinon les 2 stats se recentrent */}
-                  {todayStats.members > 0 && (
-                    <>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", marginTop: 1 }}>·</span>
-                      <motion.button
-                        whileTap={{ scale: 0.92 }}
-                        onClick={() => navigate("/new-members")}
-                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                      >
-                        <div style={{
-                          display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                          background: "linear-gradient(160deg, #2a2a2a 0%, #0d0d0d 100%)",
-                          borderRadius: 10, padding: "4px 10px",
-                          border: "0.5px solid rgba(255,255,255,0.10)",
-                        }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", lineHeight: 1 }}>Membres</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.90)", lineHeight: 1 }}>{todayStats.members}</span>
-                        </div>
-                      </motion.button>
-                    </>
-                  )}
                 </motion.div>
               ) : (
                 /* Placeholder pendant le chargement */
