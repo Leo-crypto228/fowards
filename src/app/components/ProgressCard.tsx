@@ -838,7 +838,7 @@ export function ProgressCard({
           <span style={{ fontWeight: 700, fontSize: 14, color: isAnonymous ? "rgba(240,240,245,0.55)" : "#f0f0f5", whiteSpace: "nowrap" }}>
             {isAnonymous ? "Anonyme" : (user?.name || "")}
           </span>
-          {!isAnonymous && (user as any)?.is_premium && <PremiumBadge size="sm" />}
+          {!isAnonymous && ((user as any)?.is_premium || (user as any)?.is_starter) && <PremiumBadge size="sm" />}
           {!isAnonymous && verified && <VerifiedBadge />}
           {!isAnonymous && liveGrade && (
             <span style={{ ...SEC, whiteSpace: "nowrap", fontWeight: 400 }}>

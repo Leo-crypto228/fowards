@@ -1626,7 +1626,7 @@ export function Profile() {
 
         {/* ── Premium / portal button ── */}
         <div style={{ padding: "0 16px", marginTop: 12 }}>
-          {!authUser?.is_premium ? (
+          {!(authUser?.is_premium || authUser?.is_starter) ? (
             <motion.button
               whileTap={{ scale: 0.97 }}
               onClick={() => navigate("/premium")}

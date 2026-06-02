@@ -47,8 +47,9 @@ export interface QuotaStatus {
   deepDiagnosticsRemaining: number;
   canSendDeepDiagnostic: boolean;
   // Plan
-  plan?: "free" | "premium";
+  plan?: "free" | "starter" | "premium";
   is_premium?: boolean;
+  is_starter?: boolean;
   premium_expires_at?: string | null;
 }
 
@@ -264,7 +265,7 @@ export async function updateProfile(
 
 export async function createCheckoutSession(
   token: string,
-  plan: "monthly" | "annual",
+  plan: "starter_monthly" | "starter_annual" | "premium_monthly" | "premium_annual",
 ): Promise<{ url: string }> {
   const res = await fetchT(
     `https://${projectId}.supabase.co/functions/v1/create-checkout-session`,

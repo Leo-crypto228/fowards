@@ -135,16 +135,18 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
 
     // ── Premium / subscription depuis Supabase profiles ──────────────────────
     let is_premium = false;
+    let is_starter = false;
     let subscription_status: StoredAuthUser["subscription_status"] = "free";
     let subscription_plan: StoredAuthUser["subscription_plan"] = "free";
     try {
       const { data: premiumData } = await supabase
         .from("profiles")
-        .select("is_premium, subscription_status, subscription_plan, subscription_current_period_end")
+        .select("is_premium, is_starter, subscription_status, subscription_plan, subscription_current_period_end")
         .eq("id", supabaseUser.id)
         .single();
       if (premiumData) {
         is_premium          = premiumData.is_premium          ?? false;
+        is_starter          = premiumData.is_starter          ?? false;
         subscription_status = premiumData.subscription_status ?? "free";
         subscription_plan   = premiumData.subscription_plan   ?? "free";
       }
@@ -158,6 +160,7 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
       onboarding_complete,
       onboarding_step,
       is_premium,
+      is_starter,
       subscription_status,
       subscription_plan,
     };
@@ -201,6 +204,7 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
 
     // ── Premium / subscription depuis Supabase profiles (catch path) ─────────
     let is_premium = false;
+    let is_starter = false;
     let subscription_status: StoredAuthUser["subscription_status"] = "free";
     let subscription_plan: StoredAuthUser["subscription_plan"] = "free";
     try {
@@ -209,6 +213,7 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
         const c = JSON.parse(cachedRaw) as Partial<StoredAuthUser>;
         if (c.supabaseId === supabaseUser.id) {
           is_premium          = c.is_premium          ?? false;
+          is_starter          = c.is_starter          ?? false;
           subscription_status = c.subscription_status ?? "free";
           subscription_plan   = c.subscription_plan   ?? "free";
         }
@@ -223,6 +228,7 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
       onboarding_complete,
       onboarding_step,
       is_premium,
+      is_starter,
       subscription_status,
       subscription_plan,
     };
@@ -401,12 +407,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await supabase
         .from("profiles")
-        .select("is_premium, subscription_status, subscription_plan, subscription_current_period_end")
+        .select("is_premium, is_starter, subscription_status, subscription_plan, subscription_current_period_end")
         .eq("id", current.supabaseId)
         .single();
       if (data) {
         updateLocalUser({
           is_premium:          data.is_premium          ?? false,
+          is_starter:          data.is_starter          ?? false,
           subscription_status: data.subscription_status ?? "free",
           subscription_plan:   data.subscription_plan   ?? "free",
         });
