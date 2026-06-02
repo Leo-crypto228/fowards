@@ -18,8 +18,11 @@ async function updateSubscription(customerId: string, updates: Record<string, un
   else console.log("[stripe-webhook] updated:", customerId, JSON.stringify(updates));
 }
 
-function getPlan(priceId: string): "monthly" | "annual" {
-  return priceId === Deno.env.get("STRIPE_PRICE_MONTHLY") ? "monthly" : "annual";
+function getPlan(priceId: string): string {
+  if (priceId === Deno.env.get("STRIPE_PRICE_STARTER_MONTHLY")) return "starter_monthly";
+  if (priceId === Deno.env.get("STRIPE_PRICE_STARTER_ANNUAL"))  return "starter_annual";
+  if (priceId === Deno.env.get("STRIPE_PRICE_ANNUAL"))          return "premium_annual";
+  return "premium_monthly"; // STRIPE_PRICE_MONTHLY (Premium mensuel) par défaut
 }
 
 Deno.serve(async (req: Request) => {

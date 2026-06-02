@@ -32,24 +32,33 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { plan, success_url, cancel_url } = body;
+    let { plan } = body;
+    const { success_url, cancel_url } = body;
+    // Rétro-compat : anciens clients envoyaient "monthly"/"annual" (= Premium)
+    if (plan === "monthly") plan = "premium_monthly";
+    if (plan === "annual")  plan = "premium_annual";
     console.log("[checkout] plan:", plan, "user:", user.id, "email:", user.email);
 
-    if (!plan || !["monthly", "annual"].includes(plan)) {
-      return new Response(JSON.stringify({ error: "Invalid plan. Use 'monthly' or 'annual'." }), {
+    // Map plan → secret du Price ID. Premium garde ses noms historiques.
+    const PRICE_MAP: Record<string, string | undefined> = {
+      starter_monthly: Deno.env.get("STRIPE_PRICE_STARTER_MONTHLY"),
+      starter_annual:  Deno.env.get("STRIPE_PRICE_STARTER_ANNUAL"),
+      premium_monthly: Deno.env.get("STRIPE_PRICE_MONTHLY"),
+      premium_annual:  Deno.env.get("STRIPE_PRICE_ANNUAL"),
+    };
+
+    if (!plan || !(plan in PRICE_MAP)) {
+      return new Response(JSON.stringify({ error: "Invalid plan." }), {
         status: 400, headers: { ...CORS, "Content-Type": "application/json" },
       });
     }
 
-    // Vérifier que les secrets sont bien chargés
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    const priceMonthly = Deno.env.get("STRIPE_PRICE_MONTHLY");
-    const priceAnnual = Deno.env.get("STRIPE_PRICE_ANNUAL");
-    console.log("[checkout] secrets check — key:", stripeKey ? "ok" : "MISSING", "monthly:", priceMonthly ?? "MISSING", "annual:", priceAnnual ?? "MISSING");
+    const priceId = PRICE_MAP[plan];
+    console.log("[checkout] secrets check — key:", stripeKey ? "ok" : "MISSING", "priceId:", priceId ?? "MISSING");
 
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY manquant dans les secrets Supabase");
-    if (!priceMonthly) throw new Error("STRIPE_PRICE_MONTHLY manquant dans les secrets Supabase");
-    if (!priceAnnual) throw new Error("STRIPE_PRICE_ANNUAL manquant dans les secrets Supabase");
+    if (!priceId) throw new Error(`Price ID manquant pour le plan ${plan} dans les secrets Supabase`);
 
     // Récupérer ou créer le customer Stripe
     const { data: profile, error: profileErr } = await supabaseAdmin
@@ -79,7 +88,6 @@ Deno.serve(async (req: Request) => {
       if (upsertErr) console.warn("[checkout] upsert error:", upsertErr.message);
     }
 
-    const priceId = plan === "monthly" ? priceMonthly : priceAnnual;
     console.log("[checkout] using priceId:", priceId);
 
     const session = await stripe.checkout.sessions.create({

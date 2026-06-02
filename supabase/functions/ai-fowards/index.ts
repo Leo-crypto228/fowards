@@ -73,10 +73,25 @@ app.onError((err, c) => {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const NORMAL_DAILY_LIMIT_FREE    = 30;
+const NORMAL_DAILY_LIMIT_STARTER = 150;
 const NORMAL_DAILY_LIMIT_PREMIUM = 300;
-const DIAGNOSTIC_BASE_LIMIT      = 1;
-const DIAGNOSTIC_MAX_LIMIT_FREE  = 2;
-const DEEP_DIAGNOSTIC_DAILY_LIMIT = 4; // Premium : 4 diagnostics approfondis/jour, reset minuit
+const STARTER_DIAGNOSTIC_DAILY_LIMIT = 1; // Starter : 1 diagnostic normal/jour
+const DEEP_DIAGNOSTIC_DAILY_LIMIT = 4;    // Premium : 4 diagnostics approfondis/jour, reset minuit
+const FREE_DIAG_CYCLE_DAYS = 3;           // Free : 1 base + 1 bonus post par fenêtre de 3 jours
+
+type PlanTier = "free" | "starter" | "premium";
+
+// ── Cycle diagnostic Free (3 jours glissants) ─────────────────────────────────
+interface FreeCycle { cycleStart: string | null; used: number; postBonus: number; expired: boolean; available: number; }
+function normalizeFreeCycle(row: { free_diag_cycle_start?: string | null; free_diag_used?: number | null; free_diag_post_bonus?: number | null } | null): FreeCycle {
+  const today = new Date().toISOString().slice(0, 10);
+  const cs = row?.free_diag_cycle_start ?? null;
+  const expired = !cs || (new Date(today).getTime() - new Date(cs).getTime()) >= FREE_DIAG_CYCLE_DAYS * 86_400_000;
+  if (expired) return { cycleStart: null, used: 0, postBonus: 0, expired: true, available: 1 };
+  const used = row?.free_diag_used ?? 0;
+  const postBonus = row?.free_diag_post_bonus ?? 0;
+  return { cycleStart: cs, used, postBonus, expired: false, available: Math.max(0, (1 + postBonus) - used) };
+}
 const GEMINI_MODEL          = "gemini-2.5-flash";
 const GEMINI_URL            = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const GEMINI_STREAM_URL     = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
@@ -145,25 +160,39 @@ async function getOrCreateQuota(userId: string): Promise<DbUserQuota> {
   return created as DbUserQuota;
 }
 
-function buildQuotaStatus(quota: DbUserQuota, isPhase1Complete: boolean, isPremium = false): QuotaStatus {
-  const normalLimit = isPremium ? NORMAL_DAILY_LIMIT_PREMIUM : NORMAL_DAILY_LIMIT_FREE;
-  // Premium : pas de diagnostic normal (0). Free : 1 base + 1 via post, max 2.
-  const diagnosticsLimit = isPremium ? 0 : Math.min(
-    DIAGNOSTIC_BASE_LIMIT + quota.diagnostics_unlocked_via_post,
-    DIAGNOSTIC_MAX_LIMIT_FREE,
-  );
+function buildQuotaStatus(quota: DbUserQuota, isPhase1Complete: boolean, plan: PlanTier = "free", freeCycle?: FreeCycle): QuotaStatus {
+  const isPremium = plan === "premium";
+  const isStarter = plan === "starter";
+  const normalLimit = isPremium ? NORMAL_DAILY_LIMIT_PREMIUM : isStarter ? NORMAL_DAILY_LIMIT_STARTER : NORMAL_DAILY_LIMIT_FREE;
+
+  // Diagnostic normal : Premium → 0 (utilise l'Approfondi) · Starter → 1/jour ·
+  // Free → cycle 3 jours (1 base + 1 bonus post), géré via freeCycle.
+  let diagnosticsUsed: number, diagnosticsLimit: number, canSendDiagnostic: boolean;
+  if (isPremium) {
+    diagnosticsUsed = 0; diagnosticsLimit = 0; canSendDiagnostic = false;
+  } else if (isStarter) {
+    diagnosticsUsed = quota.diagnostics_used;
+    diagnosticsLimit = STARTER_DIAGNOSTIC_DAILY_LIMIT;
+    canSendDiagnostic = isPhase1Complete && quota.diagnostics_used < STARTER_DIAGNOSTIC_DAILY_LIMIT;
+  } else {
+    const fc = freeCycle ?? { used: 0, postBonus: 0, expired: true, available: 1, cycleStart: null };
+    diagnosticsUsed = fc.expired ? 0 : fc.used;
+    diagnosticsLimit = fc.expired ? 1 : 1 + fc.postBonus;
+    canSendDiagnostic = isPhase1Complete && fc.available > 0;
+  }
+
   const deepLimit = isPremium ? DEEP_DIAGNOSTIC_DAILY_LIMIT : 0;
   const deepUsed  = quota.deep_diagnostics_used_today ?? 0;
   return {
     normalUsed: quota.normal_messages_used,
     normalLimit,
     normalRemaining: Math.max(0, normalLimit - quota.normal_messages_used),
-    diagnosticsUsed: quota.diagnostics_used,
+    diagnosticsUsed,
     diagnosticsLimit,
-    diagnosticsRemaining: Math.max(0, diagnosticsLimit - quota.diagnostics_used),
-    diagnosticsUnlockedViaPost: quota.diagnostics_unlocked_via_post > 0,
+    diagnosticsRemaining: Math.max(0, diagnosticsLimit - diagnosticsUsed),
+    diagnosticsUnlockedViaPost: !isPremium && !isStarter && (freeCycle?.postBonus ?? 0) > 0,
     canSendNormal: quota.normal_messages_used < normalLimit,
-    canSendDiagnostic: !isPremium && isPhase1Complete && quota.diagnostics_used < diagnosticsLimit,
+    canSendDiagnostic,
     isPhase1Complete,
     deepDiagnosticsUsedToday: deepUsed,
     deepDiagnosticsLimit: deepLimit,
@@ -555,19 +584,27 @@ app.get("/ai-fowards/quota-status", async (c) => {
   const userId = await getUserId(c.req.header("Authorization"));
   if (!userId) return c.json({ error: "Non authentifié" }, 401);
 
-  const { data: profileRow } = await supabaseAdmin.from("profiles").select("is_premium, subscription_status, subscription_plan, subscription_current_period_end").eq("id", userId).single();
+  const { data: profileRow } = await supabaseAdmin
+    .from("profiles")
+    .select("is_premium, is_starter, subscription_status, subscription_plan, subscription_current_period_end, free_diag_cycle_start, free_diag_used, free_diag_post_bonus")
+    .eq("id", userId)
+    .single();
   const isPremium = profileRow?.is_premium === true;
+  const isStarter = profileRow?.is_starter === true;
+  const plan: PlanTier = isPremium ? "premium" : isStarter ? "starter" : "free";
 
   try {
     const [quota, profile] = await Promise.all([
       getOrCreateQuota(userId),
       getOrCreateProfile(userId),
     ]);
-    const qs = buildQuotaStatus(quota, profile.is_phase1_complete, isPremium);
+    const freeCycle = normalizeFreeCycle(profileRow);
+    const qs = buildQuotaStatus(quota, profile.is_phase1_complete, plan, freeCycle);
     return c.json({
       ...qs,
-      plan: isPremium ? (profileRow?.subscription_plan || "premium") : "free",
+      plan,
       is_premium: isPremium,
+      is_starter: isStarter,
       premium_expires_at: profileRow?.subscription_current_period_end || null,
     });
   } catch (err) {
@@ -787,11 +824,17 @@ app.post("/ai-fowards/chat", async (c) => {
     return c.json({ error: "Mode invalide (normal | diagnostic | diagnostic_approfondi)" }, 400);
   }
 
-  // ── Premium check ──────────────────────────────────────────────────────────
-  const { data: profileRow } = await supabaseAdmin.from("profiles").select("is_premium, subscription_status, subscription_plan, subscription_current_period_end").eq("id", userId).single();
+  // ── Plan check (free / starter / premium) ───────────────────────────────────
+  const { data: profileRow } = await supabaseAdmin
+    .from("profiles")
+    .select("is_premium, is_starter, subscription_status, subscription_plan, subscription_current_period_end, free_diag_cycle_start, free_diag_used, free_diag_post_bonus")
+    .eq("id", userId)
+    .single();
   const isPremium = profileRow?.is_premium === true;
+  const isStarter = profileRow?.is_starter === true;
+  const plan: PlanTier = isPremium ? "premium" : isStarter ? "starter" : "free";
 
-  // EDIT 3 — Block diagnostic_approfondi for free users
+  // EDIT 3 — Block diagnostic_approfondi for non-premium users
   if (mode === "diagnostic_approfondi" && !isPremium) {
     return new Response(JSON.stringify({ error: "premium_required", message: "Le Diagnostic Approfondi est reserve aux membres Premium." }), { status: 403, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
   }
@@ -828,7 +871,8 @@ app.post("/ai-fowards/chat", async (c) => {
     getOrCreateQuota(userId),
     getOrCreateProfile(userId),
   ]);
-  const quotaStatus = buildQuotaStatus(quota, profile.is_phase1_complete, isPremium);
+  const freeCycle = normalizeFreeCycle(profileRow);
+  const quotaStatus = buildQuotaStatus(quota, profile.is_phase1_complete, plan, freeCycle);
 
   // ── Vérification quota ─────────────────────────────────────────────────────
   // SEC-06 : le bypass onboarding n'est autorisé QUE si Phase 1 pas encore complète.
@@ -852,15 +896,47 @@ app.post("/ai-fowards/chat", async (c) => {
         quota: quotaStatus,
       }, 403);
     }
-    if (!quotaStatus.canSendDiagnostic) {
-      const hint = quotaStatus.diagnosticsUnlockedViaPost
-        ? "Tu as déjà utilisé tes 2 diagnostics aujourd'hui. Reviens demain !"
-        : "Publie un post de progression (≥50 caractères) pour débloquer un 2ème diagnostic.";
+
+    if (plan === "premium") {
+      // Premium n'a pas de diagnostic normal — il utilise le Diagnostic Approfondi.
       return c.json({
-        error: `Quota diagnostic atteint. ${hint}`,
-        quotaExceeded: true,
+        error: "En Premium, utilise le Diagnostic Approfondi (plus complet).",
+        quotaExceeded: false,
         quota: quotaStatus,
-      }, 429);
+      }, 400);
+    }
+
+    if (plan === "starter") {
+      if (quota.diagnostics_used >= STARTER_DIAGNOSTIC_DAILY_LIMIT) {
+        return c.json({
+          error: "Tu as utilisé ton diagnostic du jour. Il se renouvelle à minuit.",
+          quotaExceeded: true,
+          quota: quotaStatus,
+        }, 429);
+      }
+    } else {
+      // FREE — cycle 3 jours (1 base + 1 bonus post)
+      if (freeCycle.available <= 0) {
+        const next = new Date(freeCycle.cycleStart!);
+        next.setDate(next.getDate() + FREE_DIAG_CYCLE_DAYS);
+        return c.json({
+          error: `Ton prochain diagnostic est disponible le ${next.toLocaleDateString("fr-FR")}. Publie un post (≥50 car.) pour en débloquer un de plus.`,
+          quotaExceeded: true,
+          quota: quotaStatus,
+          next_available_at: next.toISOString(),
+        }, 429);
+      }
+      // Pré-consommation du cycle Free (avant traitement, anti double-utilisation)
+      const today = new Date().toISOString().slice(0, 10);
+      if (freeCycle.expired) {
+        await supabaseAdmin.from("profiles").update({
+          free_diag_cycle_start: today, free_diag_used: 1, free_diag_post_bonus: 0,
+        }).eq("id", userId);
+      } else {
+        await supabaseAdmin.from("profiles").update({
+          free_diag_used: freeCycle.used + 1,
+        }).eq("id", userId);
+      }
     }
   }
 
@@ -913,8 +989,10 @@ app.post("/ai-fowards/chat", async (c) => {
     console.log("PROFIL IA CONTENU:", profile?.content_markdown?.substring(0, 100));
     console.log("PHASE 1 COMPLETE:", profile?.is_phase1_complete);
 
-    // ── Injection contexte V8 (profil + mode + onboarding trigger) ───────────
-    const userContext = buildUserContext(profile, mode);
+    // ── Injection contexte V11 (flag plan + profil + mode + onboarding) ──────
+    // Le flag plan active les modules Premium (7/8, Approfondi, J+30) côté prompt V11.
+    const planFlag = plan === "premium" ? "[PREMIUM_USER]" : plan === "starter" ? "[STARTER_USER]" : "[FREE_USER]";
+    const userContext = `${planFlag}\n${buildUserContext(profile, mode)}`;
     const modeMap: Record<string, string> = {
       "normal": "[MODE: NORMAL]",
       "diagnostic": "[MODE: DIAGNOSTIC]",
@@ -1025,7 +1103,7 @@ app.post("/ai-fowards/chat", async (c) => {
                 done: true, conversationId: convId, message: cleanContent,
                 forwardsData: forwardsData ?? null, choices: sChoices ?? null,
                 mode, isPhase1JustCompleted,
-                quota: buildQuotaStatus(quota, sFinalPhase1Complete, isPremium),
+                quota: buildQuotaStatus(quota, sFinalPhase1Complete, plan, freeCycle),
               };
               controller.enqueue(encoder.encode(`data: ${JSON.stringify(sErrFinalEvent)}\n\n`));
               return;
@@ -1057,7 +1135,8 @@ app.post("/ai-fowards/chat", async (c) => {
             const sToday = new Date().toISOString().split("T")[0];
             if (mode === "normal") {
               await supabaseAdmin.from("user_quotas").update({ normal_messages_used: quota.normal_messages_used + 1 }).eq("user_id", userId).eq("quota_date", sToday);
-            } else if (mode === "diagnostic") {
+            } else if (mode === "diagnostic" && plan === "starter") {
+              // Starter : compteur journalier. Free → déjà pré-consommé sur le cycle profiles.
               await supabaseAdmin.from("user_quotas").update({ diagnostics_used: quota.diagnostics_used + 1 }).eq("user_id", userId).eq("quota_date", sToday);
             }
             // diagnostic_approfondi : déjà pré-incrémenté avant traitement — pas de mise à jour ici
@@ -1066,7 +1145,7 @@ app.post("/ai-fowards/chat", async (c) => {
             const sUpdatedQuota: DbUserQuota = {
               ...quota,
               normal_messages_used: mode === "normal" ? quota.normal_messages_used + 1 : quota.normal_messages_used,
-              diagnostics_used: mode === "diagnostic" ? quota.diagnostics_used + 1 : quota.diagnostics_used,
+              diagnostics_used: (mode === "diagnostic" && plan === "starter") ? quota.diagnostics_used + 1 : quota.diagnostics_used,
               // deep_diagnostics_used_today : déjà pré-incrémenté → quota contient la valeur +1
             };
 
@@ -1078,7 +1157,7 @@ app.post("/ai-fowards/chat", async (c) => {
               choices: sChoices ?? null,
               mode,
               isPhase1JustCompleted,
-              quota: buildQuotaStatus(sUpdatedQuota, sFinalPhase1Complete, isPremium),
+              quota: buildQuotaStatus(sUpdatedQuota, sFinalPhase1Complete, plan, freeCycle),
             };
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(finalEvent)}\n\n`));
           } catch (err) {
@@ -1189,20 +1268,22 @@ app.post("/ai-fowards/chat", async (c) => {
         .update({ normal_messages_used: quota.normal_messages_used + 1 })
         .eq("user_id", userId)
         .eq("quota_date", today);
-    } else {
+    } else if (mode === "diagnostic" && plan === "starter") {
+      // Starter : compteur journalier. Free → déjà pré-consommé sur le cycle profiles.
       await supabaseAdmin
         .from("user_quotas")
         .update({ diagnostics_used: quota.diagnostics_used + 1 })
         .eq("user_id", userId)
         .eq("quota_date", today);
     }
+    // diagnostic_approfondi : déjà pré-incrémenté avant traitement
 
     // ── Quota calculé localement (évite un aller-retour DB — PERF-04) ──────────
     const finalPhase1Complete = isPhase1JustCompleted || profile.is_phase1_complete;
     const updatedQuota: DbUserQuota = {
       ...quota,
       normal_messages_used: mode === "normal" ? quota.normal_messages_used + 1 : quota.normal_messages_used,
-      diagnostics_used: mode === "diagnostic" ? quota.diagnostics_used + 1 : quota.diagnostics_used,
+      diagnostics_used: (mode === "diagnostic" && plan === "starter") ? quota.diagnostics_used + 1 : quota.diagnostics_used,
       // deep_diagnostics_used_today : déjà pré-incrémenté → quota contient la valeur +1
     };
 
@@ -1213,7 +1294,7 @@ app.post("/ai-fowards/chat", async (c) => {
       choices: choices ?? null,
       mode,
       isPhase1JustCompleted,
-      quota: buildQuotaStatus(updatedQuota, finalPhase1Complete, isPremium),
+      quota: buildQuotaStatus(updatedQuota, finalPhase1Complete, plan, freeCycle),
     });
   } catch (err) {
     console.error("[chat] error:", err);
