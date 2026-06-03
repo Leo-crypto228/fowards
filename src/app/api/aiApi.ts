@@ -66,6 +66,7 @@ export interface AiMessage {
   content: string;
   mode: ChatMode;
   fowards_data: Record<string, unknown> | null;
+  community_button_text?: string | null;
   created_at: string;
 }
 
@@ -90,7 +91,21 @@ export interface ChatResponse {
   choices: ChoicesBlock | null;
   mode: ChatMode;
   isPhase1JustCompleted: boolean;
+  community_button_text?: string | null;
   quota: QuotaStatus;
+}
+
+// Nettoie le texte partiel streamé : retire les blocs techniques complets et
+// tronque un bloc ouvert mais pas encore fermé (évite tout flash de balise).
+export function cleanPartialStream(t: string): string {
+  let s = t
+    .replace(/<fowards-data>[\s\S]*?<\/fowards-data>/g, "")
+    .replace(/<profile-update>[\s\S]*?<\/profile-update>/g, "")
+    .replace(/<choices[\s\S]*?<\/choices>/g, "")
+    .replace(/<community-button>[\s\S]*?<\/community-button>/g, "");
+  const open = s.search(/<(fowards-data|profile-update|choices|community-button)\b/);
+  if (open !== -1) s = s.slice(0, open);
+  return s;
 }
 
 // ── API functions ─────────────────────────────────────────────────────────────
@@ -216,7 +231,7 @@ export async function sendMessageStream(
 
         if (typeof event.chunk === "string") {
           accText += event.chunk;
-          onChunk(accText);
+          onChunk(cleanPartialStream(accText));
         }
 
         if (event.done === true) {

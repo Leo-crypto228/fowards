@@ -12,12 +12,27 @@ import {
   type ChoicesBlock,
 } from "../api/aiApi";
 import { MessageBubble } from "../components/MessageBubble";
+import { CommunityButton } from "../components/CommunityButton";
 import { ChatInput } from "../components/ChatInput";
 import { toast } from "sonner";
 import mascot from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const GRAD = "linear-gradient(120deg, #a86bff 0%, #8a6bff 55%, #7287ff 100%)";
+
+// ── Bouton communauté — règle 30 min (uniquement sur les nouveaux boutons streamés)
+// Les boutons déjà persistés en DB s'affichent TOUJOURS (gérés au rendu).
+const COMMUNITY_BTN_KEY = "fowards_community_btn_last_shown";
+function canShowCommunityButton(): boolean {
+  try {
+    const last = localStorage.getItem(COMMUNITY_BTN_KEY);
+    if (!last) return true;
+    return Date.now() - parseInt(last, 10) >= 30 * 60 * 1000;
+  } catch { return true; }
+}
+function markCommunityButtonShown(): void {
+  try { localStorage.setItem(COMMUNITY_BTN_KEY, String(Date.now())); } catch { /* quota plein */ }
+}
 
 // ── Robot icon SVG ─────────────────────────────────────────────────────────────
 function RobotIcon({ size = 20 }: { size?: number }) {
@@ -169,13 +184,22 @@ export function AIConversationPage() {
         });
       });
 
+      // Bouton communauté — fraîchement streamé : on l'affiche seulement si la
+      // règle 30 min l'autorise. (Les boutons persistés en DB s'affichent toujours
+      // au chargement de l'historique, sans ce gate.)
+      let freshCommunityBtn: string | null = null;
+      if (response.community_button_text && canShowCommunityButton()) {
+        freshCommunityBtn = response.community_button_text;
+        markCommunityButtonShown();
+      }
+
       // Finaliser avec contenu propre — on retire uniquement le typing indicator,
       // le message utilisateur (tempUserId) reste dans la conversation
       setMessages((prev) => {
         const base = prev.filter((m) => m.id !== typingId);
         return base.map((m) =>
           m.id === streamingAiId
-            ? { ...m, content: response.message, fowards_data: response.forwardsData ?? null }
+            ? { ...m, content: response.message, fowards_data: response.forwardsData ?? null, community_button_text: freshCommunityBtn }
             : m,
         );
       });
@@ -340,7 +364,12 @@ export function AIConversationPage() {
           )}
 
           <AnimatePresence initial={false}>
-            {messages.map((msg) => (
+            {messages.map((msg, i) => {
+              // Prefill = message user qui précède CE message assistant
+              const precedingUserMsg = msg.community_button_text
+                ? [...messages.slice(0, i)].reverse().find((m) => m.role === "user")?.content ?? ""
+                : "";
+              return (
               <motion.div
                 key={msg.id}
                 initial={{ opacity: 0, y: 9 }}
@@ -350,10 +379,16 @@ export function AIConversationPage() {
                 {msg.id.startsWith("typing-") ? (
                   <TypingIndicator />
                 ) : (
-                  <MessageBubble message={msg} />
+                  <>
+                    <MessageBubble message={msg} />
+                    {msg.role === "assistant" && msg.community_button_text && (
+                      <CommunityButton text={msg.community_button_text} prefillText={precedingUserMsg} />
+                    )}
+                  </>
                 )}
               </motion.div>
-            ))}
+              );
+            })}
           </AnimatePresence>
           <div ref={messagesEndRef} />
         </div>

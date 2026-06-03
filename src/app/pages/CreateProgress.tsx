@@ -102,6 +102,8 @@ export function CreateProgress() {
   const navigate   = useNavigate();
   const location   = useLocation();
   const quotedPost = location.state?.quotedPost ?? null;
+  const prefillText = (location.state?.prefillText as string | undefined) ?? null;
+  const hasBack = !!(quotedPost || prefillText); // affiche le bouton retour
 
   // ── Mode : Partage (post classique) ou Ways (story 24h) ───────────────────
   const [mode, setMode] = useState<"partage" | "ways">("partage");
@@ -156,7 +158,7 @@ export function CreateProgress() {
   const [selectedType, setSelectedType] = useState<string>("");
   const [isAnonymous, setIsAnonymous]   = useState(false);
   const [anonHint, setAnonHint]         = useState(false);
-  const [text, setText]                 = useState("");
+  const [text, setText]                 = useState<string>(() => (location.state?.prefillText as string | undefined) ?? "");
   const [posted, setPosted]             = useState(false); // optimistic: posted instantly
   const [error, setError]               = useState<string | null>(null);
 
@@ -542,8 +544,8 @@ export function CreateProgress() {
 
       <div className="relative max-w-md mx-auto px-5" style={{ zIndex: 1 }}>
 
-        {/* ── Retour si post quoté ── */}
-        {quotedPost && (
+        {/* ── Retour si post quoté ou texte prérempli (depuis l'IA) ── */}
+        {hasBack && (
           <div style={{ paddingTop: 56, paddingBottom: 0 }}>
             <motion.button whileTap={{ scale: 0.92 }} onClick={() => navigate(-1)}
               style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px 8px 12px", borderRadius: 999, background: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "0.5px solid rgba(255,255,255,0.14)", boxShadow: "0 2px 12px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.09)", cursor: "pointer" }}>
@@ -555,7 +557,7 @@ export function CreateProgress() {
 
         {/* ── Sélecteur de mode : tab style comme le feed ── */}
         <div
-          className={quotedPost ? "mt-6" : "mt-14"}
+          className={hasBack ? "mt-6" : "mt-14"}
           style={{ display: "flex", borderBottom: "0.5px solid rgba(255,255,255,0.07)", marginBottom: 24 }}
         >
           {(["partage", "ways"] as const).map((m) => (
