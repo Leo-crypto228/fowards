@@ -479,12 +479,15 @@ const RE_FOWARDS_DATA   = /<fowards-data>([\s\S]*?)<\/fowards-data>/g;
 const RE_PROFILE_UPDATE = /<profile-update>([\s\S]*?)<\/profile-update>/g;
 // Capture type="single" ou type="multi" + contenu pipe-séparé
 const RE_CHOICES        = /<choices\s+type="(single|multi)">([\s\S]*?)<\/choices>/g;
+// Bouton communauté "Poste ta situation" — phrase courte de l'IA
+const RE_COMMUNITY_BTN  = /<community-button>([\s\S]*?)<\/community-button>/g;
 
 interface ParsedResponse {
   cleanContent: string;
   forwardsData: Record<string, unknown> | null;
   profileUpdate: ProfileUpdateBlock | null;
   choices: ChoicesBlock | null;
+  communityButtonText: string | null;
 }
 
 function parseGeminiResponse(raw: string): ParsedResponse {
@@ -492,6 +495,7 @@ function parseGeminiResponse(raw: string): ParsedResponse {
   let forwardsData: Record<string, unknown> | null = null;
   let profileUpdate: ProfileUpdateBlock | null = null;
   let choices: ChoicesBlock | null = null;
+  let communityButtonText: string | null = null;
 
   // 1. <fowards-data>
   const fdMatches = [...raw.matchAll(RE_FOWARDS_DATA)];
@@ -533,11 +537,21 @@ function parseGeminiResponse(raw: string): ParsedResponse {
   cleanContent = cleanContent.replace(RE_CHOICES, "");
   RE_CHOICES.lastIndex = 0;
 
+  // 4. <community-button> — phrase courte du bouton "Poste ta situation"
+  const cbMatches = [...raw.matchAll(RE_COMMUNITY_BTN)];
+  if (cbMatches.length > 0) {
+    const t = cbMatches[0][1].trim();
+    if (t) communityButtonText = t;
+  }
+  cleanContent = cleanContent.replace(RE_COMMUNITY_BTN, "");
+  RE_COMMUNITY_BTN.lastIndex = 0;
+
   return {
     cleanContent: cleanContent.trim(),
     forwardsData,
     profileUpdate,
     choices,
+    communityButtonText,
   };
 }
 
@@ -763,7 +777,7 @@ app.get("/ai-fowards/conversations/:id", async (c) => {
 
     const { data: messages, error: msgErr } = await supabaseAdmin
       .from("messages")
-      .select("id, role, content, mode, fowards_data, created_at")
+      .select("id, role, content, mode, fowards_data, community_button_text, created_at")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
 
@@ -1079,7 +1093,7 @@ app.post("/ai-fowards/chat", async (c) => {
             if (!fullText) throw new Error("Gemini: réponse vide");
 
             // Post-traitement (identique au chemin non-streaming)
-            const { cleanContent, forwardsData, profileUpdate, choices: sChoices } = parseGeminiResponse(fullText);
+            const { cleanContent, forwardsData, profileUpdate, choices: sChoices, communityButtonText } = parseGeminiResponse(fullText);
 
             let isPhase1JustCompleted = false;
             if (profileUpdate) {
@@ -1090,7 +1104,7 @@ app.post("/ai-fowards/chat", async (c) => {
             const now = new Date().toISOString();
             const { error: sMsgErr } = await supabaseAdmin.from("messages").insert([
               { conversation_id: convId, user_id: userId, role: "user", content: message.trim(), mode, fowards_data: null, tokens_input: null, tokens_output: null, created_at: now },
-              { conversation_id: convId, user_id: userId, role: "assistant", content: cleanContent, mode, fowards_data: forwardsData, tokens_input: tokensInput, tokens_output: tokensOutput, created_at: new Date(Date.now() + 1).toISOString() },
+              { conversation_id: convId, user_id: userId, role: "assistant", content: cleanContent, mode, fowards_data: forwardsData, community_button_text: communityButtonText, tokens_input: tokensInput, tokens_output: tokensOutput, created_at: new Date(Date.now() + 1).toISOString() },
             ]);
 
             const sFinalPhase1Complete = isPhase1JustCompleted || profile.is_phase1_complete;
@@ -1103,6 +1117,7 @@ app.post("/ai-fowards/chat", async (c) => {
                 done: true, conversationId: convId, message: cleanContent,
                 forwardsData: forwardsData ?? null, choices: sChoices ?? null,
                 mode, isPhase1JustCompleted,
+                community_button_text: communityButtonText,
                 quota: buildQuotaStatus(quota, sFinalPhase1Complete, plan, freeCycle),
               };
               controller.enqueue(encoder.encode(`data: ${JSON.stringify(sErrFinalEvent)}\n\n`));
@@ -1157,6 +1172,7 @@ app.post("/ai-fowards/chat", async (c) => {
               choices: sChoices ?? null,
               mode,
               isPhase1JustCompleted,
+              community_button_text: communityButtonText,
               quota: buildQuotaStatus(sUpdatedQuota, sFinalPhase1Complete, plan, freeCycle),
             };
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(finalEvent)}\n\n`));
@@ -1181,8 +1197,8 @@ app.post("/ai-fowards/chat", async (c) => {
     // ── Appel Gemini (non-streaming) ──────────────────────────────────────────
     const { text: rawAiResponse, tokensInput, tokensOutput } = await callGemini(geminiHistory, messageWithContext);
 
-    // ── Triple parsing (fowards-data, profile-update, choices) ────────────────
-    const { cleanContent, forwardsData, profileUpdate, choices } = parseGeminiResponse(rawAiResponse);
+    // ── Parsing (fowards-data, profile-update, choices, community-button) ─────
+    const { cleanContent, forwardsData, profileUpdate, choices, communityButtonText } = parseGeminiResponse(rawAiResponse);
 
     // ── Appliquer le <profile-update> si présent ──────────────────────────────
     let isPhase1JustCompleted = false;
@@ -1215,6 +1231,7 @@ app.post("/ai-fowards/chat", async (c) => {
         content: cleanContent,
         mode,
         fowards_data: forwardsData,
+        community_button_text: communityButtonText,
         tokens_input: tokensInput,
         tokens_output: tokensOutput,
         created_at: new Date(Date.now() + 1).toISOString(),
@@ -1294,6 +1311,7 @@ app.post("/ai-fowards/chat", async (c) => {
       choices: choices ?? null,
       mode,
       isPhase1JustCompleted,
+      community_button_text: communityButtonText,
       quota: buildQuotaStatus(updatedQuota, finalPhase1Complete, plan, freeCycle),
     });
   } catch (err) {

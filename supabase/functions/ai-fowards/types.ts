@@ -11,6 +11,7 @@ export interface DbMessage {
   content: string;
   mode: ChatMode;
   fowards_data: Record<string, unknown> | null;
+  community_button_text?: string | null;
   created_at: string;
 }
 
