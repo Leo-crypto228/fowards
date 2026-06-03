@@ -8,7 +8,7 @@ import {
 } from "../api/aiApi";
 import { toast } from "sonner";
 import mascot from "figma:asset/cd3b49eafdee7adc585eb4cea8cc18850443b810.png";
-import { VerifiedIcon } from "../components/PremiumBadge";
+import { PremiumCtaButton } from "../components/PremiumBadge";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const GRAD = "linear-gradient(120deg, #a86bff 0%, #8a6bff 55%, #7287ff 100%)";
@@ -356,22 +356,7 @@ export function AIHomePage() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {!user?.is_premium && (
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                onClick={() => navigate("/premium")}
-                style={{
-                  background: "rgba(99,102,241,0.15)",
-                  border: "1px solid rgba(99,102,241,0.4)",
-                  borderRadius: 999,
-                  padding: "4px 10px",
-                  cursor: "pointer",
-                  display: "flex", alignItems: "center", gap: 4,
-                  color: "#a78bfa", fontSize: 12, fontWeight: 600,
-                  fontFamily: "inherit",
-                }}
-              >
-                <VerifiedIcon size={13} color="#7c3aed" /> Premium
-              </motion.button>
+              <PremiumCtaButton onClick={() => navigate("/premium")} />
             )}
             <motion.button
               whileTap={{ scale: 0.88 }}
@@ -663,22 +648,7 @@ export function AIHomePage() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {!user?.is_premium && (
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={() => navigate("/premium")}
-              style={{
-                background: "rgba(99,102,241,0.15)",
-                border: "1px solid rgba(99,102,241,0.4)",
-                borderRadius: 999,
-                padding: "4px 10px",
-                cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 4,
-                color: "#a78bfa", fontSize: 12, fontWeight: 600,
-                fontFamily: "inherit",
-              }}
-            >
-              ⭐ Premium
-            </motion.button>
+            <PremiumCtaButton onClick={() => navigate("/premium")} />
           )}
           <motion.button
             whileTap={{ scale: 0.88 }}

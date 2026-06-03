@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { BadgesSection } from "../components/BadgesSection";
+import { PremiumCtaButton } from "../components/PremiumBadge";
 import { ProgressCard } from "../components/ProgressCard";
 import { useNavigate } from "react-router";
 import { FollowButton } from "../components/FollowButton";
@@ -1553,6 +1554,28 @@ export function Profile() {
           </div>
         </motion.div>
 
+        {/* ── Premium CTA / portail — juste sous la bannière, coin droit ── */}
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "10px 16px 0" }}>
+          {!(authUser?.is_premium || authUser?.is_starter) ? (
+            <PremiumCtaButton onClick={() => navigate("/premium")} />
+          ) : (
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={handleOpenPortal}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                background: "linear-gradient(135deg, #2e2e36 0%, #1c1c20 100%)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                borderRadius: 999, padding: "6px 12px", cursor: "pointer",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.40)", fontFamily: "inherit",
+              }}
+            >
+              <Settings style={{ width: 13, height: 13, color: "rgba(255,255,255,0.75)" }} />
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", lineHeight: 1 }}>Mon abonnement</span>
+            </motion.button>
+          )}
+        </div>
+
         {/* ── Profile card — avatar + streak + info — visible only on Evolution ── */}
         
           {showInfo && (
@@ -1623,50 +1646,6 @@ export function Profile() {
             </motion.div>
           )}
         
-
-        {/* ── Premium / portal button ── */}
-        <div style={{ padding: "0 16px", marginTop: 12 }}>
-          {!(authUser?.is_premium || authUser?.is_starter) ? (
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => navigate("/premium")}
-              style={{
-                width: "100%",
-                border: "1px solid rgba(99,102,241,0.40)",
-                background: "rgba(99,102,241,0.10)",
-                borderRadius: 12,
-                padding: "11px 0",
-                marginBottom: 16,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-            >
-              <span style={{ color: "#a78bfa", fontWeight: 700, fontSize: 15 }}>⭐ Passer Premium</span>
-            </motion.button>
-          ) : (
-            <button
-              onClick={handleOpenPortal}
-              style={{
-                width: "100%",
-                border: "1px solid rgba(99,102,241,0.25)",
-                background: "rgba(99,102,241,0.07)",
-                borderRadius: 12,
-                padding: "11px 0",
-                marginBottom: 16,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-            >
-              <span style={{ color: "rgba(167,139,250,0.7)", fontWeight: 700, fontSize: 15 }}>⚙️ Gerer mon abonnement</span>
-            </button>
-          )}
-        </div>
 
         {/* ── Nav + content ── */}
         <div style={{ padding: "0 16px" }}>

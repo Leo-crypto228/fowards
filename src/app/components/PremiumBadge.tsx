@@ -1,3 +1,26 @@
+import { motion } from "motion/react";
+
+// CTA Premium — pilule gradient gris (comme la barre de saisie IA),
+// badge certifié violet + texte "Premium" blanc. Réutilisé page IA + profil.
+export function PremiumCtaButton({ onClick }: { onClick: () => void }) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.92 }}
+      onClick={onClick}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 5,
+        background: "linear-gradient(135deg, #2e2e36 0%, #1c1c20 100%)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 999, padding: "6px 12px", cursor: "pointer",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.40)", fontFamily: "inherit",
+      }}
+    >
+      <VerifiedIcon size={14} color="#a78bfa" />
+      <span style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", lineHeight: 1 }}>Premium</span>
+    </motion.button>
+  );
+}
+
 // Badge vérifié violet — coche blanche sur fond violet, pas de fond extérieur
 export function PremiumBadge({ size = "md" }: { size?: "sm" | "md" }) {
   const px = size === "sm" ? 14 : 18;
