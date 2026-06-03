@@ -1500,8 +1500,9 @@ export function Profile() {
           />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.50) 100%)" }} />
 
-          {/* Action buttons pinned bottom-right — une seule ligne */}
-          <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 7 }}>
+          {/* Actions + Premium — colonne ancrée bas-droit, sur la bannière */}
+          <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
 
             {/* Bouton Partager */}
             <motion.button
@@ -1551,30 +1552,30 @@ export function Profile() {
               <Settings style={{ width: 13, height: 13, color: "#a5b4fc" }} />
             </motion.div>
 
-          </div>
-        </motion.div>
+          </div>{/* fin rangée boutons */}
 
-        {/* ── Premium CTA / portail — juste sous la bannière, coin droit ── */}
-        <div style={{ display: "flex", justifyContent: "flex-end", padding: "10px 16px 0" }}>
-          {!(authUser?.is_premium || authUser?.is_starter) ? (
-            <PremiumCtaButton onClick={() => navigate("/premium")} />
-          ) : (
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={handleOpenPortal}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                background: "linear-gradient(135deg, #2e2e36 0%, #1c1c20 100%)",
-                border: "1px solid rgba(255,255,255,0.10)",
-                borderRadius: 999, padding: "6px 12px", cursor: "pointer",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.40)", fontFamily: "inherit",
-              }}
-            >
-              <Settings style={{ width: 13, height: 13, color: "rgba(255,255,255,0.75)" }} />
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", lineHeight: 1 }}>Mon abonnement</span>
-            </motion.button>
-          )}
-        </div>
+            {/* Premium CTA / portail — sous les boutons, sur la bannière */}
+            {!(authUser?.is_premium || authUser?.is_starter) ? (
+              <PremiumCtaButton onClick={() => navigate("/premium")} />
+            ) : (
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                onClick={handleOpenPortal}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "linear-gradient(135deg, #2e2e36 0%, #1c1c20 100%)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  borderRadius: 999, padding: "6px 12px", cursor: "pointer",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.40)", fontFamily: "inherit",
+                }}
+              >
+                <Settings style={{ width: 13, height: 13, color: "rgba(255,255,255,0.75)" }} />
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", lineHeight: 1 }}>Mon abonnement</span>
+              </motion.button>
+            )}
+
+          </div>{/* fin colonne actions */}
+        </motion.div>
 
         {/* ── Profile card — avatar + streak + info — visible only on Evolution ── */}
         
