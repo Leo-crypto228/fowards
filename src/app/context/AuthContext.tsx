@@ -79,14 +79,47 @@ async function checkPhase1CompleteFromDB(userId: string): Promise<boolean> {
   }
 }
 
+// Race une promesse contre un timeout — renvoie `fallback` si dépassé.
+// PERF : garantit que le chemin d'auth ne bloque JAMAIS le rendu indéfiniment.
+function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    p.catch(() => fallback),
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
+type PremiumFields = Pick<StoredAuthUser, "is_premium" | "is_starter" | "subscription_status" | "subscription_plan">;
+const FREE_PREMIUM: PremiumFields = { is_premium: false, is_starter: false, subscription_status: "free", subscription_plan: "free" };
+
+async function fetchPremiumFields(userId: string): Promise<PremiumFields> {
+  try {
+    const { data } = await supabase
+      .from("profiles")
+      .select("is_premium, is_starter, subscription_status, subscription_plan, subscription_current_period_end")
+      .eq("id", userId)
+      .single();
+    if (!data) return FREE_PREMIUM;
+    return {
+      is_premium:          data.is_premium          ?? false,
+      is_starter:          data.is_starter          ?? false,
+      subscription_status: data.subscription_status ?? "free",
+      subscription_plan:   data.subscription_plan   ?? "free",
+    };
+  } catch { return FREE_PREMIUM; }
+}
+
 async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
   const meta         = supabaseUser.user_metadata ?? {};
   const authUsername = normalizeUsername(meta.username || supabaseUser.email?.split("@")[0] || "user");
   const nameDefault  = meta.name || meta.username || supabaseUser.email?.split("@")[0] || "Utilisateur";
 
-  // 3s timeout — évite de bloquer indéfiniment si le worker KV est lent/cold
+  // 2,5s timeout — évite de bloquer indéfiniment si le worker KV est lent/cold
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 3000);
+  const timer = setTimeout(() => controller.abort(), 2500);
+
+  // PERF : la requête premium est indépendante du KV → on la lance EN PARALLÈLE
+  // dès maintenant, bornée à 2,5s. Elle ne rallonge donc pas le chemin critique.
+  const premiumPromise = withTimeout(fetchPremiumFields(supabaseUser.id), 2500, FREE_PREMIUM);
 
   try {
     // Les deux fetches en parallèle (gagne ~300-800ms sur le cas nominal)
@@ -124,7 +157,8 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
     // Évite le faux redirect vers /onboarding/ia sur un nouvel appareil (sans cache localStorage)
     // si le flag KV est absent ou si le worker KV a retourné des données incomplètes.
     if (!onboarding_complete) {
-      const dbComplete = await checkPhase1CompleteFromDB(supabaseUser.id);
+      // Timeout 2s — ne bloque jamais le rendu si Supabase est lent
+      const dbComplete = await withTimeout(checkPhase1CompleteFromDB(supabaseUser.id), 2000, false);
       if (dbComplete) {
         onboarding_complete = true;
         onboarding_step = "done";
@@ -133,24 +167,8 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
       }
     }
 
-    // ── Premium / subscription depuis Supabase profiles ──────────────────────
-    let is_premium = false;
-    let is_starter = false;
-    let subscription_status: StoredAuthUser["subscription_status"] = "free";
-    let subscription_plan: StoredAuthUser["subscription_plan"] = "free";
-    try {
-      const { data: premiumData } = await supabase
-        .from("profiles")
-        .select("is_premium, is_starter, subscription_status, subscription_plan, subscription_current_period_end")
-        .eq("id", supabaseUser.id)
-        .single();
-      if (premiumData) {
-        is_premium          = premiumData.is_premium          ?? false;
-        is_starter          = premiumData.is_starter          ?? false;
-        subscription_status = premiumData.subscription_status ?? "free";
-        subscription_plan   = premiumData.subscription_plan   ?? "free";
-      }
-    } catch { /* profils inaccessibles — valeurs par défaut */ }
+    // ── Premium / subscription (déjà en vol depuis le début, parallèle au KV) ──
+    const premium = await premiumPromise;
 
     return {
       supabaseId: supabaseUser.id, username: authUsername,
@@ -159,10 +177,7 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
       streak: kv.streak || 0, onboardingDone: kv.onboardingDone || false, firstPostCreated,
       onboarding_complete,
       onboarding_step,
-      is_premium,
-      is_starter,
-      subscription_status,
-      subscription_plan,
+      ...premium,
     };
   } catch {
     clearTimeout(timer);
@@ -193,7 +208,7 @@ async function buildStoredUser(supabaseUser: User): Promise<StoredAuthUser> {
     // KV inaccessible + localStorage vide (nouvel appareil) → vérifier la DB
     // pour ne pas rediriger un utilisateur existant vers l'onboarding.
     if (!onboarding_complete) {
-      const dbComplete = await checkPhase1CompleteFromDB(supabaseUser.id);
+      const dbComplete = await withTimeout(checkPhase1CompleteFromDB(supabaseUser.id), 2000, false);
       if (dbComplete) {
         onboarding_complete = true;
         onboarding_step = "done";
