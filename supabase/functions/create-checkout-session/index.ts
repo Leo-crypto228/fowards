@@ -12,8 +12,19 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Kill-switch paiement : passe à true pour réactiver le checkout Stripe.
+// Bloque la création de session même en cas d'appel direct (le frontend bloque aussi).
+const PAYMENTS_ENABLED = false;
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
+  if (!PAYMENTS_ENABLED) {
+    return new Response(JSON.stringify({
+      error: "payments_disabled",
+      message: "Les abonnements sont temporairement indisponibles.",
+    }), { status: 503, headers: { ...CORS, "Content-Type": "application/json" } });
+  }
 
   try {
     const authHeader = req.headers.get("Authorization");

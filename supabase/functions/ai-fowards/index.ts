@@ -79,6 +79,11 @@ const STARTER_DIAGNOSTIC_DAILY_LIMIT = 1; // Starter : 1 diagnostic normal/jour
 const DEEP_DIAGNOSTIC_DAILY_LIMIT = 4;    // Premium : 4 diagnostics approfondis/jour, reset minuit
 const FREE_DIAG_CYCLE_DAYS = 3;           // Free : 1 base + 1 bonus post par fenêtre de 3 jours
 
+// ── Kill-switch IA ────────────────────────────────────────────────────────────
+// Passe à true pour réactiver l'IA. Bloque toute génération côté serveur, même
+// en cas d'appel direct à l'API (défense en profondeur, le frontend bloque aussi).
+const AI_ENABLED = false;
+
 type PlanTier = "free" | "starter" | "premium";
 
 // ── Cycle diagnostic Free (3 jours glissants) ─────────────────────────────────
@@ -814,6 +819,14 @@ app.delete("/ai-fowards/conversations/:id", async (c) => {
 
 // ── POST /chat ────────────────────────────────────────────────────────────────
 app.post("/ai-fowards/chat", async (c) => {
+  // Kill-switch : IA mise en pause (cf AI_ENABLED). Bloque toute génération.
+  if (!AI_ENABLED) {
+    return c.json({
+      error: "ai_disabled",
+      message: "L'IA Fowards est temporairement indisponible. Elle revient bientôt.",
+    }, 503);
+  }
+
   const userId = await getUserId(c.req.header("Authorization"));
   if (!userId) return c.json({ error: "Non authentifié" }, 401);
 

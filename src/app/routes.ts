@@ -9,6 +9,8 @@ import { SignupPage } from "./pages/SignupPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { OnboardingProfilePage } from "./pages/OnboardingProfilePage";
 import { OnboardingIAPage } from "./pages/OnboardingIAPage";
+import { AiDisabledPage, PaymentsDisabledPage } from "./pages/FeatureDisabled";
+import { AI_ENABLED, PAYMENTS_ENABLED } from "./config/featureFlags";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { AdminProtected } from "./pages/AdminProtected";
 import { MentionsLegales } from "./pages/MentionsLegales";
@@ -50,7 +52,7 @@ export const router = createBrowserRouter([
   { path: "/signup",             Component: SignupPage },
   { path: "/verify-email",       Component: VerifyEmailPage },
   { path: "/onboarding/profile", Component: OnboardingProfilePage },
-  { path: "/onboarding/ia",      Component: OnboardingIAPage },
+  { path: "/onboarding/ia",      Component: AI_ENABLED ? OnboardingIAPage : AiDisabledPage },
   { path: "/auth/callback", Component: AuthCallbackPage },
   { path: "/mentions-legales",           Component: MentionsLegales },
   { path: "/conditions",                 Component: ConditionsGenerales },
@@ -66,7 +68,7 @@ export const router = createBrowserRouter([
     Component: Layout,
     ErrorBoundary: RootError,
     children: [
-      { index: true,                element: createElement(Navigate, { to: "/ai", replace: true }) },
+      { index: true,                element: createElement(Navigate, { to: AI_ENABLED ? "/ai" : "/feed", replace: true }) },
       { path: "feed",               Component: Feed },
       { path: "profile",            Component: Profile },
       { path: "profile/edit",       Component: EditProfilePage },
@@ -88,10 +90,10 @@ export const router = createBrowserRouter([
       { path: "ways/:id/comments",  Component: WaysComments },
       { path: "ways/:id",           Component: WaysViewer },
       { path: "new-members",        Component: NewMembersPage },
-      { path: "ai",                 Component: AIHomePage },
-      { path: "ai/profile",         Component: AIProfilePage },
-      { path: "ai/:conversationId", Component: AIConversationPage },
-      { path: "premium",            Component: PremiumPage },
+      { path: "ai",                 Component: AI_ENABLED ? AIHomePage : AiDisabledPage },
+      { path: "ai/profile",         Component: AI_ENABLED ? AIProfilePage : AiDisabledPage },
+      { path: "ai/:conversationId", Component: AI_ENABLED ? AIConversationPage : AiDisabledPage },
+      { path: "premium",            Component: PAYMENTS_ENABLED ? PremiumPage : PaymentsDisabledPage },
       { path: "premium/success",    Component: PremiumSuccessPage },
     ],
   },
